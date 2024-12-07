@@ -1,0 +1,42 @@
+name: layrz_ble
+description: "Layrz BLE plugin for Flutter projects"
+version: 1.0.0
+homepage: https://github.com/goldenm-software/layrz_ble
+publish_to: "pub.dev"
+
+environment:
+  sdk: ">=3.0.0 <4.0.0"
+  flutter: '>=3.22.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  flutter_web_plugins:
+    sdk: flutter
+
+  web: ^1.1.0
+  plugin_platform_interface: ^2.0.2
+  collection: ^1.18.0
+  layrz_models: ^3.3.7
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+
+  flutter_lints: ^4.0.0
+
+flutter:
+  plugin:
+    platforms:
+      android:
+        package: com.layrz.layrz_ble
+        pluginClass: LayrzBlePlugin
+      ios:
+        pluginClass: LayrzBlePlugin
+      macos:
+        pluginClass: LayrzBlePlugin
+      windows:
+        pluginClass: LayrzBlePluginCApi
+      web:
+        pluginClass: LayrzBleWeb
+        fileName: layrz_ble_web.dart

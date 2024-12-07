@@ -1,0 +1,11 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "VS Code Connected Device",
+      "request": "launch",
+      "cwd": "example",
+      "type": "dart",
+    }
+  ]
+}
