@@ -36,12 +36,16 @@ class MethodChannelLayrzBle extends LayrzBlePlatform {
 
   final StreamController<BleDevice> _scanController = StreamController<BleDevice>.broadcast();
   final StreamController<BleEvent> _eventController = StreamController<BleEvent>.broadcast();
+  final StreamController<List<int>> _notifyController = StreamController<List<int>>.broadcast();
 
   @override
   Stream<BleDevice> get onScan => _scanController.stream;
 
   @override
   Stream<BleEvent> get onEvent => _eventController.stream;
+
+  @override
+  Stream<List<int>> get onNotify => _notifyController.stream;
 
   @override
   Future<bool?> startScan() => methodChannel.invokeMethod<bool>('startScan');
@@ -73,5 +77,101 @@ class MethodChannelLayrzBle extends LayrzBlePlatform {
         bluetoothConnectPermission: false,
       );
     }
+  }
+
+  @override
+  Future<int?> setMtu({required int newMtu}) => methodChannel.invokeMethod<int>('setMtu', newMtu);
+
+  @override
+  Future<bool?> connect({required String macAddress}) => methodChannel.invokeMethod<bool>('connect', macAddress);
+
+  @override
+  Future<bool?> disconnect() => methodChannel.invokeMethod<bool>('disconnect');
+
+  @override
+  Future<List<BleService>?> discoverServices({required String macAddress}) async {
+    final result = await methodChannel.invokeMethod<List>('discoverServices', macAddress);
+    if (result == null) {
+      log('Error discovering services from native side');
+      return null;
+    }
+
+    try {
+      return result.map((e) => BleService.fromJson(Map<String, dynamic>.from(e))).toList();
+    } catch (e) {
+      log('Error parsing BleService: $e');
+      return null;
+    }
+  }
+
+  @override
+  Future<List<BleCharacteristic>?> discoverCharacteristics({
+    required String macAddress,
+    required String serviceUuid,
+  }) async {
+    final result = await methodChannel.invokeMethod<List>('discoverCharacteristics', <String, String>{
+      'macAddress': macAddress,
+      'uuid': serviceUuid,
+    });
+
+    if (result == null) {
+      log('Error discovering characteristics from native side');
+      return null;
+    }
+
+    try {
+      return result.map((e) => BleCharacteristic.fromJson(Map<String, dynamic>.from(e))).toList();
+    } catch (e) {
+      log('Error parsing BleCharacteristic: $e');
+      return null;
+    }
+  }
+
+  @override
+  Future<bool> sendPayload({
+    required String macAddress,
+    required String serviceUuid,
+    required String characteristicUuid,
+    required List<int> payload,
+  }) async {
+    final result = await methodChannel.invokeMethod<bool>('sendPayload', <String, dynamic>{
+      'macAddress': macAddress,
+      'serviceUuid': serviceUuid,
+      'characteristicUuid': characteristicUuid,
+      'payload': payload,
+    });
+
+    if (result == null) {
+      log('Error sending payload from native side');
+      return false;
+    }
+
+    return result;
+  }
+
+  @override
+  Future<bool?> startNotify({
+    required String macAddress,
+    required String serviceUuid,
+    required String characteristicUuid,
+  }) {
+    return methodChannel.invokeMethod<bool>('startNotify', <String, String>{
+      'macAddress': macAddress,
+      'serviceUuid': serviceUuid,
+      'characteristicUuid': characteristicUuid,
+    });
+  }
+
+  @override
+  Future<bool?> stopNotify({
+    required String macAddress,
+    required String serviceUuid,
+    required String characteristicUuid,
+  }) {
+    return methodChannel.invokeMethod<bool>('stopNotify', <String, String>{
+      'macAddress': macAddress,
+      'serviceUuid': serviceUuid,
+      'characteristicUuid': characteristicUuid,
+    });
   }
 }

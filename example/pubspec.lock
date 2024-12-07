@@ -323,10 +323,10 @@ packages:
     dependency: "direct main"
     description:
       name: layrz_models
-      sha256: f56278c27bd05448a78a509ee5720f1e51a03dfe41912f688ddcc74029394045
+      sha256: "24e4c21bf503cb205b4dbb959bcba5780c26e3580aac5f08b23912ad243bb005"
       url: "https://pub.dev"
     source: hosted
-    version: "3.3.7"
+    version: "3.3.8"
   layrz_theme:
     dependency: "direct main"
     description:

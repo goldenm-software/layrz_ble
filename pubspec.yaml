@@ -1,5 +1,5 @@
 name: layrz_ble
-description: "Layrz BLE plugin for Flutter projects"
+description: "A simple way to interact with BLE devices in Flutter."
 version: 1.0.0
 homepage: https://github.com/goldenm-software/layrz_ble
 publish_to: "pub.dev"
@@ -17,7 +17,7 @@ dependencies:
   web: ^1.1.0
   plugin_platform_interface: ^2.0.2
   collection: ^1.18.0
-  layrz_models: ^3.3.7
+  layrz_models: ^3.3.8
 
 dev_dependencies:
   flutter_test:

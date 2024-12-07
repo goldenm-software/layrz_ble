@@ -1,8 +1,8 @@
 # layrz_ble
-Managed by Golden M.
+
+A simple way to interact with BLE devices in Flutter.
 
 ## Motivation
-This plugin is a universal wrapper for BLE devices, which allows you to scan, connect, and interact with BLE devices in a simple and easy way.
 Our goal is to provide a simple and easy-to-use library for Flutter developers to interact with BLE devices, and support as many platforms as possible.
 
 ## Usage
@@ -24,23 +24,29 @@ import 'package:layrz_ble/layrz_ble.dart';
 
 final ble = LayrzBle();
 
-// Listen for events
-ble.onEvent.listen((BleEvent event) { // Class included on the package
+/// Listen for events
+///
+/// `BleEvent` is from this package
+ble.onEvent.listen((BleEvent event) {
   debugPrint(event);
 });
 
-// Listen for device discovery
-ble.onScan.listen((BleDevice device) { // BleDevice is a class from `layrz_models` package, but we exported it here for convenience
+/// Listen for device discovery
+///
+/// `BleDevice` is from `layrz_models` package, but we exported it here for convenience
+ble.onScan.listen((BleDevice device) {
   debugPrint(device);
 });
 
-// Check capabilities
-final BleCapabilities capabilities = await ble.checkCapabilities(); // Class included on the package
+/// Check capabilities
+///
+/// `BleCapabilities` is from this package
+final BleCapabilities capabilities = await ble.checkCapabilities();
 
-// Scan for BLE devices
+/// Scan for BLE devices
 final bool startResult = await ble.startScan();
 
-// Stop scanning
+/// Stop scanning
 final bool stopResult = await ble.stopScan();
 ```
 
@@ -60,7 +66,8 @@ final bool stopResult = await ble.stopScan();
 - [ ] Support for Windows
 
 ## Permissions
-Each platform requires some permissions to be granted in order to work properly. Here is a list of permissions required by each platform:
+
+Before getting into the platform specific permissions, always raises the question "How can I handle the permissions on my Flutter app?". Well, you can use the [`permission_handler`](https://pub.dev/packages/permission_handler) package to handle the permissions on your Flutter app, or you can handle them manually with native code, the choice is yours.
 
 ### Android
 ```xml
@@ -105,3 +112,25 @@ To be added.
 
 ### Windows
 To be added.
+
+## FAQ
+
+### Why is this package called `layrz_ble`?
+All packages developed by [Layrz](https://layrz.com) are prefixed with `layrz_`, check out our other packages on [pub.dev](https://pub.dev/publishers/goldenm.com/packages).
+
+### I need to pay to use this package?
+<b>No!</b> This library is free and open source, you can use it in your projects without any cost, but if you want to support us, give us a thumbs up here in [pub.dev](https://pub.dev/packages/layrz_ble) and star our [Repository](https://github.com/goldenm-software/layrz_ble)!
+
+### Can I contribute to this package?
+<b>Yes!</b> We are open to contributions, feel free to open a pull request or an issue on the [Repository](https://github.com/goldenm-software/layrz_ble)!
+
+### I have a question, how can I contact you?
+If you need more assistance, you open an issue on the [Repository](https://github.com/goldenm-software/layrz_ble) and we're happy to help you :)
+
+## License
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+This project is maintained by [Golden M](https://goldenm.com) with authorization of [Layrz LTD](https://layrz.com).
+
+## Who are you? / Want to work with us?
+<b>Golden M</b> is a software and hardware development company what is working on a new, innovative and disruptive technologies. For more information, contact us at [sales@goldenm.com](mailto:sales@goldenm.com) or via WhatsApp at [+(507)-6979-3073](https://wa.me/50769793073?text="From%20layrz_ble%20flutter%20library.%20Hello").
