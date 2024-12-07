@@ -1,5 +1,10 @@
 # layrz_ble
 
+[![Pub version](https://img.shields.io/pub/v/layrz_ble?logo=flutter)](https://pub.dev/packages/layrz_ble)
+[![popularity](https://img.shields.io/pub/popularity/layrz_ble?logo=flutter)](https://pub.dev/packages/layrz_ble/score)
+[![likes](https://img.shields.io/pub/likes/layrz_ble?logo=flutter)](https://pub.dev/packages/layrz_ble/score)
+[![GitHub license](https://img.shields.io/github/license/goldenm-software/layrz_ble?logo=github)](https://github.com/goldenm-software/layrz_ble)
+
 A simple way to interact with BLE devices in Flutter.
 
 ## Motivation
