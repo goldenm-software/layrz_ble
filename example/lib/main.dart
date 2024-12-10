@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:layrz_ble/layrz_ble.dart';
-import 'package:layrz_ble/layrz_ble_web.dart';
 import 'package:layrz_models/layrz_models.dart';
 import 'package:layrz_theme/layrz_theme.dart';
 import 'package:permission_handler/permission_handler.dart';
@@ -18,10 +17,7 @@ class MyApp extends StatefulWidget {
 
 class _MyAppState extends State<MyApp> {
   final _ble = LayrzBle();
-  final web = LayrzBleWeb()
-    ..onEvent.listen((e) {
-      // pass
-    });
+
   AppThemedAsset get logo => const AppThemedAsset(
         normal: 'https://cdn.layrz.com/resources/layrz/logo/normal.png',
         white: 'https://cdn.layrz.com/resources/layrz/logo/white.png',

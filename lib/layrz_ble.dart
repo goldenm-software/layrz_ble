@@ -21,7 +21,7 @@ class LayrzBle {
   /// [onNotify] is a stream of BLE notifications.
   /// To add a new notification listener, use [startNotify] method.
   /// This stream will emit the raw bytes of the notification.
-  Stream<List<int>> get onNotify => LayrzBlePlatform.instance.onNotify;
+  Stream<Uint8List> get onNotify => LayrzBlePlatform.instance.onNotify;
 
   /// [startScan] starts scanning for BLE devices.
   ///
