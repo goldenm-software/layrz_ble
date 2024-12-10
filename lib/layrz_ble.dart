@@ -21,12 +21,17 @@ class LayrzBle {
   /// [onNotify] is a stream of BLE notifications.
   /// To add a new notification listener, use [startNotify] method.
   /// This stream will emit the raw bytes of the notification.
-  Stream<Uint8List> get onNotify => LayrzBlePlatform.instance.onNotify;
+  Stream<BleCharacteristicNotification> get onNotify => LayrzBlePlatform.instance.onNotify;
 
   /// [startScan] starts scanning for BLE devices.
   ///
   /// To get the results, you need to set a callback function using [onScanResult].
-  Future<bool?> startScan() => LayrzBlePlatform.instance.startScan();
+  Future<bool?> startScan({
+    /// [macAddress] is the MAC address or UUID of the device to scan.
+    /// If this value is not provided, the scan will search for all devices.
+    String? macAddress,
+  }) =>
+      LayrzBlePlatform.instance.startScan(macAddress: macAddress);
 
   /// [stopScan] stops scanning for BLE devices.
   ///
@@ -37,9 +42,10 @@ class LayrzBle {
   Future<BleCapabilities> checkCapabilities() => LayrzBlePlatform.instance.checkCapabilities();
 
   /// [setMtu] sets the MTU size for the BLE connection.
-  /// The MTU size is the maximum number of bytes that can be sent in a single packet.
+  /// The MTU size is the maximum number of bytes that can be sent in a single packet, also, MTU means
+  /// Maximum Transmission Unit and it is the maximum size of a packet that can be sent in a single transmission.
   ///
-  /// The return value is the new MTU size, after the handshake with the peripheral.
+  /// The return value is the new MTU size, after a negotion with the peripheral.
   Future<int?> setMtu({required int newMtu}) => LayrzBlePlatform.instance.setMtu(newMtu: newMtu);
 
   /// [connect] connects to a BLE device.
@@ -49,56 +55,57 @@ class LayrzBle {
   Future<bool?> disconnect() => LayrzBlePlatform.instance.disconnect();
 
   /// [discoverServices] discovers the services of a BLE device.
-  Future<List<BleService>?> discoverServices({required String macAddress}) =>
-      LayrzBlePlatform.instance.discoverServices(macAddress: macAddress);
-
-  /// [discoverCharacteristics] discovers the characteristics of a BLE service.
-  Future<List<BleCharacteristic>?> discoverCharacteristics({
-    required String macAddress,
-    required String serviceUuid,
+  Future<List<BleService>?> discoverServices({
+    /// [timeout] is the duration to wait for the services to be discovered.
+    Duration timeout = const Duration(seconds: 30),
   }) =>
-      LayrzBlePlatform.instance.discoverCharacteristics(
-        macAddress: macAddress,
-        serviceUuid: serviceUuid,
-      );
+      LayrzBlePlatform.instance.discoverServices(timeout: timeout);
 
-  /// [sendPayload] sends a payload to a BLE characteristic.
+  /// [writeCharacteristic] sends a payload to a BLE characteristic.
   ///
   /// The return value is `true` if the payload was sent successfully.
-  Future<bool> sendPayload({
-    required String macAddress,
+  Future<bool> writeCharacteristic({
     required String serviceUuid,
     required String characteristicUuid,
     required Uint8List payload,
+    Duration timeout = const Duration(seconds: 30),
   }) =>
-      LayrzBlePlatform.instance.sendPayload(
-        macAddress: macAddress,
+      LayrzBlePlatform.instance.writeCharacteristic(
         serviceUuid: serviceUuid,
         characteristicUuid: characteristicUuid,
         payload: payload,
       );
 
+  /// [readCharacteristic] reads the value of a BLE characteristic.
+  /// The return value is the raw bytes of the characteristic.
+  ///
+  /// If the characteristic is not readable, this method will return `null`.
+  Future<Uint8List?> readCharacteristic({
+    required String serviceUuid,
+    required String characteristicUuid,
+  }) =>
+      LayrzBlePlatform.instance.readCharacteristic(
+        serviceUuid: serviceUuid,
+        characteristicUuid: characteristicUuid,
+      );
+
   /// [startNotify] starts listening to notifications from a BLE characteristic.
   /// To stop listening, use [stopNotify] method and to get the notifications, use [onNotify] stream.
   Future<bool?> startNotify({
-    required String macAddress,
     required String serviceUuid,
     required String characteristicUuid,
   }) =>
       LayrzBlePlatform.instance.startNotify(
-        macAddress: macAddress,
         serviceUuid: serviceUuid,
         characteristicUuid: characteristicUuid,
       );
 
   /// [stopNotify] stops listening to notifications from a BLE characteristic.
   Future<bool?> stopNotify({
-    required String macAddress,
     required String serviceUuid,
     required String characteristicUuid,
   }) =>
       LayrzBlePlatform.instance.stopNotify(
-        macAddress: macAddress,
         serviceUuid: serviceUuid,
         characteristicUuid: characteristicUuid,
       );

@@ -55,20 +55,61 @@ final bool startResult = await ble.startScan();
 final bool stopResult = await ble.stopScan();
 ```
 
-## Goals
-### Capabilities
+## Working checklist per platform
+### Android
 - [x] Scan for BLE devices
-- [ ] Connect to BLE devices (Work in progress)
-- [ ] Disconnect from BLE devices
-- [ ] Read and write characteristics
-- [ ] Subscribe to characteristic notifications
+- [x] Connect to BLE devices
+- [x] Disconnect from BLE devices
+- [X] Negotiate a new MTU
+- [x] Get services and characteristics
+- [x] Read from characteristics
+- [x] Write to characteristics
+- [x] Subscribe to characteristic notifications
+- [x] Send a payload to a BLE device
 
-## Platforms
-- [ ] Support for Android (Work in progress)
-- [ ] Support for iOS
-- [ ] Support for Web
-- [ ] Support for macOS
-- [ ] Support for Windows
+### iOS
+- [ ] Scan for BLE devices
+- [ ] Connect to BLE devices
+- [ ] Disconnect from BLE devices
+- [ ] Negotiate a new MTU
+- [ ] Get services and characteristics
+- [ ] Read from characteristics
+- [ ] Write to characteristics
+- [ ] Subscribe to characteristic notifications
+- [ ] Send a payload to a BLE device
+
+### Windows
+- [ ] Scan for BLE devices
+- [ ] Connect to BLE devices
+- [ ] Disconnect from BLE devices
+- [ ] Negotiate a new MTU
+- [ ] Get services and characteristics
+- [ ] Read from characteristics
+- [ ] Write to characteristics
+- [ ] Subscribe to characteristic notifications
+- [ ] Send a payload to a BLE device
+
+### macOS
+- [ ] Scan for BLE devices
+- [ ] Connect to BLE devices
+- [ ] Disconnect from BLE devices
+- [ ] Negotiate a new MTU
+- [ ] Get services and characteristics
+- [ ] Read from characteristics
+- [ ] Write to characteristics
+- [ ] Subscribe to characteristic notifications
+- [ ] Send a payload to a BLE device
+
+### Web
+- [ ] Scan for BLE devices
+- [ ] Connect to BLE devices
+- [ ] Disconnect from BLE devices
+- [ ] Negotiate a new MTU
+- [ ] Get services and characteristics
+- [ ] Read from characteristics
+- [ ] Write to characteristics
+- [ ] Subscribe to characteristic notifications
+- [ ] Send a payload to a BLE device
 
 ## Permissions
 

@@ -31,12 +31,12 @@ flutter:
       android:
         package: com.layrz.layrz_ble
         pluginClass: LayrzBlePlugin
-      ios:
-        pluginClass: LayrzBlePlugin
-      macos:
-        pluginClass: LayrzBlePlugin
-      windows:
-        pluginClass: LayrzBlePluginCApi
-      web:
-        pluginClass: LayrzBleWeb
-        fileName: layrz_ble_web.dart
+      # ios:
+      #   pluginClass: LayrzBlePlugin
+      # macos:
+      #   pluginClass: LayrzBlePlugin
+      # windows:
+      #   pluginClass: LayrzBlePluginCApi
+      # web:
+      #   pluginClass: LayrzBleWeb
+      #   fileName: layrz_ble_web.dart

@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 class BleCapabilities {
   /// [locationPermission] is true if the app has location permission.
   ///
@@ -67,6 +69,10 @@ enum BleEvent {
 
   /// [unknown] is an event that is triggered when an unknown event is received.
   unknown,
+
+  /// [scanStopped] is an event that is triggered when the scan is stopped.
+  /// This event can be triggered by the user or by the system when you are connected to a device.
+  scanStopped,
   ;
 
   @override
@@ -80,6 +86,8 @@ enum BleEvent {
         return 'CONNECTED';
       case BleEvent.disconnected:
         return 'DISCONNECTED';
+      case BleEvent.scanStopped:
+        return 'SCAN_STOPPED';
       default:
         return 'UNKNOWN';
     }
@@ -93,8 +101,41 @@ enum BleEvent {
         return BleEvent.connected;
       case 'DISCONNECTED':
         return BleEvent.disconnected;
+      case 'SCAN_STOPPED':
+        return BleEvent.scanStopped;
       default:
         return BleEvent.unknown;
     }
+  }
+}
+
+class BleCharacteristicNotification {
+  /// [serviceUuid] is the UUID of the service.
+  final String serviceUuid;
+
+  /// [characteristicUuid] is the UUID of the characteristic.
+  final String characteristicUuid;
+
+  /// [payload] is the data received from the characteristic.
+  final Uint8List value;
+
+  BleCharacteristicNotification({
+    required this.serviceUuid,
+    required this.characteristicUuid,
+    required this.value,
+  });
+
+  factory BleCharacteristicNotification.fromMap(Map<String, dynamic> map) {
+    return BleCharacteristicNotification(
+      serviceUuid: map['serviceUuid'],
+      characteristicUuid: map['characteristicUuid'],
+      value: Uint8List.fromList(List<int>.from(map['value'])),
+    );
+  }
+
+  @override
+  String toString() {
+    return 'BleCharacteristicNotification(serviceUuid: $serviceUuid, '
+        'characteristicUuid: $characteristicUuid, value: $value)';
   }
 }
