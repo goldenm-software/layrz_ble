@@ -8,12 +8,12 @@ import 'package:layrz_models/layrz_models.dart';
 import 'layrz_ble_platform_interface.dart';
 
 /// An implementation of [LayrzBlePlatform] that uses method channels.
-class MethodChannelLayrzBle extends LayrzBlePlatform {
+class LayrzBleNative extends LayrzBlePlatform {
   void log(String message) {
     debugPrint('LayrzBlePlugin/Dart: $message');
   }
 
-  MethodChannelLayrzBle() {
+  LayrzBleNative() {
     methodChannel.setMethodCallHandler((call) async {
       log('MethodChannelLayrzBle: ${call.method}');
       switch (call.method) {

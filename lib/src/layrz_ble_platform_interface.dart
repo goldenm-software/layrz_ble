@@ -10,7 +10,7 @@ abstract class LayrzBlePlatform extends PlatformInterface {
   LayrzBlePlatform() : super(token: _token);
 
   static final Object _token = Object();
-  static LayrzBlePlatform _instance = MethodChannelLayrzBle();
+  static LayrzBlePlatform _instance = LayrzBleNative();
   static LayrzBlePlatform get instance => _instance;
 
   static set instance(LayrzBlePlatform instance) {
