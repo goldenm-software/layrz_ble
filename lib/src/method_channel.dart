@@ -36,7 +36,7 @@ class LayrzBleNative extends LayrzBlePlatform {
 
   final StreamController<BleDevice> _scanController = StreamController<BleDevice>.broadcast();
   final StreamController<BleEvent> _eventController = StreamController<BleEvent>.broadcast();
-  final StreamController<List<int>> _notifyController = StreamController<List<int>>.broadcast();
+  final StreamController<Uint8List> _notifyController = StreamController<Uint8List>.broadcast();
 
   @override
   Stream<BleDevice> get onScan => _scanController.stream;
@@ -45,7 +45,7 @@ class LayrzBleNative extends LayrzBlePlatform {
   Stream<BleEvent> get onEvent => _eventController.stream;
 
   @override
-  Stream<List<int>> get onNotify => _notifyController.stream;
+  Stream<Uint8List> get onNotify => _notifyController.stream;
 
   @override
   Future<bool?> startScan() => methodChannel.invokeMethod<bool>('startScan');
@@ -132,7 +132,7 @@ class LayrzBleNative extends LayrzBlePlatform {
     required String macAddress,
     required String serviceUuid,
     required String characteristicUuid,
-    required List<int> payload,
+    required Uint8List payload,
   }) async {
     final result = await methodChannel.invokeMethod<bool>('sendPayload', <String, dynamic>{
       'macAddress': macAddress,

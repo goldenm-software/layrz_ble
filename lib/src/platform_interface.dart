@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:typed_data';
 
 import 'package:layrz_ble/src/types.dart';
 import 'package:layrz_models/layrz_models.dart';
@@ -27,7 +28,7 @@ abstract class LayrzBlePlatform extends PlatformInterface {
   /// [onNotify] is a stream of BLE notifications.
   /// To add a new notification listener, use [startNotify] method.
   /// This stream will emit the raw bytes of the notification.
-  Stream<List<int>> get onNotify => throw UnimplementedError('_notifySubscription has not been implemented.');
+  Stream<Uint8List> get onNotify => throw UnimplementedError('_notifySubscription has not been implemented.');
 
   /// [startScan] starts scanning for BLE devices.
   ///
@@ -74,7 +75,7 @@ abstract class LayrzBlePlatform extends PlatformInterface {
     required String macAddress,
     required String serviceUuid,
     required String characteristicUuid,
-    required List<int> payload,
+    required Uint8List payload,
   }) =>
       throw UnimplementedError('sendPayload() has not been implemented.');
 

@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:typed_data';
 
 import 'package:flutter_web_plugins/flutter_web_plugins.dart';
 import 'package:layrz_ble/src/types.dart';
@@ -17,7 +18,7 @@ class LayrzBleWeb extends LayrzBlePlatform {
 
   final StreamController<BleDevice> _scanController = StreamController<BleDevice>.broadcast();
   final StreamController<BleEvent> _eventController = StreamController<BleEvent>.broadcast();
-  final StreamController<List<int>> _notifyController = StreamController<List<int>>.broadcast();
+  final StreamController<Uint8List> _notifyController = StreamController<Uint8List>.broadcast();
 
   @override
   Stream<BleDevice> get onScan => _scanController.stream;
@@ -26,5 +27,5 @@ class LayrzBleWeb extends LayrzBlePlatform {
   Stream<BleEvent> get onEvent => _eventController.stream;
 
   @override
-  Stream<List<int>> get onNotify => _notifyController.stream;
+  Stream<Uint8List> get onNotify => _notifyController.stream;
 }

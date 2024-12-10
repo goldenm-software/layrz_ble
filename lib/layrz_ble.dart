@@ -1,5 +1,7 @@
 library layrz_ble;
 
+import 'dart:typed_data';
+
 import 'package:layrz_ble/src/types.dart';
 import 'package:layrz_models/layrz_models.dart';
 import 'src/platform_interface.dart';
@@ -67,7 +69,7 @@ class LayrzBle {
     required String macAddress,
     required String serviceUuid,
     required String characteristicUuid,
-    required List<int> payload,
+    required Uint8List payload,
   }) =>
       LayrzBlePlatform.instance.sendPayload(
         macAddress: macAddress,
