@@ -5,7 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:layrz_ble/src/types.dart';
 import 'package:layrz_models/layrz_models.dart';
 
-import 'layrz_ble_platform_interface.dart';
+import 'platform_interface.dart';
 
 /// An implementation of [LayrzBlePlatform] that uses method channels.
 class LayrzBleNative extends LayrzBlePlatform {

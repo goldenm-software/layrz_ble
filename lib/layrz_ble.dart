@@ -2,10 +2,10 @@ library layrz_ble;
 
 import 'package:layrz_ble/src/types.dart';
 import 'package:layrz_models/layrz_models.dart';
-import 'src/layrz_ble_platform_interface.dart';
+import 'src/platform_interface.dart';
 
-export 'src/layrz_ble_platform_interface.dart';
-export 'src/layrz_ble_method_channel.dart';
+export 'src/platform_interface.dart';
+export 'src/method_channel.dart';
 export 'src/types.dart';
 export 'package:layrz_models/layrz_models.dart' show BleDevice, BleService, BleCharacteristic, BleProperty;
 

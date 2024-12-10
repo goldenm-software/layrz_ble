@@ -4,7 +4,7 @@ import 'package:flutter_web_plugins/flutter_web_plugins.dart';
 import 'package:layrz_ble/src/types.dart';
 import 'package:layrz_models/layrz_models.dart';
 
-import 'src/layrz_ble_platform_interface.dart';
+import 'src/platform_interface.dart';
 
 /// A web implementation of the LayrzBlePlatform of the LayrzBle plugin.
 class LayrzBleWeb extends LayrzBlePlatform {
