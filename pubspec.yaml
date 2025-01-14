@@ -35,5 +35,5 @@ flutter:
         pluginClass: LayrzBlePlugin
       macos:
         pluginClass: LayrzBlePlugin
-      # windows:
-      #   pluginClass: LayrzBlePluginCApi
+      windows:
+        pluginClass: LayrzBlePluginCApi

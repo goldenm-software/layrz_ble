@@ -1,4 +1,0 @@
-namespace layrz_ble {
-
-	
-}

@@ -63,7 +63,6 @@ public class LayrzBlePlugin: NSObject, FlutterPlugin, CBCentralManagerDelegate, 
             "bluetoothPermission": auth == .allowedAlways,
             "bluetoothAdminOrScanPermission": auth == .allowedAlways,
             "bluetoothConnectPermission": auth == .allowedAlways
-            
         ])
     }
     
