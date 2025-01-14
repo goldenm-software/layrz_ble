@@ -89,6 +89,9 @@ abstract class LayrzBlePlatform extends PlatformInterface {
 
     /// [timeout] is the duration to wait for the characteristic to be written.
     Duration timeout = const Duration(seconds: 30),
+
+    /// [withResponse] is a flag to indicate if the write should be with response or not.
+    required bool withResponse,
   }) =>
       throw UnimplementedError('writeCharacteristic() has not been implemented.');
 

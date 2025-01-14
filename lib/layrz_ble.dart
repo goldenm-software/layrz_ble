@@ -69,11 +69,14 @@ class LayrzBle {
     required String characteristicUuid,
     required Uint8List payload,
     Duration timeout = const Duration(seconds: 30),
+    required bool withResponse,
   }) =>
       LayrzBlePlatform.instance.writeCharacteristic(
         serviceUuid: serviceUuid,
         characteristicUuid: characteristicUuid,
         payload: payload,
+        timeout: timeout,
+        withResponse: withResponse,
       );
 
   /// [readCharacteristic] reads the value of a BLE characteristic.

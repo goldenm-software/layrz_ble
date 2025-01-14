@@ -129,10 +129,13 @@ class _HomePageState extends State<HomePage> {
                   color: Colors.blue,
                   onTap: () async {
                     setState(() => _isLoading = true);
-                    await Permission.location.request();
-                    await Permission.bluetooth.request();
-                    await Permission.bluetoothScan.request();
-                    await Permission.bluetoothConnect.request();
+                    if (ThemedPlatform.isAndroid) await Permission.location.request();
+                    if (!ThemedPlatform.isMacOS) await Permission.bluetooth.request();
+
+                    if (ThemedPlatform.isAndroid) {
+                      await Permission.bluetoothScan.request();
+                      await Permission.bluetoothConnect.request();
+                    }
 
                     final result = await plugin.checkCapabilities();
 
@@ -228,6 +231,9 @@ class _HomePageState extends State<HomePage> {
                     return InkWell(
                       onTap: () async {
                         debugPrint('Selected device: ${device.macAddress}');
+                        debugPrint("Manufacturer data: ${_castToString(device.manufacturerData)}");
+                        debugPrint("Service data: ${_castToString(device.serviceData)}");
+                        debugPrint("Services Identifiers: ${_castServicesIdentifiers(device.servicesIdentifiers)}");
                         setState(() => _isLoading = true);
                         final result = await plugin.connect(macAddress: device.macAddress);
                         if (result == true) {
@@ -251,18 +257,30 @@ class _HomePageState extends State<HomePage> {
                               size: 40,
                             ),
                             const SizedBox(width: 10),
-                            Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  device.name ?? 'Unknown device',
-                                  style: Theme.of(context).textTheme.titleSmall,
-                                ),
-                                Text(
-                                  device.macAddress,
-                                  style: Theme.of(context).textTheme.bodySmall,
-                                ),
-                              ],
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    device.name ?? 'Unknown device',
+                                    style: Theme.of(context).textTheme.titleSmall,
+                                  ),
+                                  Text(
+                                    device.macAddress,
+                                    style: Theme.of(context).textTheme.bodySmall,
+                                  ),
+                                  Text(
+                                    "Manufacturer data: ${_castToString(device.manufacturerData)}",
+                                    style: Theme.of(context).textTheme.bodySmall,
+                                    maxLines: 10,
+                                  ),
+                                  Text(
+                                    "Service data: ${_castToString(device.serviceData)}",
+                                    style: Theme.of(context).textTheme.bodySmall,
+                                    maxLines: 10,
+                                  ),
+                                ],
+                              ),
                             ),
                           ],
                         ),
@@ -348,10 +366,12 @@ class _HomePageState extends State<HomePage> {
                     onTap: () async {
                       setState(() => _isLoading = true);
 
+                      debugPrint("Sending payload");
                       await plugin.writeCharacteristic(
                         serviceUuid: serviceId,
                         characteristicUuid: writeCharacteristic,
                         payload: Uint8List.fromList(payload.codeUnits),
+                        withResponse: true,
                       );
 
                       setState(() => _isLoading = false);
@@ -419,5 +439,18 @@ class _HomePageState extends State<HomePage> {
         ),
       ),
     );
+  }
+
+  String _castToString(List<int>? data) {
+    if (data == null) return 'Not provided';
+    if (data.isEmpty) return 'Empty';
+    return data.map((e) => e.toRadixString(16).padLeft(2, '0')).join(' ');
+  }
+
+  String _castServicesIdentifiers(List<List<int>>? services) {
+    if (services == null) return 'Not provided';
+    if (services.isEmpty) return 'Empty';
+
+    return services.map((service) => _castToString(service)).join(' ');
   }
 }
