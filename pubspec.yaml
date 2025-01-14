@@ -33,8 +33,8 @@ flutter:
         pluginClass: LayrzBlePlugin
       ios:
         pluginClass: LayrzBlePlugin
-      # macos:
-      #   pluginClass: LayrzBlePlugin
+      macos:
+        pluginClass: LayrzBlePlugin
       # windows:
       #   pluginClass: LayrzBlePluginCApi
       # web:

@@ -322,10 +322,11 @@ packages:
   layrz_models:
     dependency: "direct main"
     description:
-      path: "../../layrz_models"
-      relative: true
-    source: path
-    version: "3.3.20"
+      name: layrz_models
+      sha256: "9ac3b1a0743b0b213b445afdf8ba7aeb6f9fa94e0886c844864c0eed29cd2c83"
+      url: "https://pub.dev"
+    source: hosted
+    version: "3.3.21"
   layrz_theme:
     dependency: "direct main"
     description:

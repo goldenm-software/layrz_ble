@@ -129,10 +129,13 @@ class _HomePageState extends State<HomePage> {
                   color: Colors.blue,
                   onTap: () async {
                     setState(() => _isLoading = true);
-                    await Permission.location.request();
-                    await Permission.bluetooth.request();
-                    await Permission.bluetoothScan.request();
-                    await Permission.bluetoothConnect.request();
+                    if (ThemedPlatform.isAndroid) await Permission.location.request();
+                    if (!ThemedPlatform.isMacOS) await Permission.bluetooth.request();
+
+                    if (ThemedPlatform.isAndroid) {
+                      await Permission.bluetoothScan.request();
+                      await Permission.bluetoothConnect.request();
+                    }
 
                     final result = await plugin.checkCapabilities();
 
@@ -180,12 +183,7 @@ class _HomePageState extends State<HomePage> {
                       onTap: () async {
                         setState(() => _isLoading = true);
                         _devices = {};
-                        _isScanning = await plugin.startScan(
-                              macAddress: "7c1e6a04-8976-ee6f-bcdc-82399fed1b68", // Layrz.HUB.EAA1
-                              // macAddress: "75911452-9BA3-C104-35A9-DAF92E377EB2", // Layrz.HUB.E96D
-                              // macAddress: "B50068BE-E907-149C-1E0F-EF74D10F6B40", // P RHT 905677
-                            ) ??
-                            false;
+                        _isScanning = await plugin.startScan() ?? false;
                         setState(() => _isLoading = false);
 
                         ThemedSnackbarMessenger.of(context).showSnackbar(ThemedSnackbar(
