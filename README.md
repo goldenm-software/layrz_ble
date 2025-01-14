@@ -56,16 +56,16 @@ final bool stopResult = await ble.stopScan();
 ```
 
 ## Working checklist per platform
-### Android (Broken)
-- [ ] Scan for BLE devices
-- [ ] Connect to BLE devices
-- [ ] Disconnect from BLE devices
-- [ ] Negotiate a new MTU
-- [ ] Get services and characteristics
-- [ ] Read from characteristics
-- [ ] Write to characteristics
-- [ ] Subscribe to characteristic notifications
-- [ ] Send a payload to a BLE device
+### Android
+- [x] Scan for BLE devices
+- [x] Connect to BLE devices
+- [x] Disconnect from BLE devices
+- [x] Negotiate a new MTU
+- [x] Get services and characteristics
+- [x] Read from characteristics
+- [x] Write to characteristics
+- [x] Subscribe to characteristic notifications
+- [x] Send a payload to a BLE device
 
 ### iOS
 - [x] Scan for BLE devices

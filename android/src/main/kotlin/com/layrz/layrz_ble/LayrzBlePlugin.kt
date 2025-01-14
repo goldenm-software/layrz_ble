@@ -62,13 +62,52 @@ class LayrzBlePlugin : FlutterPlugin, MethodCallHandler, ActivityAware,
             if (lastOperation != LastOperation.SCAN) return
 
             val device = result.device
-            val macAddress = device.address
+            val macAddress = device.address.lowercase()
 
-            if (filteredMacAddress != null && macAddress != filteredMacAddress) return
+            if (filteredMacAddress != null && macAddress != filteredMacAddress?.lowercase()) return
 
             val name = device.name ?: "Unknown"
             val rssi = result.rssi
-            val advertisementData = result.scanRecord?.bytes
+            val rec = result.scanRecord
+
+            val rawManufacturerData = rec?.manufacturerSpecificData
+            val manufacturerData = rawManufacturerData?.let { sparseArray ->
+                // Calculate total size: 2 bytes for each manufacturer ID + data size
+                val totalSize =
+                    (0 until sparseArray.size()).sumOf { 2 + (sparseArray.valueAt(it)?.size ?: 0) }
+
+                // Preallocate a ByteArray
+                ByteArray(totalSize).also { result ->
+                    var offset = 0
+                    for (i in 0 until sparseArray.size()) {
+                        val manufacturerId = sparseArray.keyAt(i) // Manufacturer ID
+                        val data = sparseArray.valueAt(i)        // Manufacturer-specific data
+
+                        // Add the 2-byte manufacturer ID in big-endian order
+                        result[offset] = (manufacturerId shr 8).toByte() // High byte
+                        result[offset + 1] = (manufacturerId and 0xFF).toByte() // Low byte
+                        offset += 2
+
+                        // Add the manufacturer-specific data
+                        if (data != null) {
+                            System.arraycopy(data, 0, result, offset, data.size)
+                            offset += data.size
+                        }
+                    }
+                }
+            } ?: byteArrayOf()
+
+            var serviceData = byteArrayOf()
+            val servicesIdentifiers = mutableListOf<ByteArray>()
+
+            val sortedServices = rec?.serviceData?.keys?.sortedBy { it.toString() }
+            for (key in sortedServices ?: listOf()) {
+                val data = rec!!.serviceData[key]
+                if (data != null) {
+                    serviceData += data
+                    Log.d(TAG, "Key: $key, Data: ${data.size}")
+                }
+            }
 
             channel.invokeMethod(
                 "onScan",
@@ -76,7 +115,9 @@ class LayrzBlePlugin : FlutterPlugin, MethodCallHandler, ActivityAware,
                     "name" to name,
                     "macAddress" to macAddress,
                     "rssi" to rssi,
-                    "advertisementData" to advertisementData
+                    "manufacturerData" to manufacturerData,
+                    "serviceData" to serviceData,
+                    "servicesIdentifiers" to servicesIdentifiers
                 )
             )
 
@@ -677,7 +718,7 @@ class LayrzBlePlugin : FlutterPlugin, MethodCallHandler, ActivityAware,
         val serviceUuid = call.argument<String>("serviceUuid")
         if (serviceUuid == null) {
             Log.d(TAG, "No serviceUuid provided")
-            result.success(false)
+            result.success(null)
             this.result = null
             return
         }
@@ -685,7 +726,7 @@ class LayrzBlePlugin : FlutterPlugin, MethodCallHandler, ActivityAware,
         val characteristicUuid = call.argument<String>("characteristicUuid")
         if (characteristicUuid == null) {
             Log.d(TAG, "No characteristicUuid provided")
-            result.success(false)
+            result.success(null)
             this.result = null
             return
         }
@@ -697,7 +738,7 @@ class LayrzBlePlugin : FlutterPlugin, MethodCallHandler, ActivityAware,
 
         if (gatt == null) {
             Log.d(TAG, "No device connected")
-            result.success(false)
+            result.success(null)
             this.result = null
             return
         }
@@ -705,7 +746,7 @@ class LayrzBlePlugin : FlutterPlugin, MethodCallHandler, ActivityAware,
         val service = gatt!!.getService(UUID.fromString(serviceUuid))
         if (service == null) {
             Log.d(TAG, "Service not found")
-            result.success(false)
+            result.success(null)
             this.result = null
             return
         }
@@ -714,14 +755,14 @@ class LayrzBlePlugin : FlutterPlugin, MethodCallHandler, ActivityAware,
             service.getCharacteristic(UUID.fromString(characteristicUuid))
         if (characteristic == null) {
             Log.d(TAG, "Characteristic not found")
-            result.success(false)
+            result.success(null)
             this.result = null
             return
         }
 
         if (characteristic.properties and BluetoothGattCharacteristic.PROPERTY_READ == 0) {
             Log.d(TAG, "Characteristic does not support read")
-            result.success(false)
+            result.success(null)
             this.result = null
             return
         }
