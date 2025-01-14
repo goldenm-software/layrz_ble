@@ -55,61 +55,19 @@ final bool startResult = await ble.startScan();
 final bool stopResult = await ble.stopScan();
 ```
 
-## Working checklist per platform
-### Android
-- [x] Scan for BLE devices
-- [x] Connect to BLE devices
-- [x] Disconnect from BLE devices
-- [x] Negotiate a new MTU
-- [x] Get services and characteristics
-- [x] Read from characteristics
-- [x] Write to characteristics
-- [x] Subscribe to characteristic notifications
-- [x] Send a payload to a BLE device
+## Features available per platform
 
-### iOS
-- [x] Scan for BLE devices
-- [x] Connect to BLE devices
-- [x] Disconnect from BLE devices
-- [x] Negotiate a new MTU
-- [x] Get services and characteristics
-- [x] Read from characteristics
-- [x] Write to characteristics
-- [x] Subscribe to characteristic notifications
-- [x] Send a payload to a BLE device
-
-### macOS
-- [x] Scan for BLE devices
-- [x] Connect to BLE devices
-- [x] Disconnect from BLE devices
-- [x] Negotiate a new MTU
-- [x] Get services and characteristics
-- [x] Read from characteristics
-- [x] Write to characteristics
-- [x] Subscribe to characteristic notifications
-- [x] Send a payload to a BLE device
-
-### Windows
-- [ ] Scan for BLE devices
-- [ ] Connect to BLE devices
-- [ ] Disconnect from BLE devices
-- [ ] Negotiate a new MTU
-- [ ] Get services and characteristics
-- [ ] Read from characteristics
-- [ ] Write to characteristics
-- [ ] Subscribe to characteristic notifications
-- [ ] Send a payload to a BLE device
-
-### Web
-- [ ] Scan for BLE devices
-- [ ] Connect to BLE devices
-- [ ] Disconnect from BLE devices
-- [ ] Negotiate a new MTU
-- [ ] Get services and characteristics
-- [ ] Read from characteristics
-- [ ] Write to characteristics
-- [ ] Subscribe to characteristic notifications
-- [ ] Send a payload to a BLE device
+| Feature | Android | iOS | macOS | Windows | Web | Linux |
+| --- | --- | --- | --- | --- | --- | --- |
+| Scan for BLE devices | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :x: | :x: | :x: |
+| Connect to BLE devices | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :x: | :x: | :x: |
+| Disconnect from BLE devices | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :x: | :x: | :x: |
+| Negotiate a new MTU | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :x: | :x: | :x: |
+| Get services and characteristics | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :x: | :x: | :x: |
+| Read from characteristics | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :x: | :x: | :x: |
+| Write to characteristics | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :x: | :x: | :x: |
+| Subscribe to characteristic notifications | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :x: | :x: | :x: |
+| Send a payload to a BLE device | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :x: | :x: | :x: |
 
 ## Permissions
 
@@ -154,7 +112,7 @@ Before getting into the platform specific permissions, always raises the questio
 <plist version="1.0">
 <dict>
   <!-- ... -->
-  <!-- Required for BLE scan -->
+  <!-- Required for BLE -->
 	<key>NSBluetoothAlwaysUsageDescription</key>
 	<string>The app need access to the Bluetooth to extract sensor values and diagnostics of the devices</string>
 	<key>NSBluetoothPeripheralUsageDescription</key>
@@ -164,19 +122,34 @@ Before getting into the platform specific permissions, always raises the questio
 </plist>
 ```
 
-### Web
-To be added.
-
 ### macOS
-To be added.
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <!-- ... -->
+  <!-- Required for BLE -->
+	<key>NSBluetoothAlwaysUsageDescription</key>
+	<string>This app uses Bluetooth to connect to your device.</string>
+  <!-- ... -->
+</dict>
+</plist>
+```
 
 ### Windows
-To be added.
+We're currently working on the support of Windows, please be patient until we finished this feature.
 
 ## FAQ
 
 ### Why on iOS and macOS I'm getting an UUID instead of a Mac Address?
 Apple privacy policies are very strict, and they don't allow developers to access the MAC Address of the devices, instead, Apple OSs return a UUID for the device. Be careful with this UUID, is not an unique identifier along the time and devices.
+
+### Why this library does not support Linux?
+Honestly, is a matter of priorities, we are focusing on the most used platforms first for the end users. If you want to help us to support Linux, feel free to open a pull request on the [Repository](https://github.com/goldenm-software/layrz_ble)!
+
+### And, why web is not supported?
+Web Bluetooth API is a very powerful tool, and we are considering to support it in the future, but for now, we are focusing on the mobile and desktop platforms (Native code). If you want to help us to support Web, feel free to open a pull request on the [Repository](https://github.com/goldenm-software/layrz_ble)!
 
 ### Why is this package called `layrz_ble`?
 All packages developed by [Layrz](https://layrz.com) are prefixed with `layrz_`, check out our other packages on [pub.dev](https://pub.dev/publishers/goldenm.com/packages).
