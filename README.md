@@ -55,50 +55,19 @@ final bool startResult = await ble.startScan();
 final bool stopResult = await ble.stopScan();
 ```
 
-## Working checklist per platform
-### Android
-- [x] Scan for BLE devices
-- [x] Connect to BLE devices
-- [x] Disconnect from BLE devices
-- [x] Negotiate a new MTU
-- [x] Get services and characteristics
-- [x] Read from characteristics
-- [x] Write to characteristics
-- [x] Subscribe to characteristic notifications
-- [x] Send a payload to a BLE device
+## Features available per platform
 
-### iOS
-- [x] Scan for BLE devices
-- [x] Connect to BLE devices
-- [x] Disconnect from BLE devices
-- [x] Negotiate a new MTU
-- [x] Get services and characteristics
-- [x] Read from characteristics
-- [x] Write to characteristics
-- [x] Subscribe to characteristic notifications
-- [x] Send a payload to a BLE device
-
-### macOS
-- [x] Scan for BLE devices
-- [x] Connect to BLE devices
-- [x] Disconnect from BLE devices
-- [x] Negotiate a new MTU
-- [x] Get services and characteristics
-- [x] Read from characteristics
-- [x] Write to characteristics
-- [x] Subscribe to characteristic notifications
-- [x] Send a payload to a BLE device
-
-### Windows
-- [ ] Scan for BLE devices
-- [ ] Connect to BLE devices
-- [ ] Disconnect from BLE devices
-- [ ] Negotiate a new MTU
-- [ ] Get services and characteristics
-- [ ] Read from characteristics
-- [ ] Write to characteristics
-- [ ] Subscribe to characteristic notifications
-- [ ] Send a payload to a BLE device
+| Feature | Android | iOS | macOS | Windows | Web | Linux |
+| --- | --- | --- | --- | --- | --- | --- |
+| Scan for BLE devices | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :x: | :x: | :x: |
+| Connect to BLE devices | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :x: | :x: | :x: |
+| Disconnect from BLE devices | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :x: | :x: | :x: |
+| Negotiate a new MTU | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :x: | :x: | :x: |
+| Get services and characteristics | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :x: | :x: | :x: |
+| Read from characteristics | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :x: | :x: | :x: |
+| Write to characteristics | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :x: | :x: | :x: |
+| Subscribe to characteristic notifications | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :x: | :x: | :x: |
+| Send a payload to a BLE device | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :x: | :x: | :x: |
 
 ## Permissions
 
@@ -169,7 +138,7 @@ Before getting into the platform specific permissions, always raises the questio
 ```
 
 ### Windows
-To be added.
+We're currently working on the support of Windows, please be patient until we finished this feature.
 
 ## FAQ
 
