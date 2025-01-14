@@ -100,17 +100,6 @@ final bool stopResult = await ble.stopScan();
 - [ ] Subscribe to characteristic notifications
 - [ ] Send a payload to a BLE device
 
-### Web
-- [ ] Scan for BLE devices
-- [ ] Connect to BLE devices
-- [ ] Disconnect from BLE devices
-- [ ] Negotiate a new MTU
-- [ ] Get services and characteristics
-- [ ] Read from characteristics
-- [ ] Write to characteristics
-- [ ] Subscribe to characteristic notifications
-- [ ] Send a payload to a BLE device
-
 ## Permissions
 
 Before getting into the platform specific permissions, always raises the question "How can I handle the permissions on my Flutter app?". Well, you can use the [`permission_handler`](https://pub.dev/packages/permission_handler) package to handle the permissions on your Flutter app, or you can handle them manually with native code, the choice is yours.
@@ -164,9 +153,6 @@ Before getting into the platform specific permissions, always raises the questio
 </plist>
 ```
 
-### Web
-To be added.
-
 ### macOS
 To be added.
 
@@ -177,6 +163,12 @@ To be added.
 
 ### Why on iOS and macOS I'm getting an UUID instead of a Mac Address?
 Apple privacy policies are very strict, and they don't allow developers to access the MAC Address of the devices, instead, Apple OSs return a UUID for the device. Be careful with this UUID, is not an unique identifier along the time and devices.
+
+### Why this library does not support Linux?
+Honestly, is a matter of priorities, we are focusing on the most used platforms first for the end users. If you want to help us to support Linux, feel free to open a pull request on the [Repository](https://github.com/goldenm-software/layrz_ble)!
+
+### And, why web is not supported?
+Web Bluetooth API is a very powerful tool, and we are considering to support it in the future, but for now, we are focusing on the mobile and desktop platforms (Native code). If you want to help us to support Web, feel free to open a pull request on the [Repository](https://github.com/goldenm-software/layrz_ble)!
 
 ### Why is this package called `layrz_ble`?
 All packages developed by [Layrz](https://layrz.com) are prefixed with `layrz_`, check out our other packages on [pub.dev](https://pub.dev/publishers/goldenm.com/packages).
