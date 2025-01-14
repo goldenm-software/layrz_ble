@@ -18,7 +18,8 @@ class LayrzBleNative extends LayrzBlePlatform {
       switch (call.method) {
         case 'onScan':
           try {
-            final device = BleDevice.fromJson(Map<String, dynamic>.from(call.arguments));
+            log("Raw device: ${call.arguments}");
+            final device = BleDevice.fromJson(Map.from(call.arguments));
             _scanController.add(device);
           } catch (e) {
             log('Error parsing BleDevice: $e');
@@ -78,6 +79,7 @@ class LayrzBleNative extends LayrzBlePlatform {
 
   @override
   Future<BleCapabilities> checkCapabilities() async {
+    debugPrint("Calling");
     final result = await methodChannel.invokeMethod<Map>('checkCapabilities');
     if (result == null) {
       log('Error checking BleCapabilities from native side');
@@ -155,12 +157,14 @@ class LayrzBleNative extends LayrzBlePlatform {
     required String characteristicUuid,
     required Uint8List payload,
     Duration timeout = const Duration(seconds: 30),
+    required bool withResponse,
   }) async {
     final result = await methodChannel.invokeMethod<bool>('writeCharacteristic', <String, dynamic>{
       'serviceUuid': serviceUuid,
       'characteristicUuid': characteristicUuid,
       'payload': payload,
       'timeout': timeout.inSeconds,
+      'withResponse': withResponse,
     });
 
     if (result == null) {

@@ -60,7 +60,7 @@ final bool stopResult = await ble.stopScan();
 - [x] Scan for BLE devices
 - [x] Connect to BLE devices
 - [x] Disconnect from BLE devices
-- [X] Negotiate a new MTU
+- [x] Negotiate a new MTU
 - [x] Get services and characteristics
 - [x] Read from characteristics
 - [x] Write to characteristics
@@ -68,28 +68,28 @@ final bool stopResult = await ble.stopScan();
 - [x] Send a payload to a BLE device
 
 ### iOS
-- [ ] Scan for BLE devices
-- [ ] Connect to BLE devices
-- [ ] Disconnect from BLE devices
-- [ ] Negotiate a new MTU
-- [ ] Get services and characteristics
-- [ ] Read from characteristics
-- [ ] Write to characteristics
-- [ ] Subscribe to characteristic notifications
-- [ ] Send a payload to a BLE device
-
-### Windows
-- [ ] Scan for BLE devices
-- [ ] Connect to BLE devices
-- [ ] Disconnect from BLE devices
-- [ ] Negotiate a new MTU
-- [ ] Get services and characteristics
-- [ ] Read from characteristics
-- [ ] Write to characteristics
-- [ ] Subscribe to characteristic notifications
-- [ ] Send a payload to a BLE device
+- [x] Scan for BLE devices
+- [x] Connect to BLE devices
+- [x] Disconnect from BLE devices
+- [x] Negotiate a new MTU
+- [x] Get services and characteristics
+- [x] Read from characteristics
+- [x] Write to characteristics
+- [x] Subscribe to characteristic notifications
+- [x] Send a payload to a BLE device
 
 ### macOS
+- [x] Scan for BLE devices
+- [x] Connect to BLE devices
+- [x] Disconnect from BLE devices
+- [x] Negotiate a new MTU
+- [x] Get services and characteristics
+- [x] Read from characteristics
+- [x] Write to characteristics
+- [x] Subscribe to characteristic notifications
+- [x] Send a payload to a BLE device
+
+### Windows
 - [ ] Scan for BLE devices
 - [ ] Connect to BLE devices
 - [ ] Disconnect from BLE devices
@@ -148,7 +148,21 @@ Before getting into the platform specific permissions, always raises the questio
 ```
 
 ### iOS
-To be added.
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <!-- ... -->
+  <!-- Required for BLE scan -->
+	<key>NSBluetoothAlwaysUsageDescription</key>
+	<string>The app need access to the Bluetooth to extract sensor values and diagnostics of the devices</string>
+	<key>NSBluetoothPeripheralUsageDescription</key>
+	<string>The app need access to the Bluetooth to do a remote configuration of the devices compatible with</string>
+  <!-- ... -->
+</dict>
+</plist>
+```
 
 ### Web
 To be added.
@@ -160,6 +174,9 @@ To be added.
 To be added.
 
 ## FAQ
+
+### Why on iOS and macOS I'm getting an UUID instead of a Mac Address?
+Apple privacy policies are very strict, and they don't allow developers to access the MAC Address of the devices, instead, Apple OSs return a UUID for the device. Be careful with this UUID, is not an unique identifier along the time and devices.
 
 ### Why is this package called `layrz_ble`?
 All packages developed by [Layrz](https://layrz.com) are prefixed with `layrz_`, check out our other packages on [pub.dev](https://pub.dev/publishers/goldenm.com/packages).

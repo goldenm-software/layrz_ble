@@ -45,5 +45,15 @@
 	<true/>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
+	<key>NSBluetoothAlwaysUsageDescription</key>
+	<string>The app need access to the Bluetooth to extract sensor values and diagnostics of the devices</string>
+	<key>NSBluetoothPeripheralUsageDescription</key>
+	<string>The app need access to the Bluetooth to do a remote configuration of the devices compatible with</string>
+	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+	<string>The app needs access to location when you use the app to set the static coordinates of the devices in setup mode.</string>
+	<key>NSLocationUsageDescription</key>
+	<string>The app needs access to location to know your geograhpical location and to set the static coordinates of the devices in setup mode.</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>The app needs access to location when you use the app to set the static coordinates of the devices in setup mode.</string>
 </dict>
 </plist>
