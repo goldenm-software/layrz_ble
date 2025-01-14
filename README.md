@@ -143,7 +143,7 @@ Before getting into the platform specific permissions, always raises the questio
 <plist version="1.0">
 <dict>
   <!-- ... -->
-  <!-- Required for BLE scan -->
+  <!-- Required for BLE -->
 	<key>NSBluetoothAlwaysUsageDescription</key>
 	<string>The app need access to the Bluetooth to extract sensor values and diagnostics of the devices</string>
 	<key>NSBluetoothPeripheralUsageDescription</key>
@@ -154,7 +154,19 @@ Before getting into the platform specific permissions, always raises the questio
 ```
 
 ### macOS
-To be added.
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <!-- ... -->
+  <!-- Required for BLE -->
+	<key>NSBluetoothAlwaysUsageDescription</key>
+	<string>This app uses Bluetooth to connect to your device.</string>
+  <!-- ... -->
+</dict>
+</plist>
+```
 
 ### Windows
 To be added.
