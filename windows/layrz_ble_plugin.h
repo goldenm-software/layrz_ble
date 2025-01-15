@@ -2,82 +2,54 @@
 #ifndef FLUTTER_PLUGIN_LAYRZ_BLE_PLUGIN_H_
 #define FLUTTER_PLUGIN_LAYRZ_BLE_PLUGIN_H_
 
-#include <VersionHelpers.h>
-#include <windows.h>
-
 #include <flutter/method_channel.h>
 #include <flutter/plugin_registrar_windows.h>
 #include <flutter/standard_method_codec.h>
 
+#include <iostream>
+#include <windows.h>
+#include <winrt/Windows.Foundation.h>
+#include <winrt/Windows.Foundation.Collections.h>
+#include <winrt/Windows.Devices.Radios.h>
+
 #include <algorithm>
 #include <memory>
 #include <sstream>
+#include <codecvt>
+
+
+using namespace winrt;
+using namespace Windows::Devices::Radios;
 
 namespace layrz_ble
 {
 
 class LayrzBlePlugin : public flutter::Plugin
 {
-public:
-  static std::unique_ptr<flutter::MethodChannel<flutter::EncodableValue> >
-      channel;
-  std::unique_ptr<flutter::MethodResult<flutter::EncodableValue> > lastResult;
-  std::unique_ptr<CBCentralManager> centralManager;
-  std::vector<std::unique_ptr<CBPeripheral> > discoveredPeripherals;
-  bool isScanning = false;
-  std::map<std::string, std::unique_ptr<CBPeripheral> > devices;
-  std::unique_ptr<std::string> filteredUuid;
-  std::unique_ptr<CBPeripheral> connectedPeripheral;
-  std::map<CBUUID, std::vector<std::unique_ptr<CBCharacteristic> > >
-      discoveredServices;
-  std::unique_ptr<LastOperation> lastOp;
+  public:
+    static void RegisterWithRegistrar(flutter::PluginRegistrarWindows *registrar);
 
-public:
-  static void
-  RegisterWithRegistrar (flutter::PluginRegistrarWindows *registrar);
+    LayrzBlePlugin();
+    virtual ~LayrzBlePlugin();
 
-  LayrzBlePlugin ();
-  virtual ~LayrzBlePlugin ();
+    LayrzBlePlugin(const LayrzBlePlugin &) = delete;
+    LayrzBlePlugin &operator= (const LayrzBlePlugin &) = delete;
 
-  LayrzBlePlugin (const LayrzBlePlugin &) = delete;
-  LayrzBlePlugin &operator= (const LayrzBlePlugin &) = delete;
-  void HandleMethodCall (
+    void HandleMethodCall(
       const flutter::MethodCall<flutter::EncodableValue> &method_call,
-      std::unique_ptr<flutter::MethodResult<flutter::EncodableValue> > result);
-  void Logger (const std::string &message);
+      std::unique_ptr<flutter::MethodResult<flutter::EncodableValue>> result
+    );
+    static void Log(const std::string &message);
+
+    static std::string LayrzBlePlugin::WStringToString(const std::wstring &wstr);
+    static std::string LayrzBlePlugin::HStringToString(const winrt::hstring& hstr);
+
+    Radio bluetoothRadio{nullptr};
+
+    void GetRadios();
 
 private:
-  /// @brief Check if the current system supports BLE
-  /// @param result The result object to send the response to
-  void checkCapabilities (
-      std::unique_ptr<flutter::MethodResult<flutter::EncodableValue> > result);
-  void startScan (
-      const flutter::MethodCall<flutter::EncodableValue> &method_call,
-      std::unique_ptr<flutter::MethodResult<flutter::EncodableValue> > result);
-  void stopScan (
-      const flutter::MethodCall<flutter::EncodableValue> &method_call,
-      std::unique_ptr<flutter::MethodResult<flutter::EncodableValue> > result);
-
-  void connect (
-      const flutter::MethodCall<flutter::EncodableValue> &method_call,
-      std::unique_ptr<flutter::MethodResult<flutter::EncodableValue> > result);
-
-  void disconnect (
-      const flutter::MethodCall<flutter::EncodableValue> &method_call,
-      std::unique_ptr<flutter::MethodResult<flutter::EncodableValue> > result);
-
-  void discoverServices (
-      const flutter::MethodCall<flutter::EncodableValue> &method_call,
-      std::unique_ptr<flutter::MethodResult<flutter::EncodableValue> > result);
-
-  void setMtu (
-      const flutter::MethodCall<flutter::EncodableValue> &method_call,
-      std::unique_ptr<flutter::MethodResult<flutter::EncodableValue> > result);
-
-  void writeCharacteristic (
-      const flutter::MethodCall<flutter::EncodableValue> &method_call,
-      std::unique_ptr<flutter::MethodResult<flutter::EncodableValue> > result);
-
+  void checkCapabilities(std::unique_ptr<flutter::MethodResult<flutter::EncodableValue>> result);
 }; // class LayrzBlePlugin
 
 } // namespace layrz_ble
