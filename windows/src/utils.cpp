@@ -3,10 +3,16 @@
 #define MAC_ADDRESS_STR_LENGTH (size_t)17
 
 namespace layrz_ble {
+
+  /// @brief Log a message to the console
+  /// @param message 
   void Log(const std::string &message) {
     std::cout << "LayrzBlePlugin/Windows: " << message << std::endl;
   } // Log
 
+  /// @brief Convert a wide string to a UTF-8 string
+  /// @param wstr 
+  /// @return std::string
   std::string WStringToString(const std::wstring& wstr) {
     if (wstr.empty()) {
         return {};
@@ -17,6 +23,9 @@ namespace layrz_ble {
     return str;
   } // WStringToString
 
+  /// @brief Convert an HString to a UTF-8 string
+  /// @param hstr
+  /// @return std::string
   std::string HStringToString(const winrt::hstring& hstr) {
     std::wstring wstr = hstr.c_str();  // Convert to std::wstring
     if (wstr.empty()) return {};
@@ -28,18 +37,26 @@ namespace layrz_ble {
     return str;
   } // HStringToString
 
+  /// @brief Format a Bluetooth MAC address
+  /// @param mac_address
+  /// @return std::string
   std::string formatBluetoothAddress(uint64_t mac_address) {
     uint8_t *mac_ptr = (uint8_t *)&mac_address;
     char mac_str[MAC_ADDRESS_STR_LENGTH + 1] = {0};
-    snprintf(mac_str, MAC_ADDRESS_STR_LENGTH + 1, "%02x:%02x:%02x:%02x:%02x:%02x", mac_ptr[5], mac_ptr[4], mac_ptr[3],
-              mac_ptr[2], mac_ptr[1], mac_ptr[0]);
+    snprintf(mac_str, MAC_ADDRESS_STR_LENGTH + 1, "%02x:%02x:%02x:%02x:%02x:%02x", mac_ptr[5], mac_ptr[4], mac_ptr[3], mac_ptr[2], mac_ptr[1], mac_ptr[0]);
     return std::string(mac_str);
   } // formatBluetoothAddress
 
+  /// @brief Convert a string to lowercase
+  /// @param str
+  /// @return std::string
   std::string toLowercase(const std::string &str) {
     std::string lower = str;
-    std::transform(lower.begin(), lower.end(), lower.begin(),
-                   [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
+    std::transform(
+      lower.begin(), 
+      lower.end(), 
+      lower.begin(),
+      [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
     return lower;
   } // toLowercase
 }

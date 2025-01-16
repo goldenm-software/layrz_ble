@@ -1,3 +1,5 @@
+#pragma once
+
 #ifndef FLUTTER_PLUGIN_LAYRZ_BLE_PLUGIN_H_
 #define FLUTTER_PLUGIN_LAYRZ_BLE_PLUGIN_H_
 
@@ -25,7 +27,6 @@
 
 namespace layrz_ble
 {
-
   using namespace winrt;
   using namespace winrt::Windows::Foundation;
   using namespace winrt::Windows::Foundation::Collections;
@@ -75,7 +76,6 @@ namespace layrz_ble
         const flutter::MethodCall<flutter::EncodableValue> &method_call,
         std::unique_ptr<flutter::MethodResult<flutter::EncodableValue>> result
       );
-
       void setupWatcher();
       void handleScanResult(DeviceInformation device);
       void handleBleScanResult(BleScanResult& result);
