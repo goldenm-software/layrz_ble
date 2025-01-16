@@ -59,7 +59,7 @@ final bool stopResult = await ble.stopScan();
 
 | Feature | Android | iOS | macOS | Windows | Web | Linux |
 | --- | --- | --- | --- | --- | --- | --- |
-| Scan for BLE devices | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :x: | :x: | :x: |
+| Scan for BLE devices | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :x: | :x: |
 | Connect to BLE devices | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :x: | :x: | :x: |
 | Disconnect from BLE devices | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :x: | :x: | :x: |
 | Negotiate a new MTU | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :x: | :x: | :x: |

@@ -18,7 +18,6 @@ class LayrzBleNative extends LayrzBlePlatform {
       switch (call.method) {
         case 'onScan':
           try {
-            log("Raw device: ${call.arguments}");
             final device = BleDevice.fromJson(Map.from(call.arguments));
             _scanController.add(device);
           } catch (e) {

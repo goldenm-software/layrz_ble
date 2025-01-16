@@ -35,6 +35,8 @@ list(APPEND PLUGIN_SOURCES
   "src/thread_handler.hpp"
   "src/utils.cpp"
   "src/utils.h"
+  "src/scan_result.cpp"
+  "src/scan_result.h"
   "src/layrz_ble_plugin.cpp"
   "src/layrz_ble_plugin.h"
 )

@@ -19,6 +19,7 @@
 #include <memory>
 
 #include "utils.h"
+#include "scan_result.h"
 #include "thread_handler.hpp"
 
 
@@ -26,7 +27,12 @@ namespace layrz_ble
 {
 
   using namespace winrt;
-  using namespace Windows::Devices::Radios;
+  using namespace winrt::Windows::Foundation;
+  using namespace winrt::Windows::Foundation::Collections;
+  using namespace winrt::Windows::Devices::Radios;
+  using namespace winrt::Windows::Devices::Enumeration;
+  using namespace winrt::Windows::Devices::Bluetooth::Advertisement;
+
   class LayrzBlePlugin : public flutter::Plugin
   {
     public:
@@ -45,8 +51,14 @@ namespace layrz_ble
         std::unique_ptr<flutter::MethodResult<flutter::EncodableValue>> result
       );
 
+      static std::unique_ptr<flutter::MethodChannel<flutter::EncodableValue>> methodChannel;
+      static std::string filteredDeviceId;
 
-      Radio bluetoothRadio{nullptr};
+      Radio btRadio{nullptr};
+      DeviceWatcher btScanner{nullptr};
+      BluetoothLEAdvertisementWatcher leScanner{nullptr};
+      std::unordered_map<std::string, DeviceInformation> deviceWatcherDevices{};
+      std::unordered_map<std::string, BleScanResult> visibleDevices{};
 
       winrt::fire_and_forget GetRadios();
 
@@ -55,6 +67,18 @@ namespace layrz_ble
 
     private:
       void checkCapabilities(std::unique_ptr<flutter::MethodResult<flutter::EncodableValue>> result);
+      void startScan(
+        const flutter::MethodCall<flutter::EncodableValue> &method_call,
+        std::unique_ptr<flutter::MethodResult<flutter::EncodableValue>> result
+      );
+      void stopScan(
+        const flutter::MethodCall<flutter::EncodableValue> &method_call,
+        std::unique_ptr<flutter::MethodResult<flutter::EncodableValue>> result
+      );
+
+      void setupWatcher();
+      void handleScanResult(DeviceInformation device);
+      void handleBleScanResult(BleScanResult& result);
   }; // class LayrzBlePlugin
 } // namespace layrz_ble
 

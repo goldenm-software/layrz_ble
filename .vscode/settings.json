@@ -14,6 +14,16 @@
   "dart.lineLength": 120,
   "dart.flutterSdkPath": ".fvm/versions/3.27.2",
   "files.associations": {
+    "*.html": "html",
+    "*.py": "python",
+    "*.vue": "vue",
+    "*.yml": "yaml",
+    "*.php": "php",
+    "*.json": "json",
+    "*.liquid": "liquid",
+    "*.dart": "dart",
+    ".env*": "dotenv",
+    "*.confiot": "json",
     "algorithm": "cpp",
     "any": "cpp",
     "atomic": "cpp",
@@ -83,6 +93,13 @@
     "array": "cpp",
     "coroutine": "cpp",
     "stop_token": "cpp",
-    "thread": "cpp"
+    "thread": "cpp",
+    "codecvt": "cpp",
+    "condition_variable": "cpp",
+    "deque": "cpp",
+    "fstream": "cpp",
+    "future": "cpp",
+    "mutex": "cpp",
+    "unordered_set": "cpp"
   }
 }
