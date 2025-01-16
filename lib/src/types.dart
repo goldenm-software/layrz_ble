@@ -5,12 +5,27 @@ class BleCapabilities {
   ///
   /// On Android:
   /// `<uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />`
+  ///
+  /// On iOS, macOS, windows, web or linux, this will always return
+  /// the same value as [bluetoothPermission]
   final bool locationPermission;
 
   /// [bluetoothPermission] is true if the app has bluetooth permission.
   ///
   /// On Android:
   /// `<uses-permission android:name="android.permission.BLUETOOTH" />`
+  ///
+  /// On iOS and macOS:
+  /// You need to add the `NSBluetoothAlwaysUsageDescription` key to your Info.plist file.
+  ///
+  /// On web:
+  /// Will return true if the browser supports Web Bluetooth.
+  ///
+  /// On windows:
+  /// If the library can find a Bluetooth adapter (radio) on the system.
+  ///
+  /// On linux:
+  /// If the library can find a Bluetooth adapter and `bluez` installed.
   final bool bluetoothPermission;
 
   /// [bluetoothAdminOrScanPermission] is true if the app has bluetooth admin or scan permission.
@@ -21,6 +36,9 @@ class BleCapabilities {
   ///
   /// On API level 30 or below, the app needs to have admin permission.
   /// `<uses-permission android:name="android.permission.BLUETOOTH_ADMIN" />`
+  ///
+  /// On iOS, macOS, windows, web or linux, this will always return the same value
+  /// as [bluetoothPermission]
   final bool bluetoothAdminOrScanPermission;
 
   /// [bluetoothConnectPermission] is true if the app has bluetooth connect permission.
@@ -28,6 +46,9 @@ class BleCapabilities {
   /// On Android (API level 31 or above):
   /// `<uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />`
   /// On Android (API level 30 or below) will always return true.
+  ///
+  /// On iOS, macOS, windows, web or linux, this will always return the same value
+  /// as [bluetoothPermission]
   final bool bluetoothConnectPermission;
 
   /// [BleCapabilities] defines the capabilities of the device or browser.

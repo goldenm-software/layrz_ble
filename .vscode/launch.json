@@ -6,6 +6,13 @@
       "request": "launch",
       "cwd": "example",
       "type": "dart",
+    },
+    {
+      "name": "VS Code Connected Device (DEMO)",
+      "request": "launch",
+      "cwd": "example",
+      "type": "dart",
+      "program": "lib/main.demo.dart"
     }
   ]
 }

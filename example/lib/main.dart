@@ -130,7 +130,7 @@ class _HomePageState extends State<HomePage> {
                   onTap: () async {
                     setState(() => _isLoading = true);
                     if (ThemedPlatform.isAndroid) await Permission.location.request();
-                    if (!ThemedPlatform.isMacOS) await Permission.bluetooth.request();
+                    if (!ThemedPlatform.isMacOS && !ThemedPlatform.isWeb) await Permission.bluetooth.request();
 
                     if (ThemedPlatform.isAndroid) {
                       await Permission.bluetoothScan.request();

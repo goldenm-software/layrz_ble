@@ -29,9 +29,15 @@ class LayrzBle {
   Future<bool?> startScan({
     /// [macAddress] is the MAC address or UUID of the device to scan.
     /// If this value is not provided, the scan will search for all devices.
+    ///
+    /// On Web platform, this property is ignored.
     String? macAddress,
+
+    /// [servicesUuids] is a list of service UUIDs to filter the services to be discovered.
+    /// This property is only working on Web, other platforms will be ignored.
+    List<String>? servicesUuids,
   }) =>
-      LayrzBlePlatform.instance.startScan(macAddress: macAddress);
+      LayrzBlePlatform.instance.startScan(macAddress: macAddress, servicesUuids: servicesUuids);
 
   /// [stopScan] stops scanning for BLE devices.
   ///

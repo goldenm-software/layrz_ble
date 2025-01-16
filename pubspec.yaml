@@ -18,6 +18,7 @@ dependencies:
   plugin_platform_interface: ^2.0.2
   collection: ^1.18.0
   layrz_models: ^3.3.21
+  flutter_web_bluetooth: ^1.0.0
 
 dev_dependencies:
   flutter_test:
@@ -37,3 +38,6 @@ flutter:
         pluginClass: LayrzBlePlugin
       windows:
         pluginClass: LayrzBlePluginCApi
+      web:
+        pluginClass: LayrzBlePluginWeb
+        fileName: platforms/web.dart
