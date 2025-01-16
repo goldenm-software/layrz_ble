@@ -19,6 +19,7 @@ dependencies:
   collection: ^1.18.0
   layrz_models: ^3.3.21
   flutter_web_bluetooth: ^1.0.0
+  bluez: ^0.8.2
 
 dev_dependencies:
   flutter_test:
@@ -41,3 +42,6 @@ flutter:
       web:
         pluginClass: LayrzBlePluginWeb
         fileName: platforms/web.dart
+      linux:
+        dartPluginClass: LayrzBlePluginLinux
+        fileName: platforms/linux.dart

@@ -11,6 +11,8 @@ export 'src/method_channel.dart';
 export 'src/types.dart';
 export 'package:layrz_models/layrz_models.dart' show BleDevice, BleService, BleCharacteristic, BleProperty;
 
+export 'platforms/stub.dart' if (dart.library.io) 'platforms/linux.dart';
+
 class LayrzBle {
   /// [onScan] is a stream of BLE devices detected during a scan.
   Stream<BleDevice> get onScan => LayrzBlePlatform.instance.onScan;

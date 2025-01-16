@@ -64,7 +64,7 @@ final bool stopResult = await ble.stopScan();
 
 | Feature | Android | iOS | macOS | Windows | Web | Linux |
 | --- | --- | --- | --- | --- | --- | --- |
-| Scan for BLE devices | ✅ | ✅ | ✅ | ✅ | ✅ | ❌ |
+| Scan for BLE devices | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | Connect to BLE devices | ✅ | ✅ | ✅ | ❌ | ✅ | ❌ |
 | Disconnect from BLE devices | ✅ | ✅ | ✅ | ❌ | ✅ | ❌ |
 | Negotiate a new MTU | ✅ | ✅ | ✅ | ❌ | ❌ | ❌ |
@@ -74,7 +74,7 @@ final bool stopResult = await ble.stopScan();
 | Subscribe to characteristic notifications | ✅ | ✅ | ✅ | ❌ | ✅ | ❌ |
 | Send a payload to a BLE device | ✅ | ✅ | ✅ | ❌ | ✅ | ❌ |
 | --- | --- | --- | --- | --- | --- | --- |
-| Language used | Kotlin | Swift | Swift | C++ | Dart | TBD |
+| Language used | Kotlin | Swift | Swift | C++ | Dart | Dart |
 ## Permissions
 
 Before getting into the platform specific permissions, always raises the question "How can I handle the permissions on my Flutter app?". Well, you can use the [`permission_handler`](https://pub.dev/packages/permission_handler) package to handle the permissions on your Flutter app, or you can handle them manually with native code, the choice is yours.
@@ -168,9 +168,6 @@ This is a limitation of the Web Bluetooth API, you need to supply the services a
 
 ### And, why on Web I cannot negotiate the MTU?
 This functionality on Web Bluetooth API is currently not available, we're working on a workaround to provide this feature.
-
-### Why this library does not support Linux?
-Honestly, is a matter of priorities, we are focusing on the most used platforms first for the end users. If you want to help us to support Linux, feel free to open a pull request on the [Repository](https://github.com/goldenm-software/layrz_ble)!
 
 ### Why is this package called `layrz_ble`?
 All packages developed by [Layrz](https://layrz.com) are prefixed with `layrz_`, check out our other packages on [pub.dev](https://pub.dev/publishers/goldenm.com/packages).
