@@ -65,17 +65,18 @@ final bool stopResult = await ble.stopScan();
 | Feature | Android | iOS | macOS | Windows | Web | Linux |
 | --- | --- | --- | --- | --- | --- | --- |
 | Scan for BLE devices | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
-| Connect to BLE devices | ✅ | ✅ | ✅ | ❌ | ✅ | ❌ |
-| Disconnect from BLE devices | ✅ | ✅ | ✅ | ❌ | ✅ | ❌ |
+| Connect to BLE devices | ✅ | ✅ | ✅ | ❌ | ✅ | ✅ |
+| Disconnect from BLE devices | ✅ | ✅ | ✅ | ❌ | ✅ | ✅ |
 | Negotiate a new MTU | ✅ | ✅ | ✅ | ❌ | ❌ | ❌ |
-| Get services and characteristics | ✅ | ✅ | ✅ | ❌ | ✅ | ❌ |
-| Read from characteristics | ✅ | ✅ | ✅ | ❌ | ✅ | ❌ |
-| Write to characteristics | ✅ | ✅ | ✅ | ❌ | ✅ | ❌ |
-| Subscribe to characteristic notifications | ✅ | ✅ | ✅ | ❌ | ✅ | ❌ |
-| Send a payload to a BLE device | ✅ | ✅ | ✅ | ❌ | ✅ | ❌ |
+| Get services and characteristics | ✅ | ✅ | ✅ | ❌ | ✅ | ✅ |
+| Read from characteristics | ✅ | ✅ | ✅ | ❌ | ✅ | ✅ |
+| Write to characteristics | ✅ | ✅ | ✅ | ❌ | ✅ | ✅ |
+| Subscribe to characteristic notifications | ✅ | ✅ | ✅ | ❌ | ✅ | ✅ |
+| Send a payload to a BLE device | ✅ | ✅ | ✅ | ❌ | ✅ | ✅ |
 | --- | --- | --- | --- | --- | --- | --- |
 | Language used | Kotlin | Swift | Swift | C++ | Dart | Dart |
-## Permissions
+
+## Permissions and requirements
 
 Before getting into the platform specific permissions, always raises the question "How can I handle the permissions on my Flutter app?". Well, you can use the [`permission_handler`](https://pub.dev/packages/permission_handler) package to handle the permissions on your Flutter app, or you can handle them manually with native code, the choice is yours.
 
@@ -147,10 +148,10 @@ Before getting into the platform specific permissions, always raises the questio
 We're currently working on the support of Windows, please be patient until we finished this feature.
 
 ### Web
-Nothing to do here, the Web Bluetooth API handles the permissions for you.
+Nothing to do here :)
 
 ### Linux
-We're currently working on the support of Linux, please be patient until we finished this feature.
+Your platform should have `bluez` stack installed to work, otherwise the lib will not work.
 
 ## Roadmap
 ⬜ Permission support for each platform
@@ -166,8 +167,10 @@ Web Bluetooth API does not allow developers to access the MAC Address of the dev
 ### In Web, why I need to supply the services and characteristics?
 This is a limitation of the Web Bluetooth API, you need to supply the services and characteristics to interact with the device. This is a security measure to prevent malicious websites to interact with your devices.
 
-### And, why on Web I cannot negotiate the MTU?
-This functionality on Web Bluetooth API is currently not available, we're working on a workaround to provide this feature.
+### And, why on Web and Linux, I cannot negotiate the MTU?
+This functionality on Web Bluetooth API is currently not available, similar case with Linux, the wrapper implemented [bluez package](https://pub.dev/packages/bluez) does not support this feature.
+
+Disclaimer: On Linux, if you call `setMtu`, the response is the allowed MTU from the device and the system, not the negotiated MTU.
 
 ### Why is this package called `layrz_ble`?
 All packages developed by [Layrz](https://layrz.com) are prefixed with `layrz_`, check out our other packages on [pub.dev](https://pub.dev/publishers/goldenm.com/packages).
