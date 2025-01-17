@@ -68,7 +68,7 @@ class LayrzBleNative extends LayrzBlePlatform {
   Stream<BleCharacteristicNotification> get onNotify => _notifyController.stream;
 
   @override
-  Future<bool?> startScan({String? macAddress}) => methodChannel.invokeMethod<bool>(
+  Future<bool?> startScan({String? macAddress, List<String>? servicesUuids}) => methodChannel.invokeMethod<bool>(
         'startScan',
         {'macAddress': macAddress},
       );

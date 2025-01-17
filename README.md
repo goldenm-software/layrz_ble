@@ -10,6 +10,9 @@ A simple way to interact with BLE devices in Flutter.
 ## Motivation
 Our goal is to provide a simple and easy-to-use library for Flutter developers to interact with BLE devices, and support as many platforms as possible.
 
+## Why should I use this library?
+Other libraries on the market are either too complex to use, or does not fully support functionalities like reading service data from the advertisement, or crop the manufacturer data, our objective is provide a fully functional library, with all of the ideal capabilities of a BLE library for Flutter.
+
 ## Usage
 To use this plugin, add `layrz_ble` as a [dependency in your pubspec.yaml file](https://flutter.dev/docs/development/packages-and-plugins/using-packages).
 
@@ -57,19 +60,23 @@ final bool stopResult = await ble.stopScan();
 
 ## Features available per platform
 
+✅ - Supported | ❌ - Not available
+
 | Feature | Android | iOS | macOS | Windows | Web | Linux |
 | --- | --- | --- | --- | --- | --- | --- |
-| Scan for BLE devices | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :x: | :x: |
-| Connect to BLE devices | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :x: | :x: | :x: |
-| Disconnect from BLE devices | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :x: | :x: | :x: |
-| Negotiate a new MTU | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :x: | :x: | :x: |
-| Get services and characteristics | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :x: | :x: | :x: |
-| Read from characteristics | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :x: | :x: | :x: |
-| Write to characteristics | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :x: | :x: | :x: |
-| Subscribe to characteristic notifications | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :x: | :x: | :x: |
-| Send a payload to a BLE device | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :x: | :x: | :x: |
+| Scan for BLE devices | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| Connect to BLE devices | ✅ | ✅ | ✅ | ❌ | ✅ | ✅ |
+| Disconnect from BLE devices | ✅ | ✅ | ✅ | ❌ | ✅ | ✅ |
+| Negotiate a new MTU | ✅ | ✅ | ✅ | ❌ | ❌ | ❌ |
+| Get services and characteristics | ✅ | ✅ | ✅ | ❌ | ✅ | ✅ |
+| Read from characteristics | ✅ | ✅ | ✅ | ❌ | ✅ | ✅ |
+| Write to characteristics | ✅ | ✅ | ✅ | ❌ | ✅ | ✅ |
+| Subscribe to characteristic notifications | ✅ | ✅ | ✅ | ❌ | ✅ | ✅ |
+| Send a payload to a BLE device | ✅ | ✅ | ✅ | ❌ | ✅ | ✅ |
+| --- | --- | --- | --- | --- | --- | --- |
+| Language used | Kotlin | Swift | Swift | C++ | Dart | Dart |
 
-## Permissions
+## Permissions and requirements
 
 Before getting into the platform specific permissions, always raises the question "How can I handle the permissions on my Flutter app?". Well, you can use the [`permission_handler`](https://pub.dev/packages/permission_handler) package to handle the permissions on your Flutter app, or you can handle them manually with native code, the choice is yours.
 
@@ -113,10 +120,10 @@ Before getting into the platform specific permissions, always raises the questio
 <dict>
   <!-- ... -->
   <!-- Required for BLE -->
-	<key>NSBluetoothAlwaysUsageDescription</key>
-	<string>The app need access to the Bluetooth to extract sensor values and diagnostics of the devices</string>
-	<key>NSBluetoothPeripheralUsageDescription</key>
-	<string>The app need access to the Bluetooth to do a remote configuration of the devices compatible with</string>
+  <key>NSBluetoothAlwaysUsageDescription</key>
+  <string>The app need access to the Bluetooth to extract sensor values and diagnostics of the devices</string>
+  <key>NSBluetoothPeripheralUsageDescription</key>
+  <string>The app need access to the Bluetooth to do a remote configuration of the devices compatible with</string>
   <!-- ... -->
 </dict>
 </plist>
@@ -130,8 +137,8 @@ Before getting into the platform specific permissions, always raises the questio
 <dict>
   <!-- ... -->
   <!-- Required for BLE -->
-	<key>NSBluetoothAlwaysUsageDescription</key>
-	<string>This app uses Bluetooth to connect to your device.</string>
+  <key>NSBluetoothAlwaysUsageDescription</key>
+  <string>This app uses Bluetooth to connect to your device.</string>
   <!-- ... -->
 </dict>
 </plist>
@@ -140,16 +147,30 @@ Before getting into the platform specific permissions, always raises the questio
 ### Windows
 We're currently working on the support of Windows, please be patient until we finished this feature.
 
+### Web
+Nothing to do here :)
+
+### Linux
+Your platform should have `bluez` stack installed to work, otherwise the lib will not work.
+
+## Roadmap
+⬜ Permission support for each platform
+
 ## FAQ
 
 ### Why on iOS and macOS I'm getting an UUID instead of a Mac Address?
-Apple privacy policies are very strict, and they don't allow developers to access the MAC Address of the devices, instead, Apple OSs return a UUID for the device. Be careful with this UUID, is not an unique identifier along the time and devices.
+Apple privacy policies are very strict, and they don't allow developers to access the MAC Address of the devices, instead, Apple OSs return a UUID for the device. Be careful with this UUID, is not an unique identifier along the time and devices. More information on [Apple Developer CBPeripheral entity documentation](https://developer.apple.com/documentation/corebluetooth/cbperipheral)
 
-### Why this library does not support Linux?
-Honestly, is a matter of priorities, we are focusing on the most used platforms first for the end users. If you want to help us to support Linux, feel free to open a pull request on the [Repository](https://github.com/goldenm-software/layrz_ble)!
+### And why on Web, I cannot get the MAC Address?
+Web Bluetooth API does not allow developers to access the MAC Address of the devices, instead, it returns a randomly generated string for the device. Be careful with this string, is not an unique identifier along the time and devices. More information on [mdn BluetoothDevice id property](https://developer.mozilla.org/en-US/docs/Web/API/BluetoothDevice/id)
 
-### And, why web is not supported?
-Web Bluetooth API is a very powerful tool, and we are considering to support it in the future, but for now, we are focusing on the mobile and desktop platforms (Native code). If you want to help us to support Web, feel free to open a pull request on the [Repository](https://github.com/goldenm-software/layrz_ble)!
+### In Web, why I need to supply the services and characteristics?
+This is a limitation of the Web Bluetooth API, you need to supply the services and characteristics to interact with the device. This is a security measure to prevent malicious websites to interact with your devices.
+
+### And, why on Web and Linux, I cannot negotiate the MTU?
+This functionality on Web Bluetooth API is currently not available, similar case with Linux, the wrapper implemented [bluez package](https://pub.dev/packages/bluez) does not support this feature.
+
+Disclaimer: On Linux, if you call `setMtu`, the response is the allowed MTU from the device and the system, not the negotiated MTU.
 
 ### Why is this package called `layrz_ble`?
 All packages developed by [Layrz](https://layrz.com) are prefixed with `layrz_`, check out our other packages on [pub.dev](https://pub.dev/publishers/goldenm.com/packages).
