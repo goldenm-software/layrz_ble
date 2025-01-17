@@ -350,21 +350,186 @@ class BLEDeviceManager {
       Log("Descubrimiento de características completado.");
     }
 
+    /// @brief Leer el valor de la característica
+    /// @param serviceUuid 
+    /// @param characteristicUuid 
+    /// @return void
     void readCharacteristicValue(const std::string& serviceUuid, const std::string& characteristicUuid) {
-        // Implementación para leer el valor de la característica
+      // Implementación para leer el valor de la característica
+      Log("Leyendo el valor de la característica con UUID: " + characteristicUuid + " del servicio con UUID: " + serviceUuid);
+
+      GUID serviceGuid;
+      if (CLSIDFromString(std::wstring(serviceUuid.begin(), serviceUuid.end()).c_str(), &serviceGuid) != NOERROR) 
+      {
+        Log("Error: No se pudo convertir el UUID del servicio.");
+        return;
+      }
+
+      GUID charGuid;
+      if (CLSIDFromString(std::wstring(characteristicUuid.begin(), characteristicUuid.end()).c_str(), &charGuid) != NOERROR)
+      {
+        Log("Error: No se pudo convertir el UUID de la característica.");
+        return;
+      }
+
+      HANDLE hDevice = getBleDeviceHandle();
+      USHORT serviceBufferCount = 0;
+
+      // Obtener el número de servicios
+      HRESULT hr = BluetoothGATTGetServices(
+        hDevice,
+        0,
+        nullptr,
+        &serviceBufferCount,
+        BLUETOOTH_GATT_FLAG_NONE
+      );
+
+      if (hr != HRESULT_FROM_WIN32(ERROR_MORE_DATA))
+      {
+        Log("Error: No se pudo obtener el número de servicios.");
+        return;
+      }
+
+      // Asignar memoria para los servicios
+      auto pServiceBuffer = std::make_unique<BTH_LE_GATT_SERVICE[]>(serviceBufferCount);
+      if (!pServiceBuffer) {
+        Log("Error: No se pudo asignar memoria para los servicios.");
+        return;
+      }
+
+      // Obtener los servicios
+      hr = BluetoothGATTGetServices(
+        hDevice,
+        serviceBufferCount,
+        pServiceBuffer.get(),
+        &serviceBufferCount,
+        BLUETOOTH_GATT_FLAG_NONE
+      );
+
+      if (FAILED(hr)) {
+        Log("Error: No se pudieron obtener los servicios.");
+        return;
+      }
+
+      // Buscar el servicio con el UUID especificado
+      PBTH_LE_GATT_SERVICE pService = nullptr;
+      for (USHORT i = 0; i < serviceBufferCount; i++) {
+        if (IsEqualGUID(pServiceBuffer[i].ServiceUuid.Value.LongUuid, serviceGuid)) {
+          pService = &pServiceBuffer[i];
+          break;
+        }
+      }
+
+      if (!pService) {
+        Log("Error: No se encontró el servicio con el UUID especificado.");
+        return;
+      }
+
+      // Obtener las características del servicio
+      USHORT charBufferCount = 0;
+
+      // Obtener el número de características
+      hr = BluetoothGATTGetCharacteristics(
+        hDevice,
+        pService,
+        0,
+        nullptr,
+        &charBufferCount,
+        BLUETOOTH_GATT_FLAG_NONE
+      );
+
+      if (hr != HRESULT_FROM_WIN32(ERROR_MORE_DATA)) {
+        Log("Error: No se pudo obtener el número de características.");
+        return;
+      }
+
+      // Asignar memoria para las características
+      auto pCharBuffer = std::make_unique<BTH_LE_GATT_CHARACTERISTIC[]>(charBufferCount);
+      if (!pCharBuffer) {
+        Log("Error: No se pudo asignar memoria para las características.");
+        return;
+      }
+
+      // Obtener las características
+      hr = BluetoothGATTGetCharacteristics(
+        hDevice,
+        pService,
+        charBufferCount,
+        pCharBuffer.get(),
+        &charBufferCount,
+        BLUETOOTH_GATT_FLAG_NONE
+      );
+
+      if (FAILED(hr)) {
+        Log("Error: No se pudieron obtener las características.");
+        return;
+      }
+
+      // Buscar la característica con el UUID especificado
+      PBTH_LE_GATT_CHARACTERISTIC pCharacteristic = nullptr;
+      for (USHORT i = 0; i < charBufferCount; i++) {
+        if (IsEqualGUID(pCharBuffer[i].CharacteristicUuid.Value.LongUuid, charGuid)) {
+          pCharacteristic = &pCharBuffer[i];
+          break;
+        }
+      }
+
+      if (!pCharacteristic) {
+        Log("Error: No se encontró la característica con el UUID especificado.");
+        return;
+      }
+
+      // Leer el valor de la característica
+      USHORT valueDataSize = 0;
+      hr = BluetoothGATTGetCharacteristicValue(
+        hDevice,
+        pCharacteristic,
+        0,
+        nullptr,
+        &valueDataSize,
+        BLUETOOTH_GATT_FLAG_NONE
+      );
+
+      if (hr != HRESULT_FROM_WIN32(ERROR_MORE_DATA)) {
+        Log("Error: No se pudo obtener el tamaño del valor de la característica.");
+        return;
+      }
+
+      auto pValueBuffer = std::make_unique<BTH_LE_GATT_CHARACTERISTIC_VALUE[]>(valueDataSize);
+      if (!pValueBuffer) {
+        Log("Error: No se pudo asignar memoria para el valor de la característica.");
+        return;
+      }
+
+      hr = BluetoothGATTGetCharacteristicValue(
+        hDevice,
+        pCharacteristic,
+        valueDataSize,
+        pValueBuffer.get(),
+        nullptr,
+        BLUETOOTH_GATT_FLAG_NONE
+      );
+
+      if (FAILED(hr)) {
+        Log("Error: No se pudo obtener el valor de la característica.");
+        return;
+      }
+
+      // Registrar el valor leído
+      Log("Valor de la característica leído: " + std::to_string(pValueBuffer->Data[0]));
     }
 
-        void writeCharacteristicValue(const std::string& serviceUuid, const std::string& characteristicUuid, const std::string& value) {
-            // Implementación para escribir el valor de la característica
-        }
+    void writeCharacteristicValue(const std::string& serviceUuid, const std::string& characteristicUuid, const std::string& value) {
+      // Implementación para escribir el valor de la característica
+    }
 
-        void startCharacteristicNotification(const std::string& serviceUuid, const std::string& characteristicUuid) {
-            // Implementación para iniciar la notificación de la característica
-        }
+    void startCharacteristicNotification(const std::string& serviceUuid, const std::string& characteristicUuid) {
+      // Implementación para iniciar la notificación de la característica
+    }
 
-        void stopCharacteristicNotification(const std::string& serviceUuid, const std::string& characteristicUuid) {
-            // Implementación para detener la notificación de la característica
-        }
+    void stopCharacteristicNotification(const std::string& serviceUuid, const std::string& characteristicUuid) {
+      // Implementación para detener la notificación de la característica
+    }
 
 };
 } // namespace layrz_ble
