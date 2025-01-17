@@ -12,7 +12,7 @@
     "editor.wordBasedSuggestions": "off"
   },
   "dart.lineLength": 120,
-  "dart.flutterSdkPath": ".fvm/versions/3.27.2",
+  "dart.flutterSdkPath": "C:\\lang\\flutter",
   "files.associations": {
     "*.html": "html",
     "*.py": "python",

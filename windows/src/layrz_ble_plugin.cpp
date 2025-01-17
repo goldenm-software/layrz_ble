@@ -1,7 +1,7 @@
 #include "layrz_ble_plugin.h"
 namespace layrz_ble
 {
-  
+
 std::unique_ptr<flutter::MethodChannel<flutter::EncodableValue>>LayrzBlePlugin::methodChannel = nullptr;
 std::string LayrzBlePlugin::filteredDeviceId = std::string("");
 
@@ -384,5 +384,387 @@ void LayrzBlePlugin::handleBleScanResult(BleScanResult &result)
   if(methodChannel != nullptr)
     methodChannel->InvokeMethod("onScan", std::make_unique<flutter::EncodableValue>(response));
 } // handleBleScanResult
+
+/// @brief Connect to the device
+/// @param method_call
+/// @param result
+/// @return void
+void LayrzBlePlugin::connect (
+    const flutter::MethodCall<flutter::EncodableValue> &method_call,
+    std::unique_ptr<flutter::MethodResult<flutter::EncodableValue> > result)
+{
+  auto arguments = std::get<flutter::EncodableMap>(*method_call.arguments());
+  if (arguments.find(flutter::EncodableValue("macAddress")) != arguments.end()) 
+  {
+    auto macAddress = std::get<std::string>(arguments[flutter::EncodableValue("macAddress")]);
+    auto it = visibleDevices.find(toLowercase(macAddress));
+    if (it != visibleDevices.end()) 
+    {
+      auto device = it->second;
+      bool success = _connectToDevice(device);
+      if (success) 
+        result->Success(flutter::EncodableValue(true));
+      else 
+      {
+        Log("Failed to connect to the device");
+        result->Error("ConnectionFailed", "Failed to connect to the device");
+      }
+    } 
+    else 
+    {
+      Log("Device not found");
+      result->Error("DeviceNotFound", "Device not found");
+    }
+  } 
+  else 
+  {
+    result->Error("InvalidArguments", "Missing macAddress argument");
+  }
+} // connect
+
+/// @brief Disconnect from the device
+/// @param method_call 
+/// @param result 
+/// @return void
+void LayrzBlePlugin::disconnect (
+    const flutter::MethodCall<flutter::EncodableValue> &method_call,
+    std::unique_ptr<flutter::MethodResult<flutter::EncodableValue> > result)
+{
+  auto arguments = std::get<flutter::EncodableMap>(*method_call.arguments());
+  if (arguments.find(flutter::EncodableValue("macAddress")) != arguments.end()) 
+  {
+    auto macAddress = std::get<std::string>(arguments[flutter::EncodableValue("macAddress")]);
+    auto it = visibleDevices.find(toLowercase(macAddress));
+    if (it != visibleDevices.end()) 
+    {
+      auto device = it->second;
+      // Implement the disconnection logic here
+      // For example, you can use the Bluetooth APIs to disconnect from the device
+      // Assuming disconnectFromDevice is a function that handles the disconnection
+      bool success = _disconnectFromDevice(device);
+      if (success) 
+        result->Success(flutter::EncodableValue(true));
+      else 
+      {
+        Log("Failed to disconnect from the device");
+        result->Error("DisconnectionFailed", "Failed to disconnect from the device");
+      }
+    } 
+    else 
+    {
+      Log("Device not found");
+      result->Error("DeviceNotFound", "Device not found");
+    }
+  } 
+  else 
+  {
+    Log("Missing macAddress argument");
+    result->Error("InvalidArguments", "Missing macAddress argument");
+  }
+} // disconnect
+
+/// @brief Discover services of the device
+/// @param method_call
+/// @param result
+/// @return void
+void LayrzBlePlugin::discoverServices(
+  const flutter::MethodCall<flutter::EncodableValue> &method_call,
+  std::unique_ptr<flutter::MethodResult<flutter::EncodableValue>> result)
+{
+  auto arguments = std::get<flutter::EncodableMap>(*method_call.arguments());
+  if (arguments.find(flutter::EncodableValue("macAddress")) != arguments.end())
+  {
+    auto macAddress = std::get<std::string>(arguments[flutter::EncodableValue("macAddress")]);
+    auto it = visibleDevices.find(toLowercase(macAddress));
+    if (it != visibleDevices.end())
+    {
+      auto device = it->second;
+      // Implement the service discovery logic here
+      // For example, you can use the Bluetooth APIs to discover services of the device
+      // Assuming discoverDeviceServices is a function that handles the service discovery
+      auto services = _discoverDeviceServices(device);
+      if (!services.empty())
+      {
+        flutter::EncodableList serviceList;
+        for (const auto &service : services)
+        {
+          serviceList.push_back(flutter::EncodableValue(service));
+        }
+        result->Success(flutter::EncodableValue(serviceList));
+      }
+    }
+    else
+      {
+      Log("Failed to discover services for the device");
+      result->Error("ServiceDiscoveryFailed", "Failed to discover services for the device");
+      }
+  }
+  else
+  {
+    Log("Device not found");
+    result->Error("DeviceNotFound", "Device not found");
+  }
+} // discoverServices
+
+void LayrzBlePlugin::setMtu(
+  const flutter::MethodCall<flutter::EncodableValue> &method_call,
+  std::unique_ptr<flutter::MethodResult<flutter::EncodableValue>> result)
+{
+  auto arguments = std::get<flutter::EncodableMap>(*method_call.arguments());
+  if (arguments.find(flutter::EncodableValue("macAddress")) != arguments.end() &&
+      arguments.find(flutter::EncodableValue("mtu")) != arguments.end())
+  {
+    auto macAddress = std::get<std::string>(arguments[flutter::EncodableValue("macAddress")]);
+    auto mtu = std::get<int>(arguments[flutter::EncodableValue("mtu")]);
+    auto it = visibleDevices.find(toLowercase(macAddress));
+    if (it != visibleDevices.end())
+    {
+      auto device = it->second;
+      // Implement the MTU setting logic here
+      // For example, you can use the Bluetooth APIs to set the MTU of the device
+      // Assuming setDeviceMtu is a function that handles the MTU setting
+      bool success = _setDeviceMtu(device, mtu);
+      if (success)
+        result->Success(flutter::EncodableValue(true));
+      else
+      {
+        Log("Failed to set the MTU for the device");
+        result->Error("MtuSettingFailed", "Failed to set the MTU for the device");
+      } // if (success)
+    } // if (it != visibleDevices.end())
+    else
+    {
+      Log("Device not found");
+      result->Error("DeviceNotFound", "Device not found");
+    } // if (it != visibleDevices.end())
+  }
+  else
+  {
+    Log("Missing macAddress or mtu argument");
+    result->Error("InvalidArguments", "Missing macAddress or mtu argument");
+  } // if (arguments.find(flutter::EncodableValue("macAddress")) != arguments.end() && ...)
+}
+
+void LayrzBlePlugin::discoverCharacteristics(
+  const flutter::MethodCall<flutter::EncodableValue> &method_call,
+  std::unique_ptr<flutter::MethodResult<flutter::EncodableValue>> result)
+{
+  auto arguments = std::get<flutter::EncodableMap>(*method_call.arguments());
+  if (arguments.find(flutter::EncodableValue("macAddress")) != arguments.end() &&
+      arguments.find(flutter::EncodableValue("serviceUuid")) != arguments.end())
+  {
+    auto macAddress = std::get<std::string>(arguments[flutter::EncodableValue("macAddress")]);
+    auto serviceUuid = std::get<std::string>(arguments[flutter::EncodableValue("serviceUuid")]);
+    auto it = visibleDevices.find(toLowercase(macAddress));
+    if (it != visibleDevices.end())
+    {
+      auto device = it->second;
+      // Implement the characteristic discovery logic here
+      // For example, you can use the Bluetooth APIs to discover characteristics of the service
+      // Assuming discoverServiceCharacteristics is a function that handles the characteristic discovery
+      auto characteristics = _discoverServiceCharacteristics(device, serviceUuid);
+      if (!characteristics.empty())
+      {
+        flutter::EncodableList characteristicList;
+        for (const auto &characteristic : characteristics)
+        {
+          characteristicList.push_back(flutter::EncodableValue(characteristic));
+        }
+        result->Success(flutter::EncodableValue(characteristicList));
+      }
+      else
+      {
+        Log("Failed to discover characteristics for the service");
+        result->Error("CharacteristicDiscoveryFailed", "Failed to discover characteristics for the service");
+      }
+    }
+    else
+    {
+      Log("Device not found");
+      result->Error("DeviceNotFound", "Device not found");
+    }
+  }
+  else
+  {
+    Log("Missing macAddress or serviceUuid argument");
+    result->Error("InvalidArguments", "Missing macAddress or serviceUuid argument");
+  }
+}
+
+void LayrzBlePlugin::readCharacteristic (
+    const flutter::MethodCall<flutter::EncodableValue> &method_call,
+    std::unique_ptr<flutter::MethodResult<flutter::EncodableValue> > result)
+{
+  auto arguments = std::get<flutter::EncodableMap>(*method_call.arguments());
+  if (arguments.find(flutter::EncodableValue("macAddress")) != arguments.end() &&
+    arguments.find(flutter::EncodableValue("serviceUuid")) != arguments.end() &&
+    arguments.find(flutter::EncodableValue("characteristicUuid")) != arguments.end())
+  {
+    auto macAddress = std::get<std::string>(arguments[flutter::EncodableValue("macAddress")]);
+    auto serviceUuid = std::get<std::string>(arguments[flutter::EncodableValue("serviceUuid")]);
+    auto characteristicUuid = std::get<std::string>(arguments[flutter::EncodableValue("characteristicUuid")]);
+    auto it = visibleDevices.find(toLowercase(macAddress));
+    if (it != visibleDevices.end())
+    {
+    auto device = it->second;
+    // Implement the characteristic reading logic here
+    // For example, you can use the Bluetooth APIs to read the characteristic value
+    // Assuming readCharacteristicValue is a function that handles the characteristic reading
+    auto value = _readCharacteristicValue(device, serviceUuid, characteristicUuid);
+    if (!value.empty())
+    {
+      result->Success(flutter::EncodableValue(value));
+    }
+    else
+    {
+      Log("Failed to read characteristic value");
+      result->Error("CharacteristicReadFailed", "Failed to read characteristic value");
+    }
+    }
+    else
+    {
+    Log("Device not found");
+    result->Error("DeviceNotFound", "Device not found");
+    }
+  }
+  else
+  {
+    Log("Missing macAddress, serviceUuid, or characteristicUuid argument");
+    result->Error("InvalidArguments", "Missing macAddress, serviceUuid, or characteristicUuid argument");
+  }
+
+
+}
+
+void LayrzBlePlugin::writeCharacteristic (
+    const flutter::MethodCall<flutter::EncodableValue> &method_call,
+    std::unique_ptr<flutter::MethodResult<flutter::EncodableValue> > result)
+{
+  auto arguments = std::get<flutter::EncodableMap>(*method_call.arguments());
+  if (arguments.find(flutter::EncodableValue("macAddress")) != arguments.end() &&
+    arguments.find(flutter::EncodableValue("serviceUuid")) != arguments.end() &&
+    arguments.find(flutter::EncodableValue("characteristicUuid")) != arguments.end() &&
+    arguments.find(flutter::EncodableValue("value")) != arguments.end())
+  {
+    auto macAddress = std::get<std::string>(arguments[flutter::EncodableValue("macAddress")]);
+    auto serviceUuid = std::get<std::string>(arguments[flutter::EncodableValue("serviceUuid")]);
+    auto characteristicUuid = std::get<std::string>(arguments[flutter::EncodableValue("characteristicUuid")]);
+    auto value = std::get<std::vector<uint8_t>>(arguments[flutter::EncodableValue("value")]);
+    auto it = visibleDevices.find(toLowercase(macAddress));
+    if (it != visibleDevices.end())
+    {
+    auto device = it->second;
+    // Implement the characteristic writing logic here
+    // For example, you can use the Bluetooth APIs to write the characteristic value
+    // Assuming writeCharacteristicValue is a function that handles the characteristic writing
+    bool success = _writeCharacteristicValue(device, serviceUuid, characteristicUuid, value);
+    if (success)
+    {
+      result->Success(flutter::EncodableValue(true));
+    }
+    else
+    {
+      Log("Failed to write characteristic value");
+      result->Error("CharacteristicWriteFailed", "Failed to write characteristic value");
+    }
+    }
+    else
+    {
+    Log("Device not found");
+    result->Error("DeviceNotFound", "Device not found");
+    }
+  }
+  else
+  {
+    Log("Missing macAddress, serviceUuid, characteristicUuid, or value argument");
+    result->Error("InvalidArguments", "Missing macAddress, serviceUuid, characteristicUuid, or value argument");
+  }
+}
+
+void LayrzBlePlugin::startNotify (
+    const flutter::MethodCall<flutter::EncodableValue> &method_call,
+    std::unique_ptr<flutter::MethodResult<flutter::EncodableValue> > result)
+{
+  auto arguments = std::get<flutter::EncodableMap>(*method_call.arguments());
+  if (arguments.find(flutter::EncodableValue("macAddress")) != arguments.end() &&
+    arguments.find(flutter::EncodableValue("serviceUuid")) != arguments.end() &&
+    arguments.find(flutter::EncodableValue("characteristicUuid")) != arguments.end())
+  {
+    auto macAddress = std::get<std::string>(arguments[flutter::EncodableValue("macAddress")]);
+    auto serviceUuid = std::get<std::string>(arguments[flutter::EncodableValue("serviceUuid")]);
+    auto characteristicUuid = std::get<std::string>(arguments[flutter::EncodableValue("characteristicUuid")]);
+    auto it = visibleDevices.find(toLowercase(macAddress));
+    if (it != visibleDevices.end())
+    {
+    auto device = it->second;
+    // Implement the notification start logic here
+    // For example, you can use the Bluetooth APIs to start notifications for the characteristic
+    // Assuming startCharacteristicNotification is a function that handles the notification start
+    bool success = _startCharacteristicNotification(device, serviceUuid, characteristicUuid);
+    if (success)
+    {
+      result->Success(flutter::EncodableValue(true));
+    }
+    else
+    {
+      Log("Failed to start notifications for the characteristic");
+      result->Error("NotificationStartFailed", "Failed to start notifications for the characteristic");
+    }
+    }
+    else
+    {
+    Log("Device not found");
+    result->Error("DeviceNotFound", "Device not found");
+    }
+  }
+  else
+  {
+    Log("Missing macAddress, serviceUuid, or characteristicUuid argument");
+    result->Error("InvalidArguments", "Missing macAddress, serviceUuid, or characteristicUuid argument");
+  }
+}
+
+void LayrzBlePlugin::stopNotify (
+    const flutter::MethodCall<flutter::EncodableValue> &method_call,
+    std::unique_ptr<flutter::MethodResult<flutter::EncodableValue> > result)
+{
+  auto arguments = std::get<flutter::EncodableMap>(*method_call.arguments());
+  if (arguments.find(flutter::EncodableValue("macAddress")) != arguments.end() &&
+    arguments.find(flutter::EncodableValue("serviceUuid")) != arguments.end() &&
+    arguments.find(flutter::EncodableValue("characteristicUuid")) != arguments.end())
+  {
+    auto macAddress = std::get<std::string>(arguments[flutter::EncodableValue("macAddress")]);
+    auto serviceUuid = std::get<std::string>(arguments[flutter::EncodableValue("serviceUuid")]);
+    auto characteristicUuid = std::get<std::string>(arguments[flutter::EncodableValue("characteristicUuid")]);
+    auto it = visibleDevices.find(toLowercase(macAddress));
+    if (it != visibleDevices.end())
+    {
+      auto device = it->second;
+      // Implement the notification stop logic here
+      // For example, you can use the Bluetooth APIs to stop notifications for the characteristic
+      // Assuming stopCharacteristicNotification is a function that handles the notification stop
+      bool success = _stopCharacteristicNotification(device, serviceUuid, characteristicUuid);
+      if (success)
+      {
+        result->Success(flutter::EncodableValue(true));
+      }
+      else
+      {
+        Log("Failed to stop notifications for the characteristic");
+        result->Error("NotificationStopFailed", "Failed to stop notifications for the characteristic");
+      }
+    }
+    else
+    {
+      Log("Device not found");
+      result->Error("DeviceNotFound", "Device not found");
+    }
+  }
+  else
+  {
+    Log("Missing macAddress, serviceUuid, or characteristicUuid argument");
+    result->Error("InvalidArguments", "Missing macAddress, serviceUuid, or characteristicUuid argument");
+  }
+}
 
 } // namespace layrz_ble

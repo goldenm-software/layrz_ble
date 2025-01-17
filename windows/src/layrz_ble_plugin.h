@@ -79,6 +79,53 @@ namespace layrz_ble
       void setupWatcher();
       void handleScanResult(DeviceInformation device);
       void handleBleScanResult(BleScanResult& result);
+
+      //Pancho
+      void connect(
+        const flutter::MethodCall<flutter::EncodableValue> &method_call,
+        std::unique_ptr<flutter::MethodResult<flutter::EncodableValue>> result
+      );
+
+      void disconnect(
+        const flutter::MethodCall<flutter::EncodableValue> &method_call,
+        std::unique_ptr<flutter::MethodResult<flutter::EncodableValue>> result
+      );
+
+      void discoverServices(
+        const flutter::MethodCall<flutter::EncodableValue> &method_call,
+        std::unique_ptr<flutter::MethodResult<flutter::EncodableValue>> result
+      );
+
+      void setMtu(
+        const flutter::MethodCall<flutter::EncodableValue> &method_call,
+        std::unique_ptr<flutter::MethodResult<flutter::EncodableValue>> result
+      );
+
+      void discoverCharacteristics(
+        const flutter::MethodCall<flutter::EncodableValue> &method_call,
+        std::unique_ptr<flutter::MethodResult<flutter::EncodableValue>> result
+      );
+
+      void readCharacteristic(
+        const flutter::MethodCall<flutter::EncodableValue> &method_call,
+        std::unique_ptr<flutter::MethodResult<flutter::EncodableValue>> result
+      );
+
+      void writeCharacteristic(
+        const flutter::MethodCall<flutter::EncodableValue> &method_call,
+        std::unique_ptr<flutter::MethodResult<flutter::EncodableValue>> result
+      );
+
+      void startNotify(
+        const flutter::MethodCall<flutter::EncodableValue> &method_call,
+        std::unique_ptr<flutter::MethodResult<flutter::EncodableValue>> result
+      );
+
+      void stopNotify(
+        const flutter::MethodCall<flutter::EncodableValue> &method_call,
+        std::unique_ptr<flutter::MethodResult<flutter::EncodableValue>> result
+      );
+      
   }; // class LayrzBlePlugin
 } // namespace layrz_ble
 
