@@ -2,13 +2,19 @@ package com.layrz.layrz_ble
 
 
 import android.Manifest
+import android.annotation.SuppressLint
 import android.app.Activity
 import android.bluetooth.BluetoothAdapter
+import android.bluetooth.BluetoothGatt
+import android.bluetooth.BluetoothGattCharacteristic
+import android.bluetooth.BluetoothGattDescriptor
 import android.bluetooth.BluetoothManager
 import android.bluetooth.le.ScanCallback
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Build
+import android.os.Handler
+import android.os.Looper
 import androidx.core.app.ActivityCompat
 import androidx.core.app.ActivityCompat.startActivityForResult
 import io.flutter.Log
@@ -20,6 +26,12 @@ import io.flutter.plugin.common.MethodChannel
 import io.flutter.plugin.common.MethodChannel.MethodCallHandler
 import io.flutter.plugin.common.MethodChannel.Result
 import io.flutter.plugin.common.PluginRegistry
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+import java.util.UUID
 
 class LayrzBlePlugin : FlutterPlugin, MethodCallHandler, ActivityAware,
     PluginRegistry.ActivityResultListener {
@@ -30,32 +42,266 @@ class LayrzBlePlugin : FlutterPlugin, MethodCallHandler, ActivityAware,
     private var activity: Activity? = null
     private var result: Result? = null
 
+    // Bluetooth device connection
+    private var filteredMacAddress: String? = null
+    private val devices: HashMap<String, android.bluetooth.BluetoothDevice> = HashMap()
+    private var searchingMacAddress: String? = null
+    private var gatt: BluetoothGatt? = null
+    private var connectedDevice: android.bluetooth.BluetoothDevice? = null
+
     private var isScanning = false
+    private var lastOperation: LastOperation? = null
+    private var currentNotifications: MutableList<String> =
+        mutableListOf()
+
     private val scanCallback = object : ScanCallback() {
+        @SuppressLint("MissingPermission")
         override fun onScanResult(callbackType: Int, result: android.bluetooth.le.ScanResult?) {
             super.onScanResult(callbackType, result)
-            if (result != null) {
-                val device = result.device
-                val name = if (ActivityCompat.checkSelfPermission(
-                        context,
-                        Manifest.permission.BLUETOOTH_CONNECT
-                    ) == PackageManager.PERMISSION_GRANTED
-                ) {
-                    device.name ?: "Unknown"
-                } else {
-                    "Unknown"
-                }
-                val macAddress = device.address
-                val rssi = result.rssi
-                val advertisementData = result.scanRecord?.bytes
+            if (result == null) return
+            if (lastOperation != LastOperation.SCAN) return
 
+            val device = result.device
+            val macAddress = device.address.lowercase()
+
+            if (filteredMacAddress != null && macAddress != filteredMacAddress?.lowercase()) return
+
+            val name = device.name ?: "Unknown"
+            val rssi = result.rssi
+            val rec = result.scanRecord
+
+            val rawManufacturerData = rec?.manufacturerSpecificData
+            val manufacturerData = rawManufacturerData?.let { sparseArray ->
+                // Calculate total size: 2 bytes for each manufacturer ID + data size
+                val totalSize =
+                    (0 until sparseArray.size()).sumOf { 2 + (sparseArray.valueAt(it)?.size ?: 0) }
+
+                // Preallocate a ByteArray
+                ByteArray(totalSize).also { result ->
+                    var offset = 0
+                    for (i in 0 until sparseArray.size()) {
+                        val manufacturerId = sparseArray.keyAt(i) // Manufacturer ID
+                        val data = sparseArray.valueAt(i)        // Manufacturer-specific data
+
+                        // Add the 2-byte manufacturer ID in big-endian order
+                        result[offset] = (manufacturerId shr 8).toByte() // High byte
+                        result[offset + 1] = (manufacturerId and 0xFF).toByte() // Low byte
+                        offset += 2
+
+                        // Add the manufacturer-specific data
+                        if (data != null) {
+                            System.arraycopy(data, 0, result, offset, data.size)
+                            offset += data.size
+                        }
+                    }
+                }
+            } ?: byteArrayOf()
+
+            var serviceData = byteArrayOf()
+            val servicesIdentifiers = mutableListOf<ByteArray>()
+
+            val sortedServices = rec?.serviceData?.keys?.sortedBy { it.toString() }
+            for (key in sortedServices ?: listOf()) {
+                val data = rec!!.serviceData[key]
+                if (data != null) {
+                    serviceData += data
+                    Log.d(TAG, "Key: $key, Data: ${data.size}")
+                }
+            }
+
+            channel.invokeMethod(
+                "onScan",
+                mapOf(
+                    "name" to name,
+                    "macAddress" to macAddress,
+                    "rssi" to rssi,
+                    "manufacturerData" to manufacturerData,
+                    "serviceData" to serviceData,
+                    "servicesIdentifiers" to servicesIdentifiers
+                )
+            )
+
+            devices[macAddress] = device
+        }
+    }
+
+    private val gattCallback = object : android.bluetooth.BluetoothGattCallback() {
+        override fun onConnectionStateChange(
+            gatt: BluetoothGatt?,
+            status: Int,
+            newState: Int
+        ) {
+            super.onConnectionStateChange(gatt, status, newState)
+            if (connectedDevice == null) return
+            if (lastOperation != LastOperation.CONNECT) {
+                if (status == BluetoothGatt.STATE_DISCONNECTED) {
+                    connectedDevice = null
+                    Handler(Looper.getMainLooper()).post {
+                        channel.invokeMethod(
+                            "onEvent",
+                            "DISCONNECTED"
+                        )
+                    }
+                }
+                return
+            }
+            if (result == null) return
+
+            if (newState == android.bluetooth.BluetoothProfile.STATE_CONNECTED) {
+                result!!.success(true)
+            } else {
+                Log.d(TAG, "Connection failed")
+                result!!.success(false)
+            }
+            result = null
+        }
+
+        override fun onServicesDiscovered(gatt: BluetoothGatt?, status: Int) {
+            super.onServicesDiscovered(gatt, status)
+            if (connectedDevice == null) return
+            if (lastOperation != LastOperation.DISCOVER_SERVICES) return
+            if (result == null) return
+            if (gatt == null) return
+
+            if (status == BluetoothGatt.GATT_SUCCESS) {
+                val servicesMapList: MutableList<HashMap<String, Any>> = mutableListOf()
+
+                for (service in gatt.services) {
+                    val characteristics: MutableList<HashMap<String, Any>> = mutableListOf()
+
+                    for (characteristic in service.characteristics) {
+                        val properties = characteristic.properties
+                        val propertyList: MutableList<String> = mutableListOf()
+
+                        if (properties and BluetoothGattCharacteristic.PROPERTY_READ != 0) {
+                            propertyList.add("READ")
+                        }
+                        if (properties and BluetoothGattCharacteristic.PROPERTY_WRITE != 0) {
+                            propertyList.add("WRITE")
+                        }
+                        if (properties and BluetoothGattCharacteristic.PROPERTY_WRITE_NO_RESPONSE != 0) {
+                            propertyList.add("WRITE_WO_RSP")
+                        }
+                        if (properties and BluetoothGattCharacteristic.PROPERTY_NOTIFY != 0) {
+                            propertyList.add("NOTIFY")
+                        }
+                        if (properties and BluetoothGattCharacteristic.PROPERTY_INDICATE != 0) {
+                            propertyList.add("INDICATE")
+                        }
+                        if (properties and BluetoothGattCharacteristic.PROPERTY_SIGNED_WRITE != 0) {
+                            propertyList.add("AUTH_SIGN_WRITES")
+                        }
+                        if (properties and BluetoothGattCharacteristic.PROPERTY_BROADCAST != 0) {
+                            propertyList.add("BROADCAST")
+                        }
+                        if (properties and BluetoothGattCharacteristic.PROPERTY_EXTENDED_PROPS != 0) {
+                            propertyList.add("EXTENDED_PROP")
+                        }
+
+                        val uuid = characteristic.uuid.toString()
+
+                        characteristics.add(
+                            hashMapOf(
+                                "uuid" to uuid.lowercase().trim(),
+                                "properties" to propertyList
+                            )
+                        )
+                    }
+
+                    servicesMapList.add(
+                        hashMapOf(
+                            "uuid" to service.uuid.toString().lowercase().trim(),
+                            "characteristics" to characteristics
+                        )
+                    )
+                }
+                result!!.success(servicesMapList)
+                result = null
+            } else {
+                Log.d(TAG, "Discover services failed")
+                result!!.success(null)
+                result = null
+            }
+        }
+
+        override fun onMtuChanged(gatt: BluetoothGatt?, mtu: Int, status: Int) {
+            super.onMtuChanged(gatt, mtu, status)
+
+            if (lastOperation != LastOperation.SET_MTU) return
+            if (result == null) return
+
+            if (status == BluetoothGatt.GATT_SUCCESS) {
+                result!!.success(mtu)
+            } else {
+                Log.d(TAG, "MTU change failed")
+                result!!.success(null)
+            }
+
+            result = null
+        }
+
+        override fun onCharacteristicWrite(
+            gatt: BluetoothGatt?,
+            characteristic: BluetoothGattCharacteristic?,
+            status: Int
+        ) {
+            super.onCharacteristicWrite(gatt, characteristic, status)
+
+            if (lastOperation != LastOperation.WRITE_CHARACTERISTIC) return
+            if (result == null) return
+
+            if (status == BluetoothGatt.GATT_SUCCESS) {
+                result!!.success(true)
+            } else {
+                Log.d(TAG, "Characteristic write failed")
+                result!!.success(false)
+            }
+            result = null
+        }
+
+        @Deprecated("Deprecated in Java")
+        override fun onCharacteristicRead(
+            gatt: BluetoothGatt,
+            characteristic: BluetoothGattCharacteristic,
+            status: Int
+        ) {
+            super.onCharacteristicRead(gatt, characteristic, status)
+            Log.d(
+                TAG,
+                "onCharacteristicRead ${characteristic.uuid} - ${characteristic.value}"
+            )
+
+            if (lastOperation != LastOperation.READ_CHARACTERISTIC) return
+            if (result == null) return
+
+            if (status == BluetoothGatt.GATT_SUCCESS) {
+                result!!.success(characteristic.value)
+            } else {
+                Log.d(TAG, "Characteristic read failed")
+                result!!.success(null)
+            }
+
+            result = null
+        }
+
+        @Deprecated("Deprecated in Java")
+        override fun onCharacteristicChanged(
+            gatt: BluetoothGatt,
+            characteristic: BluetoothGattCharacteristic
+        ) {
+            super.onCharacteristicChanged(gatt, characteristic)
+            Log.d(
+                TAG,
+                "onCharacteristicChanged ${characteristic.uuid} - ${characteristic.value.size}"
+            )
+
+            Handler(Looper.getMainLooper()).post {
                 channel.invokeMethod(
-                    "onScan",
+                    "onNotify",
                     mapOf(
-                        "name" to name,
-                        "macAddress" to macAddress,
-                        "rssi" to rssi,
-                        "advertisementData" to advertisementData
+                        "serviceUuid" to characteristic.service.uuid.toString().lowercase().trim(),
+                        "characteristicUuid" to characteristic.uuid.toString().lowercase().trim(),
+                        "value" to characteristic.value
                     )
                 )
             }
@@ -86,6 +332,7 @@ class LayrzBlePlugin : FlutterPlugin, MethodCallHandler, ActivityAware,
     companion object {
         private const val TAG = "LayrzBlePlugin/Android"
         private const val REQUEST_ENABLE_BT = 20040831
+        val CCD_CHARACTERISTIC: UUID = UUID.fromString("00002902-0000-1000-8000-00805f9b34fb")
     }
 
     override fun onAttachedToEngine(flutterPluginBinding: FlutterPlugin.FlutterPluginBinding) {
@@ -104,17 +351,26 @@ class LayrzBlePlugin : FlutterPlugin, MethodCallHandler, ActivityAware,
 
         if (this.result != null) {
             Log.d(TAG, "Operation in progress, ignoring new call")
-            result.error("operation_in_progress", "Operation in progress, ignoring new call", null)
+            result.error(
+                "OPERATION_IN_PROGRESS",
+                "$lastOperation in progress, ignoring new call",
+                null,
+            )
             return
         }
 
         when (call.method) {
             "checkCapabilities" -> checkCapabilities(result = result)
-            "startScan" -> startScan(result = result)
+            "startScan" -> startScan(call = call, result = result)
             "stopScan" -> stopScan(result = result)
             "connect" -> connect(call = call, result = result)
-            "disconnect" -> disconnect(call = call, result = result)
-            "sendPayload" -> sendPayload(call = call, result = result)
+            "disconnect" -> disconnect(result = result)
+            "discoverServices" -> discoverServices(call = call, result = result)
+            "setMtu" -> setMtu(call = call, result = result)
+            "writeCharacteristic" -> writeCharacteristic(call = call, result = result)
+            "readCharacteristic" -> readCharacteristic(call = call, result = result)
+            "startNotify" -> startNotify(call = call, result = result)
+            "stopNotify" -> stopNotify(call = call, result = result)
             else -> result.notImplemented()
         }
     }
@@ -167,12 +423,13 @@ class LayrzBlePlugin : FlutterPlugin, MethodCallHandler, ActivityAware,
     }
 
     /* Starts the scanning */
-    private fun startScan(result: Result) {
+    private fun startScan(call: MethodCall, result: Result) {
+        @SuppressLint("MissingPermission")
         if (isScanning) {
-            Log.d(TAG, "Already scanning")
-            result.success(true)
-            return
+            bluetooth!!.adapter.bluetoothLeScanner.stopScan(scanCallback)
         }
+
+        filteredMacAddress = call.argument<String>("macAddress")
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
             val perm1 = ActivityCompat.checkSelfPermission(
@@ -218,8 +475,10 @@ class LayrzBlePlugin : FlutterPlugin, MethodCallHandler, ActivityAware,
         } else {
             Log.d(TAG, "Bluetooth is enabled, starting scan")
             isScanning = true
+            lastOperation = LastOperation.SCAN
             adapter!!.bluetoothLeScanner.startScan(scanCallback)
             result.success(true)
+            this.result = null
         }
     }
 
@@ -228,6 +487,7 @@ class LayrzBlePlugin : FlutterPlugin, MethodCallHandler, ActivityAware,
         if (!isScanning) {
             Log.d(TAG, "Not scanning")
             result.success(true)
+            this.result = null
             return
         }
 
@@ -255,6 +515,7 @@ class LayrzBlePlugin : FlutterPlugin, MethodCallHandler, ActivityAware,
             if (!(perm1 && perm2 && perm3)) {
                 Log.d(TAG, "No permissions")
                 result.success(false)
+                this.result = null
                 return
             }
         }
@@ -270,24 +531,420 @@ class LayrzBlePlugin : FlutterPlugin, MethodCallHandler, ActivityAware,
         Log.d(TAG, "Stopping scan")
         adapter!!.bluetoothLeScanner.stopScan(scanCallback)
         result.success(true)
+        this.result = null
+        filteredMacAddress = null
     }
 
     /* Connects to a BLE device */
+    @SuppressLint("MissingPermission")
     private fun connect(call: MethodCall, result: Result) {
-        result.success(true)
+        searchingMacAddress = call.arguments as String?
+
+        if (searchingMacAddress == null) {
+            Log.d(TAG, "No macAddress provided")
+            result.success(false)
+            this.result = null
+            return
+        }
+
+        if (!devices.containsKey(searchingMacAddress!!)) {
+            Log.d(TAG, "Device not found")
+            result.success(false)
+            this.result = null
+            return
+        }
+
+        if (isScanning) {
+            isScanning = false
+            channel.invokeMethod("onEvent", "SCAN_STOPPED")
+            bluetooth!!.adapter.bluetoothLeScanner.stopScan(scanCallback)
+        }
+
+        connectedDevice = devices[searchingMacAddress!!]!!
+        this.result = result
+        lastOperation = LastOperation.CONNECT
+        gatt = connectedDevice!!.connectGatt(context, true, gattCallback)
     }
 
     /* Disconnects from a BLE device */
-    private fun disconnect(call: MethodCall, result: Result) {
+    @SuppressLint("MissingPermission")
+    private fun disconnect(result: Result) {
+        if (gatt == null) {
+            Log.d(TAG, "No device connected")
+            result.success(false)
+            this.result = null
+            return
+        }
+
+        gatt!!.disconnect()
         result.success(true)
+        this.result = null
+    }
+
+    /* Discovers the services of a BLE device */
+    @SuppressLint("MissingPermission")
+    private fun discoverServices(call: MethodCall, result: Result) {
+        var timeoutSeconds: Int = call.argument<Int>("timeout") ?: 30
+        if (timeoutSeconds < 1) {
+            timeoutSeconds = 1
+        }
+
+        if (gatt == null) {
+            Log.d(TAG, "No device connected")
+            result.success(null)
+            this.result = null
+            return
+        }
+
+        this.result = result
+        lastOperation = LastOperation.DISCOVER_SERVICES
+        gatt!!.discoverServices()
+
+        // Timeout
+        spawnTimeout(operation = LastOperation.DISCOVER_SERVICES, timeoutSeconds = timeoutSeconds)
+    }
+
+    /* Sets the MTU of a BLE device */
+    @SuppressLint("MissingPermission")
+    private fun setMtu(call: MethodCall, result: Result) {
+        val newMtu = call.arguments as Int?
+        if (newMtu == null) {
+            Log.d(TAG, "No mtu provided")
+            result.success(null)
+            this.result = null
+            return
+        }
+
+        if (gatt == null) {
+            Log.d(TAG, "No device connected")
+            result.success(null)
+            this.result = null
+            return
+        }
+
+        this.result = result
+        lastOperation = LastOperation.SET_MTU
+        gatt!!.requestMtu(newMtu)
     }
 
     /* Sends a payload to a BLE device */
-    private fun sendPayload(call: MethodCall, result: Result) {
-        result.success(true)
+    @SuppressLint("MissingPermission")
+    private fun writeCharacteristic(call: MethodCall, result: Result) {
+        val serviceUuid = call.argument<String>("serviceUuid")
+        if (serviceUuid == null) {
+            Log.d(TAG, "No serviceUuid provided")
+            result.success(null)
+            this.result = null
+            return
+        }
+
+        val characteristicUuid = call.argument<String>("characteristicUuid")
+        if (characteristicUuid == null) {
+            Log.d(TAG, "No characteristicUuid provided")
+            result.success(null)
+            this.result = null
+            return
+        }
+
+        val payload = call.argument<ByteArray>("payload")
+        if (payload == null) {
+            Log.d(TAG, "No payload provided")
+            result.success(null)
+            this.result = null
+            return
+        }
+
+        var timeoutSeconds: Int = call.argument<Int>("timeout") ?: 30
+        if (timeoutSeconds < 1) {
+            timeoutSeconds = 1
+        }
+
+        val writeType = call.argument<Boolean>("withResponse") ?: true
+
+        if (gatt == null) {
+            Log.d(TAG, "No device connected")
+            result.success(null)
+            this.result = null
+            return
+        }
+
+        val service = gatt!!.getService(UUID.fromString(serviceUuid))
+        if (service == null) {
+            Log.d(TAG, "Service not found")
+            result.success(null)
+            this.result = null
+            return
+        }
+
+        val characteristic =
+            service.getCharacteristic(UUID.fromString(characteristicUuid))
+        if (characteristic == null) {
+            Log.d(TAG, "Characteristic not found")
+            result.success(null)
+            this.result = null
+            return
+        }
+
+        if (characteristic.properties and BluetoothGattCharacteristic.PROPERTY_WRITE == 0) {
+            Log.d(TAG, "Characteristic does not support write")
+            result.success(null)
+            this.result = null
+            return
+        }
+
+        this.result = result
+        lastOperation = LastOperation.WRITE_CHARACTERISTIC
+
+        val type = if (writeType) {
+            BluetoothGattCharacteristic.WRITE_TYPE_DEFAULT
+        } else {
+            BluetoothGattCharacteristic.WRITE_TYPE_NO_RESPONSE
+        }
+        if (Build.VERSION.SDK_INT > Build.VERSION_CODES.TIRAMISU) {
+            gatt!!.writeCharacteristic(
+                characteristic,
+                payload,
+                type,
+            )
+        } else {
+            characteristic.value = payload
+            characteristic.writeType = type
+            gatt!!.writeCharacteristic(characteristic)
+        }
+
+        // Timeout
+        spawnTimeout(
+            operation = LastOperation.WRITE_CHARACTERISTIC,
+            timeoutSeconds = timeoutSeconds,
+        )
     }
 
-    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?): Boolean {
+    /* Reads a payload from a BLE device */
+    @SuppressLint("MissingPermission")
+    private fun readCharacteristic(call: MethodCall, result: Result) {
+        val serviceUuid = call.argument<String>("serviceUuid")
+        if (serviceUuid == null) {
+            Log.d(TAG, "No serviceUuid provided")
+            result.success(null)
+            this.result = null
+            return
+        }
+
+        val characteristicUuid = call.argument<String>("characteristicUuid")
+        if (characteristicUuid == null) {
+            Log.d(TAG, "No characteristicUuid provided")
+            result.success(null)
+            this.result = null
+            return
+        }
+
+        var timeoutSeconds: Int = call.argument<Int>("timeout") ?: 30
+        if (timeoutSeconds < 1) {
+            timeoutSeconds = 1
+        }
+
+        if (gatt == null) {
+            Log.d(TAG, "No device connected")
+            result.success(null)
+            this.result = null
+            return
+        }
+
+        val service = gatt!!.getService(UUID.fromString(serviceUuid))
+        if (service == null) {
+            Log.d(TAG, "Service not found")
+            result.success(null)
+            this.result = null
+            return
+        }
+
+        val characteristic =
+            service.getCharacteristic(UUID.fromString(characteristicUuid))
+        if (characteristic == null) {
+            Log.d(TAG, "Characteristic not found")
+            result.success(null)
+            this.result = null
+            return
+        }
+
+        if (characteristic.properties and BluetoothGattCharacteristic.PROPERTY_READ == 0) {
+            Log.d(TAG, "Characteristic does not support read")
+            result.success(null)
+            this.result = null
+            return
+        }
+
+        this.result = result
+        lastOperation = LastOperation.READ_CHARACTERISTIC
+        gatt!!.readCharacteristic(characteristic)
+
+        // Timeout
+        spawnTimeout(
+            operation = LastOperation.READ_CHARACTERISTIC,
+            timeoutSeconds = timeoutSeconds,
+        )
+    }
+
+    /* Subscribe to a characteristic */
+    @SuppressLint("MissingPermission")
+    private fun startNotify(call: MethodCall, result: Result) {
+        val serviceUuid = call.argument<String>("serviceUuid")
+        if (serviceUuid == null) {
+            Log.d(TAG, "No serviceUuid provided")
+            result.success(false)
+            this.result = null
+            return
+        }
+
+        val characteristicUuid = call.argument<String>("characteristicUuid")
+        if (characteristicUuid == null) {
+            Log.d(TAG, "No characteristicUuid provided")
+            result.success(false)
+            this.result = null
+            return
+        }
+
+        if (currentNotifications.contains(characteristicUuid.lowercase().trim())) {
+            Log.d(TAG, "Already subscribed")
+            result.success(true)
+            this.result = null
+            return
+        }
+
+        if (gatt == null) {
+            Log.d(TAG, "No device connected")
+            result.success(false)
+            this.result = null
+            return
+        }
+
+        val service = gatt!!.getService(UUID.fromString(serviceUuid))
+        if (service == null) {
+            Log.d(TAG, "Service not found")
+            result.success(false)
+            this.result = null
+            return
+        }
+
+        val characteristic =
+            service.getCharacteristic(UUID.fromString(characteristicUuid))
+        if (characteristic == null) {
+            Log.d(TAG, "Characteristic not found")
+            result.success(false)
+            this.result = null
+            return
+        }
+
+        if (characteristic.properties and BluetoothGattCharacteristic.PROPERTY_NOTIFY == 0) {
+            Log.d(TAG, "Characteristic does not support notify")
+            result.success(false)
+            this.result = null
+            return
+        }
+
+        val notificationResult = gatt!!.setCharacteristicNotification(characteristic, true)
+        Log.d(TAG, "Notification subscription result: $notificationResult")
+        if (!notificationResult) {
+            Log.d(TAG, "Notification failed")
+            result.success(false)
+            this.result = null
+            return
+        }
+
+        val descriptor = characteristic.getDescriptor(CCD_CHARACTERISTIC)
+        if (descriptor == null) {
+            Log.d(TAG, "Descriptor not found")
+            result.success(false)
+            this.result = null
+            return
+        }
+
+        descriptor.value = BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE
+        gatt!!.writeDescriptor(descriptor)
+
+        currentNotifications.add(characteristic.uuid.toString().lowercase().trim())
+        result.success(true)
+        this.result = null
+    }
+
+    /* Unsubscribe from a characteristic */
+    @SuppressLint("MissingPermission")
+    private fun stopNotify(call: MethodCall, result: Result) {
+        val serviceUuid = call.argument<String>("serviceUuid")
+        if (serviceUuid == null) {
+            Log.d(TAG, "No serviceUuid provided")
+            result.success(false)
+            this.result = null
+            return
+        }
+
+        val characteristicUuid = call.argument<String>("characteristicUuid")
+        if (characteristicUuid == null) {
+            Log.d(TAG, "No characteristicUuid provided")
+            result.success(false)
+            this.result = null
+            return
+        }
+
+        if (!currentNotifications.contains(characteristicUuid.lowercase().trim())) {
+            Log.d(TAG, "Not subscribed")
+            result.success(true)
+            this.result = null
+            return
+        }
+
+        if (gatt == null) {
+            Log.d(TAG, "No device connected")
+            result.success(false)
+            this.result = null
+            return
+        }
+
+        val service = gatt!!.getService(UUID.fromString(serviceUuid))
+        if (service == null) {
+            Log.d(TAG, "Service not found")
+            result.success(false)
+            this.result = null
+            return
+        }
+
+        val characteristic =
+            service.getCharacteristic(UUID.fromString(characteristicUuid))
+        if (characteristic == null) {
+            Log.d(TAG, "Characteristic not found")
+            result.success(false)
+            this.result = null
+            return
+        }
+
+        if (characteristic.properties and BluetoothGattCharacteristic.PROPERTY_NOTIFY == 0) {
+            Log.d(TAG, "Characteristic does not support notify")
+            result.success(false)
+            this.result = null
+            return
+        }
+
+        gatt!!.setCharacteristicNotification(characteristic, false)
+        currentNotifications.remove(characteristic.uuid.toString().lowercase().trim())
+        result.success(true)
+        this.result = null
+    }
+
+    private fun spawnTimeout(operation: LastOperation, timeoutSeconds: Int) {
+        CoroutineScope(Dispatchers.IO + Job()).launch {
+            delay(timeoutSeconds * 1000L)
+            if (lastOperation == operation && result != null) {
+                Log.d(TAG, "$operation timed out")
+                result?.success(null)
+            }
+        }
+    }
+
+    override fun onActivityResult(
+        requestCode: Int,
+        resultCode: Int,
+        data: Intent?
+    ): Boolean {
         Log.d(TAG, "onActivityResult $requestCode $resultCode $data")
         if (requestCode == REQUEST_ENABLE_BT) {
             if (resultCode == Activity.RESULT_OK) {
@@ -299,14 +956,18 @@ class LayrzBlePlugin : FlutterPlugin, MethodCallHandler, ActivityAware,
                 ) {
                     bluetooth!!.adapter.bluetoothLeScanner.startScan(scanCallback)
                     isScanning = true
+                    lastOperation = LastOperation.SCAN
                     result?.success(true)
+                    this.result = null
                 } else {
                     Log.d(TAG, "No location permission")
                     result?.success(false)
+                    this.result = null
                 }
             } else {
                 Log.d(TAG, "Bluetooth not enabled")
                 result?.success(false)
+                this.result = null
             }
             return true
         }

@@ -1,12 +1,12 @@
 name: layrz_ble
-description: "Layrz BLE plugin for Flutter projects"
+description: "A simple way to interact with BLE devices in Flutter."
 version: 1.0.0
 homepage: https://github.com/goldenm-software/layrz_ble
 publish_to: "pub.dev"
 
 environment:
   sdk: ">=3.0.0 <4.0.0"
-  flutter: '>=3.22.0'
+  flutter: '>=3.27.0'
 
 dependencies:
   flutter:
@@ -17,7 +17,9 @@ dependencies:
   web: ^1.1.0
   plugin_platform_interface: ^2.0.2
   collection: ^1.18.0
-  layrz_models: ^3.3.7
+  layrz_models: ^3.3.21
+  flutter_web_bluetooth: ^1.0.0
+  bluez: ^0.8.2
 
 dev_dependencies:
   flutter_test:
@@ -38,5 +40,8 @@ flutter:
       windows:
         pluginClass: LayrzBlePluginCApi
       web:
-        pluginClass: LayrzBleWeb
-        fileName: layrz_ble_web.dart
+        pluginClass: LayrzBlePluginWeb
+        fileName: platforms/web.dart
+      linux:
+        dartPluginClass: LayrzBlePluginLinux
+        fileName: platforms/linux.dart

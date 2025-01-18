@@ -12,7 +12,7 @@ dependencies:
   permission_handler: ^11.3.1
   layrz_icons: ^1.0.4
   layrz_theme: ^7.1.9
-  layrz_models: ^3.3.7
+  layrz_models: any
   layrz_ble:
     path: ../
 

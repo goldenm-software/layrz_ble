@@ -1,3 +1,4 @@
+#pragma once
 #ifndef FLUTTER_PLUGIN_LAYRZ_BLE_PLUGIN_C_API_H_
 #define FLUTTER_PLUGIN_LAYRZ_BLE_PLUGIN_C_API_H_
 
@@ -13,8 +14,7 @@
 extern "C" {
 #endif
 
-FLUTTER_PLUGIN_EXPORT void LayrzBlePluginCApiRegisterWithRegistrar(
-    FlutterDesktopPluginRegistrarRef registrar);
+FLUTTER_PLUGIN_EXPORT void LayrzBlePluginCApiRegisterWithRegistrar(FlutterDesktopPluginRegistrarRef registrar);
 
 #if defined(__cplusplus)
 }  // extern "C"
