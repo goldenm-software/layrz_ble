@@ -2,7 +2,6 @@ name: layrz_ble
 description: "A simple way to interact with BLE devices in Flutter."
 version: 1.0.0
 homepage: https://github.com/goldenm-software/layrz_ble
-publish_to: "pub.dev"
 
 environment:
   sdk: ">=3.0.0 <4.0.0"
