@@ -35,6 +35,7 @@ list(APPEND PLUGIN_SOURCES
   "src/thread_handler.hpp"
   "src/utils.cpp"
   "src/utils.h"
+  "src/gatt.h"
   "src/scan_result.cpp"
   "src/scan_result.h"
   "src/layrz_ble_plugin.cpp"
@@ -67,7 +68,7 @@ target_include_directories(${PLUGIN_NAME} INTERFACE
   "${CMAKE_CURRENT_SOURCE_DIR}/include")
 target_link_libraries(${PLUGIN_NAME} PRIVATE flutter flutter_wrapper_plugin)
 
-set(universal_ble_bundled_libraries
+set(layrz_ble_bundled_libraries
   ""
   PARENT_SCOPE
 )

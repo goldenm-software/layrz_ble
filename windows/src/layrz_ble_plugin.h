@@ -20,6 +20,7 @@
 
 #include <memory>
 
+#include "gatt.h"
 #include "utils.h"
 #include "scan_result.h"
 #include "thread_handler.hpp"
@@ -57,6 +58,7 @@ namespace layrz_ble
       static std::unique_ptr<flutter::MethodChannel<flutter::EncodableValue>> methodChannel;
       static std::string filteredDeviceId;
 
+      std::unordered_map<std::string, BleService> servicesAndCharacteristics{};
       std::unordered_map<std::string, winrt::event_token> servicesNotifying{};
 
       Radio btRadio{nullptr};

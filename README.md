@@ -71,7 +71,7 @@ final bool stopResult = await ble.stopScan();
 | Get services and characteristics | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | Read from characteristics | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | Write to characteristics | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
-| Subscribe to characteristic notifications | ✅ | ✅ | ✅ | ❌ | ✅ | ✅ |
+| Subscribe to characteristic notifications | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | Send a payload to a BLE device | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | --- | --- | --- | --- | --- | --- | --- |
 | Language used | Kotlin | Swift | Swift | C++ | Dart | Dart |
@@ -145,7 +145,14 @@ Before getting into the platform specific permissions, always raises the questio
 ```
 
 ### Windows
-We're currently working on the support of Windows, please be patient until we finished this feature.
+If you use [`msix` package](https://pub.dev/packages/msix) to build your Windows app, you need to declare the permission for Bluetooth, this is an example of how to do it on your pubspec.yaml
+
+```yaml
+msix_config:
+  capabilities: bluetooth,radios
+```
+
+More information about the capabilities on Windows can be found on [Microsoft documentation](https://learn.microsoft.com/en-us/windows/uwp/packaging/app-capability-declarations)
 
 ### Web
 Nothing to do here :)

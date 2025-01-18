@@ -591,7 +591,7 @@ class LayrzBlePlugin : FlutterPlugin, MethodCallHandler, ActivityAware,
 
         if (gatt == null) {
             Log.d(TAG, "No device connected")
-            result.success(false)
+            result.success(null)
             this.result = null
             return
         }
@@ -610,14 +610,14 @@ class LayrzBlePlugin : FlutterPlugin, MethodCallHandler, ActivityAware,
         val newMtu = call.arguments as Int?
         if (newMtu == null) {
             Log.d(TAG, "No mtu provided")
-            result.success(false)
+            result.success(null)
             this.result = null
             return
         }
 
         if (gatt == null) {
             Log.d(TAG, "No device connected")
-            result.success(false)
+            result.success(null)
             this.result = null
             return
         }
@@ -633,7 +633,7 @@ class LayrzBlePlugin : FlutterPlugin, MethodCallHandler, ActivityAware,
         val serviceUuid = call.argument<String>("serviceUuid")
         if (serviceUuid == null) {
             Log.d(TAG, "No serviceUuid provided")
-            result.success(false)
+            result.success(null)
             this.result = null
             return
         }
@@ -641,7 +641,7 @@ class LayrzBlePlugin : FlutterPlugin, MethodCallHandler, ActivityAware,
         val characteristicUuid = call.argument<String>("characteristicUuid")
         if (characteristicUuid == null) {
             Log.d(TAG, "No characteristicUuid provided")
-            result.success(false)
+            result.success(null)
             this.result = null
             return
         }
@@ -649,7 +649,7 @@ class LayrzBlePlugin : FlutterPlugin, MethodCallHandler, ActivityAware,
         val payload = call.argument<ByteArray>("payload")
         if (payload == null) {
             Log.d(TAG, "No payload provided")
-            result.success(false)
+            result.success(null)
             this.result = null
             return
         }
@@ -659,9 +659,11 @@ class LayrzBlePlugin : FlutterPlugin, MethodCallHandler, ActivityAware,
             timeoutSeconds = 1
         }
 
+        val writeType = call.argument<Boolean>("withResponse") ?: true
+
         if (gatt == null) {
             Log.d(TAG, "No device connected")
-            result.success(false)
+            result.success(null)
             this.result = null
             return
         }
@@ -669,7 +671,7 @@ class LayrzBlePlugin : FlutterPlugin, MethodCallHandler, ActivityAware,
         val service = gatt!!.getService(UUID.fromString(serviceUuid))
         if (service == null) {
             Log.d(TAG, "Service not found")
-            result.success(false)
+            result.success(null)
             this.result = null
             return
         }
@@ -678,14 +680,14 @@ class LayrzBlePlugin : FlutterPlugin, MethodCallHandler, ActivityAware,
             service.getCharacteristic(UUID.fromString(characteristicUuid))
         if (characteristic == null) {
             Log.d(TAG, "Characteristic not found")
-            result.success(false)
+            result.success(null)
             this.result = null
             return
         }
 
         if (characteristic.properties and BluetoothGattCharacteristic.PROPERTY_WRITE == 0) {
             Log.d(TAG, "Characteristic does not support write")
-            result.success(false)
+            result.success(null)
             this.result = null
             return
         }
@@ -693,15 +695,20 @@ class LayrzBlePlugin : FlutterPlugin, MethodCallHandler, ActivityAware,
         this.result = result
         lastOperation = LastOperation.WRITE_CHARACTERISTIC
 
+        val type = if (writeType) {
+            BluetoothGattCharacteristic.WRITE_TYPE_DEFAULT
+        } else {
+            BluetoothGattCharacteristic.WRITE_TYPE_NO_RESPONSE
+        }
         if (Build.VERSION.SDK_INT > Build.VERSION_CODES.TIRAMISU) {
             gatt!!.writeCharacteristic(
                 characteristic,
                 payload,
-                BluetoothGattCharacteristic.WRITE_TYPE_DEFAULT,
+                type,
             )
         } else {
             characteristic.value = payload
-            characteristic.writeType = BluetoothGattCharacteristic.WRITE_TYPE_DEFAULT
+            characteristic.writeType = type
             gatt!!.writeCharacteristic(characteristic)
         }
 

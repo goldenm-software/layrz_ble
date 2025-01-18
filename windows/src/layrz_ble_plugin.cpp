@@ -390,14 +390,19 @@ namespace layrz_ble {
     response[flutter::EncodableValue("servicesIdentifiers")] = servicesIdentifiers;
 
     if(methodChannel != nullptr)
-      methodChannel->InvokeMethod("onScan", std::make_unique<flutter::EncodableValue>(response));
+      uiThreadHandler_.Post([this, response]() {
+        methodChannel->InvokeMethod(
+          "onScan",
+          std::make_unique<flutter::EncodableValue>(response)
+        );
+      });
   } // handleBleScanResult
 
   /// @brief Connect to the device
   /// @param method_call
   /// @param result
   /// @return void
-  winrt::fire_and_forget LayrzBlePlugin::connect (
+  winrt::fire_and_forget LayrzBlePlugin::connect(
       const flutter::MethodCall<flutter::EncodableValue> &method_call,
       std::unique_ptr<flutter::MethodResult<flutter::EncodableValue> > result
   ) {
@@ -421,13 +426,6 @@ namespace layrz_ble {
       Log("Stopping Bluetooth(Classic) watcher");
       btScanner.Stop();
       btScanner = nullptr;
-
-      if (methodChannel != nullptr) {
-        methodChannel->InvokeMethod(
-          "onEvent",
-          std::make_unique<flutter::EncodableValue>("SCAN_STOPPED")
-        );
-      }
     }
 
     // Stopping the scan
@@ -454,6 +452,8 @@ namespace layrz_ble {
       co_return;
     }
 
+    servicesAndCharacteristics.clear();
+    servicesNotifying.clear();
     device.setDevice(connDevice);
 
     Log("Device found, attempting to get GATT services");
@@ -465,6 +465,17 @@ namespace layrz_ble {
       co_return;
     }
 
+    for (auto service : servicesResult.Services()) {
+      auto serviceUuid = toLowercase(GuidToString(service.Uuid()));
+      servicesAndCharacteristics[serviceUuid] = BleService(service);
+
+      auto characteristics = co_await service.GetCharacteristicsAsync(BluetoothCacheMode::Uncached);
+      for (auto characteristic : characteristics.Characteristics()) {
+        auto characteristicUuid = toLowercase(GuidToString(characteristic.Uuid()));
+        servicesAndCharacteristics[serviceUuid].addCharacteristic(BleCharacteristic(characteristic));
+      }
+    }
+
     connDevice.ConnectionStatusChanged({this, &LayrzBlePlugin::onConnectionStatusChanged});
 
     Log("GATT Services discovered");
@@ -472,10 +483,12 @@ namespace layrz_ble {
     result->Success(flutter::EncodableValue(true));
 
     if (methodChannel != nullptr) {
-      methodChannel->InvokeMethod(
-        "onEvent",
-        std::make_unique<flutter::EncodableValue>("CONNECTED")
-      ); 
+      uiThreadHandler_.Post([this]() {
+        methodChannel->InvokeMethod(
+          "onEvent",
+          std::make_unique<flutter::EncodableValue>("CONNECTED")
+        ); 
+      });
     }
     co_return;
   } // connect
@@ -484,7 +497,7 @@ namespace layrz_ble {
   /// @param method_call 
   /// @param result 
   /// @return void
-  winrt::fire_and_forget LayrzBlePlugin::disconnect (
+  winrt::fire_and_forget LayrzBlePlugin::disconnect(
     const flutter::MethodCall<flutter::EncodableValue> &method_call,
     std::unique_ptr<flutter::MethodResult<flutter::EncodableValue> > result
   ) {
@@ -505,6 +518,7 @@ namespace layrz_ble {
     device->Close();
     connectedDevice = nullptr;
     servicesNotifying.clear();
+    servicesAndCharacteristics.clear();
 
     result->Success(flutter::EncodableValue(true));
     if (methodChannel != nullptr) {
@@ -545,21 +559,13 @@ namespace layrz_ble {
       co_return;
     }
 
-    auto services = co_await device->GetGattServicesAsync(BluetoothCacheMode::Uncached);
-    if (services.Status() != GattCommunicationStatus::Success) {
-      Log("Failed to get GATT services");
-      result->Success(flutter::EncodableValue());
-      co_return;
-    }
 
     flutter::EncodableList output = {};
-    for (auto service : services.Services()) {
-      auto serviceUuid = service.Uuid();
-      flutter::EncodableList characteristicsOutput = {};
-      auto characteristics = co_await service.GetCharacteristicsAsync(BluetoothCacheMode::Uncached);
-      for (auto characteristic : characteristics.Characteristics()) {
-        auto characteristicUuid = characteristic.Uuid();
+    for (auto [serviceUuid, service] : servicesAndCharacteristics) {
 
+      flutter::EncodableList characteristicsOutput = {};
+      for (auto [characteristicUuid, characteristicItm] : service.Characteristics()) {
+        auto characteristic = characteristicItm.Characteristic();
         flutter::EncodableMap characteristicObj = {};
         flutter::EncodableList propertiesList = {};
 
@@ -606,14 +612,14 @@ namespace layrz_ble {
           propertiesToStore.push_back("WRITE_WO_RSP");
         }
 
-        characteristicObj[flutter::EncodableValue("uuid")] = flutter::EncodableValue(GuidToString(characteristicUuid));
+        characteristicObj[flutter::EncodableValue("uuid")] = flutter::EncodableValue(characteristicUuid);
         characteristicObj[flutter::EncodableValue("properties")] = propertiesList;
 
         characteristicsOutput.push_back(characteristicObj);
       }
 
       flutter::EncodableMap serviceMap = {};
-      serviceMap[flutter::EncodableValue("uuid")] = flutter::EncodableValue(GuidToString(serviceUuid));
+      serviceMap[flutter::EncodableValue("uuid")] = flutter::EncodableValue(serviceUuid);
       serviceMap[flutter::EncodableValue("characteristics")] = characteristicsOutput;
       output.push_back(serviceMap);
     }
@@ -654,8 +660,12 @@ namespace layrz_ble {
     result->Success(flutter::EncodableValue(mtu));
     co_return;
   } // setMtu
-
-  winrt::fire_and_forget LayrzBlePlugin::readCharacteristic (
+  
+  /// @brief Read the characteristic
+  /// @param method_call
+  /// @param result 
+  /// @return void
+  winrt::fire_and_forget LayrzBlePlugin::readCharacteristic(
     const flutter::MethodCall<flutter::EncodableValue> &method_call,
     std::unique_ptr<flutter::MethodResult<flutter::EncodableValue> > result
   ) {
@@ -682,7 +692,7 @@ namespace layrz_ble {
       co_return;
     }
     // Log("Casting service UUID");
-    auto serviceUuid = std::get<std::string>(rawServiceUuid->second);
+    auto serviceUuid = toLowercase(std::get<std::string>(rawServiceUuid->second));
 
     // Log("Casting characteristic UUID");
     auto rawCharacteristicUuid = arguments.find(flutter::EncodableValue("characteristicUuid"));
@@ -692,7 +702,7 @@ namespace layrz_ble {
       co_return;
     }
     // Log("Casting characteristic UUID");
-    auto characteristicUuid = std::get<std::string>(rawCharacteristicUuid->second);
+    auto characteristicUuid = toLowercase(std::get<std::string>(rawCharacteristicUuid->second));
 
     if (servicesNotifying.find(characteristicUuid) != servicesNotifying.end()) {
       Log("This characteristic " + characteristicUuid + " is notifying, so we can't read it");
@@ -701,45 +711,49 @@ namespace layrz_ble {
     }
 
     // Log("Getting service from GATT " + serviceUuid);
-    auto services = co_await device->GetGattServicesAsync(BluetoothCacheMode::Cached);
-    if (services.Status() != GattCommunicationStatus::Success) {
-      Log("Failed to get GATT services");
+    auto serviceSearch = servicesAndCharacteristics.find(serviceUuid);
+    if (serviceSearch == servicesAndCharacteristics.end()) {
+      Log("Service " + serviceUuid + " not found");
       result->Success(flutter::EncodableValue());
       co_return;
     }
 
-    for (auto service : services.Services()) {
-      if (toLowercase(GuidToString(service.Uuid())) != toLowercase(serviceUuid)) {
-        continue;
-      }
+    auto service = serviceSearch->second;
 
-      // Log("Getting characteristic " + characteristicUuid + " from service " + serviceUuid);
-      auto characteristics = co_await service.GetCharacteristicsAsync(BluetoothCacheMode::Cached);
-      for (auto characteristic : characteristics.Characteristics()) {
-        if (toLowercase(GuidToString(characteristic.Uuid())) != toLowercase(characteristicUuid)) {
-          continue;
-        }
-        
-        // Log("Reading characteristic " + characteristicUuid + " from service " + serviceUuid);
-        auto readResult = co_await characteristic.ReadValueAsync();
-        if (readResult.Status() != GattCommunicationStatus::Success) {
-          Log("Failed to read characteristic value");
-          result->Success(flutter::EncodableValue());
-          co_return;
-        }
-
-        auto data = IBufferToVector(readResult.Value());
-        result->Success(flutter::EncodableValue(data));
-        co_return;
-      }
+    auto characteristics = service.Characteristics();
+    // Log("Getting characteristic from service " + serviceUuid);
+    auto characteristicSearch = characteristics.find(characteristicUuid);
+    if (characteristicSearch == characteristics.end()) {
+      Log("Characteristic " + characteristicUuid + " not found in service " + serviceUuid);
+      result->Success(flutter::EncodableValue());
+      co_return;
     }
 
-    Log("Characteristic " + characteristicUuid + " not found in service " + serviceUuid);
-    result->Success(flutter::EncodableValue());
-    co_return;
+    auto characteristic = characteristicSearch->second.Characteristic();
+
+    auto properties = characteristic.CharacteristicProperties();
+    if ((properties & GattCharacteristicProperties::Read) != GattCharacteristicProperties::Read) {
+      Log("Characteristic does not support writing");
+      result->Success(flutter::EncodableValue(false));
+      co_return;
+    }
+
+    auto data = co_await characteristic.ReadValueAsync();
+    if (data.Status() != GattCommunicationStatus::Success) {
+      Log("Failed to read characteristic value");
+      result->Success(flutter::EncodableValue());
+      co_return;
+    }
+
+    auto value = IBufferToVector(data.Value());
+    result->Success(flutter::EncodableValue(value));
   } // readCharacteristic
 
-  winrt::fire_and_forget LayrzBlePlugin::writeCharacteristic (
+  /// @brief Write to the characteristic
+  /// @param method_call 
+  /// @param result 
+  /// @return 
+  winrt::fire_and_forget LayrzBlePlugin::writeCharacteristic(
     const flutter::MethodCall<flutter::EncodableValue> &method_call,
     std::unique_ptr<flutter::MethodResult<flutter::EncodableValue> > result
   ) {
@@ -766,7 +780,7 @@ namespace layrz_ble {
       co_return;
     }
     // Log("Casting service UUID");
-    auto serviceUuid = std::get<std::string>(rawServiceUuid->second);
+    auto serviceUuid = toLowercase(std::get<std::string>(rawServiceUuid->second));
 
     // Log("Casting characteristic UUID");
     auto rawCharacteristicUuid = arguments.find(flutter::EncodableValue("characteristicUuid"));
@@ -776,7 +790,7 @@ namespace layrz_ble {
       co_return;
     }
     // Log("Casting characteristic UUID");
-    auto characteristicUuid = std::get<std::string>(rawCharacteristicUuid->second);
+    auto characteristicUuid = toLowercase(std::get<std::string>(rawCharacteristicUuid->second));
 
     // Log("Getting payload");
     auto rawPayload = arguments.find(flutter::EncodableValue("payload"));
@@ -794,47 +808,54 @@ namespace layrz_ble {
       withResponse = std::get<bool>(rawWithResponse->second);
     }
 
+    Log("With response: " + std::to_string(withResponse));
+
     // Log("Getting service from GATT " + serviceUuid);
-    auto services = co_await device->GetGattServicesAsync(BluetoothCacheMode::Cached);
-    if (services.Status() != GattCommunicationStatus::Success) {
-      Log("Failed to get GATT services");
+    auto serviceSearch = servicesAndCharacteristics.find(serviceUuid);
+    if (serviceSearch == servicesAndCharacteristics.end()) {
+      Log("Service " + serviceUuid + " not found");
       result->Success(flutter::EncodableValue(false));
       co_return;
     }
 
-    for (auto service : services.Services()) {
-      if (toLowercase(GuidToString(service.Uuid())) != toLowercase(serviceUuid)) {
-        continue;
-      }
+    auto service = serviceSearch->second;
+    auto characteristics = service.Characteristics();
 
-      // Log("Getting characteristic " + characteristicUuid + " from service " + serviceUuid);
-      auto characteristics = co_await service.GetCharacteristicsAsync(BluetoothCacheMode::Cached);
-      for (auto characteristic : characteristics.Characteristics()) {
-        if (toLowercase(GuidToString(characteristic.Uuid())) != toLowercase(characteristicUuid)) {
-          continue;
-        }
-
-        // Log("Writing to characteristic " + characteristicUuid + " from service " + serviceUuid);
-        auto writeType = withResponse ? GattWriteOption::WriteWithResponse : GattWriteOption::WriteWithoutResponse;
-        auto status = co_await characteristic.WriteValueAsync(VectorToIBuffer(payload), writeType);
-        if (status != GattCommunicationStatus::Success) {
-          Log("Failed to write characteristic value");
-          result->Success(flutter::EncodableValue(false));
-          co_return;
-        }
-
-        Log("Successfully wrote to characteristic " + characteristicUuid + " from service " + serviceUuid);
-        result->Success(flutter::EncodableValue(true));
-        co_return;
-      }
+    auto characteristicsSearch = characteristics.find(characteristicUuid);
+    if (characteristicsSearch == characteristics.end()) {
+      Log("Characteristic " + characteristicUuid + " not found in service " + serviceUuid);
+      result->Success(flutter::EncodableValue(false));
+      co_return;
     }
 
-    Log("Characteristic " + characteristicUuid + " not found in service " + serviceUuid);
-    result->Success(flutter::EncodableValue(false));
+    auto characteristic = characteristicsSearch->second.Characteristic();
+    auto properties = characteristic.CharacteristicProperties();
+    if ((properties & GattCharacteristicProperties::Write) != GattCharacteristicProperties::Write) {
+      Log("Characteristic does not support writing");
+      result->Success(flutter::EncodableValue(false));
+      co_return;
+    }
+
+    // Log("Writing to characteristic " + characteristicUuid + " from service " + serviceUuid);
+    auto writeType = withResponse ? GattWriteOption::WriteWithResponse : GattWriteOption::WriteWithoutResponse;
+    auto status = co_await characteristic.WriteValueAsync(VectorToIBuffer(payload), writeType);
+    if (status != GattCommunicationStatus::Success) {
+      Log("Failed to write characteristic value");
+      result->Success(flutter::EncodableValue(false));
+      co_return;
+    }
+
+    Log("Successfully wrote to characteristic " + characteristicUuid + " from service " + serviceUuid);
+    result->Success(flutter::EncodableValue(true));
     co_return;
+
   } // writeCharacteristic
 
-  winrt::fire_and_forget LayrzBlePlugin::startNotify (
+  /// @brief Start notifications for the characteristic
+  /// @param method_call 
+  /// @param result 
+  /// @return 
+  winrt::fire_and_forget LayrzBlePlugin::startNotify(
     const flutter::MethodCall<flutter::EncodableValue> &method_call,
     std::unique_ptr<flutter::MethodResult<flutter::EncodableValue> > result
   ) {
@@ -861,7 +882,7 @@ namespace layrz_ble {
       co_return;
     }
     // Log("Casting service UUID");
-    auto serviceUuid = std::get<std::string>(rawServiceUuid->second);
+    auto serviceUuid = toLowercase(std::get<std::string>(rawServiceUuid->second));
 
     // Log("Casting characteristic UUID");
     auto rawCharacteristicUuid = arguments.find(flutter::EncodableValue("characteristicUuid"));
@@ -871,7 +892,7 @@ namespace layrz_ble {
       co_return;
     }
     // Log("Casting characteristic UUID");
-    auto characteristicUuid = std::get<std::string>(rawCharacteristicUuid->second);
+    auto characteristicUuid = toLowercase(std::get<std::string>(rawCharacteristicUuid->second));
 
     if (servicesNotifying.find(characteristicUuid) != servicesNotifying.end()) {
       Log("Already subscribed to characteristic notifications");
@@ -879,64 +900,62 @@ namespace layrz_ble {
       co_return;
     }
 
-    // Log("Getting service from GATT " + serviceUuid);
-    auto services = co_await device->GetGattServicesAsync(BluetoothCacheMode::Cached);
-    if (services.Status() != GattCommunicationStatus::Success) {
-      Log("Failed to get GATT services");
+    auto serviceSearch = servicesAndCharacteristics.find(serviceUuid);
+    if (serviceSearch == servicesAndCharacteristics.end()) {
+      Log("Service " + serviceUuid + " not found");
+      result->Success(flutter::EncodableValue(false));
+      co_return;
+    }
+    auto service = serviceSearch->second;
+    auto characteristics = service.Characteristics();
+
+    auto characteristicsSearch = characteristics.find(characteristicUuid);
+    if (characteristicsSearch == characteristics.end()) {
+      Log("Characteristic " + characteristicUuid + " not found in service " + serviceUuid);
       result->Success(flutter::EncodableValue(false));
       co_return;
     }
 
-    for (auto service : services.Services()) {
-      if (toLowercase(GuidToString(service.Uuid())) != toLowercase(serviceUuid)) {
-        continue;
-      }
+    auto characteristic = characteristicsSearch->second.Characteristic();
 
-      // Log("Getting characteristic " + characteristicUuid + " from service " + serviceUuid);
-      auto characteristics = co_await service.GetCharacteristicsAsync(BluetoothCacheMode::Cached);
-      for (auto characteristic : characteristics.Characteristics()) {
-        if (toLowercase(GuidToString(characteristic.Uuid())) != toLowercase(characteristicUuid)) {
-          continue;
-        }
-        
-        auto properties = characteristic.CharacteristicProperties();
-        if ((properties & GattCharacteristicProperties::Notify) != GattCharacteristicProperties::Notify) {
-          // Log("Characteristic does not support notifications");
-          result->Success(flutter::EncodableValue(false));
-          co_return;
-        }
-
-        // Log("Subscribing to characteristic " + characteristicUuid + " from service " + serviceUuid);
-        auto descriptor = GattClientCharacteristicConfigurationDescriptorValue::Notify;
-
-        try {
-          auto status = co_await characteristic.WriteClientCharacteristicConfigurationDescriptorAsync(descriptor);
-          if (status != GattCommunicationStatus::Success) {
-            // Log("Failed to subscribe to characteristic notifications");
-            result->Success(flutter::EncodableValue(false));
-            co_return;
-          }
-
-          servicesNotifying[characteristicUuid] = {0};
-          auto token = characteristic.ValueChanged({this, &LayrzBlePlugin::onCharacteristicValueChanged});
-          servicesNotifying[characteristicUuid] = token;
-          Log("Successfully subscribed to characteristic " + characteristicUuid + " from service " + serviceUuid);
-          result->Success(flutter::EncodableValue(true));
-          co_return;
-        } catch (...) {
-          Log("Failed to subscribe to characteristic notifications");
-          result->Success(flutter::EncodableValue(false));
-          co_return;
-        }
-      }
+    auto properties = characteristic.CharacteristicProperties();
+    if ((properties & GattCharacteristicProperties::Notify) != GattCharacteristicProperties::Notify) {
+      // Log("Characteristic does not support notifications");
+      result->Success(flutter::EncodableValue(false));
+      co_return;
     }
 
-    Log("Characteristic " + characteristicUuid + " not found in service " + serviceUuid);
-    result->Success(flutter::EncodableValue(false));
+    // Log("Subscribing to characteristic " + characteristicUuid + " from service " + serviceUuid);
+    auto descriptor = GattClientCharacteristicConfigurationDescriptorValue::Notify;
+
+    try {
+      auto status = co_await characteristic.WriteClientCharacteristicConfigurationDescriptorAsync(descriptor);
+      if (status != GattCommunicationStatus::Success) {
+        // Log("Failed to subscribe to characteristic notifications");
+        result->Success(flutter::EncodableValue(false));
+        co_return;
+      }
+
+      servicesNotifying[characteristicUuid] = {0};
+      characteristic.ValueChanged(servicesNotifying[characteristicUuid]);
+      auto token = characteristic.ValueChanged({this, &LayrzBlePlugin::onCharacteristicValueChanged});
+      servicesNotifying[characteristicUuid] = token;
+      Log("Successfully subscribed to characteristic " + characteristicUuid + " from service " + serviceUuid);
+    } catch (...) {
+      Log("Failed to subscribe to characteristic notifications");
+      result->Success(flutter::EncodableValue(false));
+      co_return;
+    }
+
+    result->Success(flutter::EncodableValue(true));
     co_return;
   } // startNotify
 
-  winrt::fire_and_forget LayrzBlePlugin::stopNotify (
+  /// @brief Stop notifications for the characteristic
+  /// @param method_call 
+  /// @param result 
+  /// @return 
+  winrt::fire_and_forget LayrzBlePlugin::stopNotify(
     const flutter::MethodCall<flutter::EncodableValue> &method_call,
     std::unique_ptr<flutter::MethodResult<flutter::EncodableValue> > result
   ) {
@@ -963,7 +982,7 @@ namespace layrz_ble {
       co_return;
     }
     // Log("Casting service UUID");
-    auto serviceUuid = std::get<std::string>(rawServiceUuid->second);
+    auto serviceUuid = toLowercase(std::get<std::string>(rawServiceUuid->second));
 
     // Log("Casting characteristic UUID");
     auto rawCharacteristicUuid = arguments.find(flutter::EncodableValue("characteristicUuid"));
@@ -973,64 +992,68 @@ namespace layrz_ble {
       co_return;
     }
     // Log("Casting characteristic UUID");
-    auto characteristicUuid = std::get<std::string>(rawCharacteristicUuid->second);
+    auto characteristicUuid = toLowercase(std::get<std::string>(rawCharacteristicUuid->second));
 
     if (servicesNotifying.find(characteristicUuid) == servicesNotifying.end()) {
-      Log("Not subscribed to characteristic notifications");
+      Log("Already not subscribed to characteristic notifications");
+      result->Success(flutter::EncodableValue(true));
+      co_return;
+    }
+
+    auto serviceSearch = servicesAndCharacteristics.find(serviceUuid);
+    if (serviceSearch == servicesAndCharacteristics.end()) {
+      Log("Service " + serviceUuid + " not found");
+      result->Success(flutter::EncodableValue(false));
+      co_return;
+    }
+    auto service = serviceSearch->second;
+
+    auto characteristics = service.Characteristics();
+
+    auto characteristicsSearch = characteristics.find(characteristicUuid);
+    if (characteristicsSearch == characteristics.end()) {
+      Log("Characteristic " + characteristicUuid + " not found in service " + serviceUuid);
       result->Success(flutter::EncodableValue(false));
       co_return;
     }
 
-    // Log("Getting service from GATT " + serviceUuid);
-    auto services = co_await device->GetGattServicesAsync(BluetoothCacheMode::Uncached);
-    if (services.Status() != GattCommunicationStatus::Success) {
-      Log("Failed to get GATT services");
+    auto characteristic = characteristicsSearch->second.Characteristic();
+
+    auto properties = characteristic.CharacteristicProperties();
+    if ((properties & GattCharacteristicProperties::Notify) != GattCharacteristicProperties::Notify) {
+      // Log("Characteristic does not support notifications");
       result->Success(flutter::EncodableValue(false));
       co_return;
     }
 
-    for (auto service : services.Services()) {
-      if (toLowercase(GuidToString(service.Uuid())) != toLowercase(serviceUuid)) {
-        continue;
-      }
+    // Log("Subscribing to characteristic " + characteristicUuid + " from service " + serviceUuid);
+    auto descriptor = GattClientCharacteristicConfigurationDescriptorValue::None;
 
-      // Log("Getting characteristic " + characteristicUuid + " from service " + serviceUuid);
-      auto characteristics = co_await service.GetCharacteristicsAsync(BluetoothCacheMode::Uncached);
-      for (auto characteristic : characteristics.Characteristics()) {
-        if (toLowercase(GuidToString(characteristic.Uuid())) != toLowercase(characteristicUuid)) {
-          continue;
-        }
-        
-        auto properties = characteristic.CharacteristicProperties();
-        if ((properties & GattCharacteristicProperties::Notify) != GattCharacteristicProperties::Notify) {
-          Log("Characteristic does not support notifications");
-          result->Success(flutter::EncodableValue(false));
-          co_return;
-        }
-
-        // Log("Unsubscribing to characteristic " + characteristicUuid + " from service " + serviceUuid);
-        auto status = co_await characteristic.WriteClientCharacteristicConfigurationDescriptorAsync(
-          GattClientCharacteristicConfigurationDescriptorValue::None
-        );
-
-        if (status != GattCommunicationStatus::Success) {
-          Log("Failed to unsubscribe to characteristic notifications");
-          result->Success(flutter::EncodableValue(false));
-          co_return;
-        }
-
-        Log("Successfully unsubscribed to characteristic " + characteristicUuid + " from service " + serviceUuid);
-        result->Success(flutter::EncodableValue(true));
-        servicesNotifying.erase(characteristicUuid);
+    try {
+      auto status = co_await characteristic.WriteClientCharacteristicConfigurationDescriptorAsync(descriptor);
+      if (status != GattCommunicationStatus::Success) {
+        // Log("Failed to subscribe to characteristic notifications");
+        result->Success(flutter::EncodableValue(false));
         co_return;
       }
+
+      servicesNotifying[characteristicUuid] = {0};
+      characteristic.ValueChanged(servicesNotifying[characteristicUuid]);
+      servicesNotifying.erase(characteristicUuid);
+      Log("Successfully unsubscribed to characteristic " + characteristicUuid + " from service " + serviceUuid);
+    } catch (...) {
+      Log("Failed to unsubscribe to characteristic notifications");
+      result->Success(flutter::EncodableValue(false));
+      co_return;
     }
 
-    Log("Characteristic " + characteristicUuid + " not found in service " + serviceUuid);
-    result->Success(flutter::EncodableValue(false));
+    result->Success(flutter::EncodableValue(true));
     co_return;
   } // stopNotify
 
+  /// @brief When the characteristic value changed
+  /// @param sender 
+  /// @param args 
   void LayrzBlePlugin::onCharacteristicValueChanged(GattCharacteristic sender, GattValueChangedEventArgs args) {
     Log("Received characteristic value changed event");
     auto characteristicUuid = toLowercase(GuidToString(sender.Uuid()));
@@ -1046,13 +1069,18 @@ namespace layrz_ble {
     response[flutter::EncodableValue("value")] = flutter::EncodableValue(value);
 
     if (methodChannel != nullptr) {
-      methodChannel->InvokeMethod(
-        "onNotify",
-        std::make_unique<flutter::EncodableValue>(response)
-      );
+      uiThreadHandler_.Post([this, response]() {
+        methodChannel->InvokeMethod(
+          "onNotify",
+          std::make_unique<flutter::EncodableValue>(response)
+        );
+      });
     }
   } // onCharacteristicValueChanged
 
+  /// @brief When the connection status changed
+  /// @param device 
+  /// @param args 
   void LayrzBlePlugin::onConnectionStatusChanged(BluetoothLEDevice device, IInspectable args) {
     auto status = device.ConnectionStatus();
     if (status == BluetoothConnectionStatus::Disconnected) {
@@ -1060,17 +1088,21 @@ namespace layrz_ble {
       servicesNotifying.clear();
 
       if (methodChannel != nullptr) {
-        methodChannel->InvokeMethod(
-          "onEvent",
-          std::make_unique<flutter::EncodableValue>("DISCONNECTED")
-        );
+        uiThreadHandler_.Post([this]() {
+          methodChannel->InvokeMethod(
+            "onEvent",
+            std::make_unique<flutter::EncodableValue>("DISCONNECTED")
+          );
+        });
       }
     } else if (status == BluetoothConnectionStatus::Connected) {
       if (methodChannel != nullptr) {
-        methodChannel->InvokeMethod(
-          "onEvent",
-          std::make_unique<flutter::EncodableValue>("CONNECTED")
-        );
+        uiThreadHandler_.Post([this]() {
+          methodChannel->InvokeMethod(
+            "onEvent",
+            std::make_unique<flutter::EncodableValue>("CONNECTED")
+          );
+        });
       }
     }
   } // onConnectionStatusChanged
