@@ -2,8 +2,8 @@
 
 #define MAC_ADDRESS_STR_LENGTH (size_t)17
 
-namespace layrz_ble {
 
+namespace layrz_ble {
   /// @brief Log a message to the console
   /// @param message 
   void Log(const std::string &message) {
@@ -59,4 +59,63 @@ namespace layrz_ble {
       [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
     return lower;
   } // toLowercase
+
+  /// @brief Convert a GUID to a string
+  /// @param guid
+  /// @return std::string
+  std::string GuidToString(const winrt::guid &guid) {
+    std::ostringstream oss;
+    oss << std::hex << std::uppercase << std::setfill('0')
+        << std::setw(8) << guid.Data1 << '-'
+        << std::setw(4) << guid.Data2 << '-'
+        << std::setw(4) << guid.Data3 << '-'
+        << std::setw(2) << static_cast<int>(guid.Data4[0])
+        << std::setw(2) << static_cast<int>(guid.Data4[1]) << '-';
+
+    for (int i = 2; i < 8; ++i) {
+        oss << std::setw(2) << static_cast<int>(guid.Data4[i]);
+    }
+
+    return oss.str();
+  }
+
+  /// @brief Convert a string to a GUID
+  /// @param str
+  /// @return winrt::guid
+  winrt::guid StringToGuid(const std::string &str) {
+    winrt::guid guid;
+    std::istringstream iss(str);
+    iss >> std::hex >> guid.Data1;
+    iss.ignore(1); // Skip '-'
+    iss >> std::hex >> guid.Data2;
+    iss.ignore(1); // Skip '-'
+    iss >> std::hex >> guid.Data3;
+    iss.ignore(1); // Skip '-'
+    iss >> std::hex >> guid.Data4[0];
+    iss >> std::hex >> guid.Data4[1];
+    iss.ignore(1); // Skip '-'
+    for (int i = 2; i < 8; ++i) {
+        iss >> std::hex >> guid.Data4[i];
+    }
+    return guid;
+  }
+
+  /// @brief Convert a vector of bytes to an IBuffer
+  /// @param bytes 
+  /// @return Windows::Storage::Streams::IBuffer
+  IBuffer VectorToIBuffer(const std::vector<uint8_t> &data) {
+    auto writer = DataWriter();
+    writer.WriteBytes(data);
+    return writer.DetachBuffer();
+  }
+
+  /// @brief Convert an IBuffer to a vector of bytes
+  /// @param buffer
+  /// @return std::vector<uint8_t>
+  std::vector<uint8_t> IBufferToVector(const IBuffer &buffer) {
+    auto reader = DataReader::FromBuffer(buffer);
+    std::vector<uint8_t> data(buffer.Length());
+    reader.ReadBytes(winrt::array_view<uint8_t>(data));
+    return data;
+  }
 }

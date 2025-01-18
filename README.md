@@ -60,19 +60,19 @@ final bool stopResult = await ble.stopScan();
 
 ## Features available per platform
 
-✅ - Supported | ❌ - Not available
+✅ - Supported | ❌ - Not available | 🟨 - Partially supported
 
 | Feature | Android | iOS | macOS | Windows | Web | Linux |
 | --- | --- | --- | --- | --- | --- | --- |
 | Scan for BLE devices | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
-| Connect to BLE devices | ✅ | ✅ | ✅ | ❌ | ✅ | ✅ |
-| Disconnect from BLE devices | ✅ | ✅ | ✅ | ❌ | ✅ | ✅ |
-| Negotiate a new MTU | ✅ | ✅ | ✅ | ❌ | ❌ | ❌ |
-| Get services and characteristics | ✅ | ✅ | ✅ | ❌ | ✅ | ✅ |
-| Read from characteristics | ✅ | ✅ | ✅ | ❌ | ✅ | ✅ |
-| Write to characteristics | ✅ | ✅ | ✅ | ❌ | ✅ | ✅ |
+| Connect to BLE devices | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| Disconnect from BLE devices | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| Negotiate a new MTU | ✅ | ✅ | ✅ | 🟨 | ❌ | 🟨 |
+| Get services and characteristics | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| Read from characteristics | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| Write to characteristics | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | Subscribe to characteristic notifications | ✅ | ✅ | ✅ | ❌ | ✅ | ✅ |
-| Send a payload to a BLE device | ✅ | ✅ | ✅ | ❌ | ✅ | ✅ |
+| Send a payload to a BLE device | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | --- | --- | --- | --- | --- | --- | --- |
 | Language used | Kotlin | Swift | Swift | C++ | Dart | Dart |
 
@@ -170,7 +170,7 @@ This is a limitation of the Web Bluetooth API, you need to supply the services a
 ### And, why on Web and Linux, I cannot negotiate the MTU?
 This functionality on Web Bluetooth API is currently not available, similar case with Linux, the wrapper implemented [bluez package](https://pub.dev/packages/bluez) does not support this feature.
 
-Disclaimer: On Linux, if you call `setMtu`, the response is the allowed MTU from the device and the system, not the negotiated MTU.
+Disclaimer: On Linux and Windows, if you call `setMtu`, the response is the allowed MTU from the device and the system, not the negotiated MTU.
 
 ### Why is this package called `layrz_ble`?
 All packages developed by [Layrz](https://layrz.com) are prefixed with `layrz_`, check out our other packages on [pub.dev](https://pub.dev/publishers/goldenm.com/packages).

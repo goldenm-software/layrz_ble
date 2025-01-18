@@ -4,7 +4,15 @@
 #include <string>
 #include <vector>
 
+#include <winrt/base.h>
+
+#include <winrt/base.h>
+#include <winrt/Windows.Devices.Bluetooth.h>
+
 namespace layrz_ble {
+  using namespace winrt;
+  using namespace Windows::Devices::Bluetooth;
+  
   class BleScanResult {
     public:
       BleScanResult() = default;
@@ -33,6 +41,12 @@ namespace layrz_ble {
       void setServicesIdentifiers(const std::vector<std::vector<uint8_t>>* servicesIdentifiers);
       void setServicesIdentifiers(std::vector<std::vector<uint8_t>> servicesIdentifiers);
 
+      const uint64_t Address() const;
+      void setAddress(uint64_t address);
+
+      const std::optional<BluetoothLEDevice> Device() const;
+      void setDevice(const std::optional<BluetoothLEDevice> device);
+
     private:
       std::string deviceId_;
       std::optional<std::string> name_;
@@ -40,5 +54,8 @@ namespace layrz_ble {
       std::optional<std::vector<uint8_t>> manufacturerData_;
       std::optional<std::vector<uint8_t>> serviceData_;
       std::optional<std::vector<std::vector<uint8_t>>> servicesIdentifiers_;
+      std::optional<uint64_t> address_;
+
+      std::optional<BluetoothLEDevice> device_;
   };
 }

@@ -120,4 +120,29 @@ namespace layrz_ble {
     servicesIdentifiers_ = std::optional<std::vector<std::vector<uint8_t>>>(servicesIdentifiers);
   }
   
+  /// @brief Get the Address object
+  /// @return const uint64_t
+  const uint64_t BleScanResult::Address() const {
+    return address_ ? *address_ : 0;
+  }
+
+  /// @brief Set the Address object
+  /// @param address
+  /// @return void
+  void BleScanResult::setAddress(uint64_t address) {
+    address_ = address;
+  }
+
+  /// @brief Get the Device object
+  /// @return const std::optional<BluetoothLEDevice>
+  const std::optional<BluetoothLEDevice> BleScanResult::Device() const {
+    return device_;
+  }
+
+  /// @brief Set the Device object
+  /// @param device
+  /// @return void
+  void BleScanResult::setDevice(const std::optional<BluetoothLEDevice> device) {
+    device_ = device;
+  }
 }
