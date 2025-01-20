@@ -1,17 +1,75 @@
 # layrz_ble
 
 [![Pub version](https://img.shields.io/pub/v/layrz_ble?logo=flutter)](https://pub.dev/packages/layrz_ble)
-[![popularity](https://img.shields.io/pub/popularity/layrz_ble?logo=flutter)](https://pub.dev/packages/layrz_ble/score)
+[![Pub Points](https://img.shields.io/pub/points/layrz_ble)](https://pub.dev/packages/layrz_ble/score)
 [![likes](https://img.shields.io/pub/likes/layrz_ble?logo=flutter)](https://pub.dev/packages/layrz_ble/score)
 [![GitHub license](https://img.shields.io/github/license/goldenm-software/layrz_ble?logo=github)](https://github.com/goldenm-software/layrz_ble)
 
 A simple way to interact with BLE devices in Flutter.
 
-## Motivation
-Our goal is to provide a simple and easy-to-use library for Flutter developers to interact with BLE devices, and support as many platforms as possible.
-
 ## Why should I use this library?
+
 Other libraries on the market are either too complex to use, or does not fully support functionalities like reading service data from the advertisement, or crop the manufacturer data, our objective is provide a fully functional library, with all of the ideal capabilities of a BLE library for Flutter.
+
+For example, most of the libraries out there requires services and characteristics discovered before interacting with the device, but we auto-discover that for you, in this way, you will never forget about the services and characteristics of the device.
+
+## Functionalities available per platform
+
+✅ - Supported | ❌ - Not available | 🟨 - Partially supported
+
+| Feature | Android | iOS | macOS | Windows | Web | Linux | Method(s) | 
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| Scan for BLE devices | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | `startScan`, `stopScan` and `onScan` |
+| Connect to BLE devices | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | `connect` and `onEvent` |
+| Disconnect from BLE devices | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | `disconnect` and `onEvent` |
+| Negotiate a new MTU | ✅ | ✅ | ✅ | 🟨 | ❌ | 🟨 | `setMtu` |
+| Get services and characteristics | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | `discoverServices` |
+| Read from characteristics | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | `readCharacteristic` |
+| Write to characteristics | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | `writeCharacteristic` |
+| Subscribe to characteristic notifications | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | `startNotify`, `stopNotify` and `onNotify` |
+| --- | --- | --- | --- | --- | --- | --- |
+| Language used | Kotlin | Swift | Swift | C++ | Dart | Dart |
+
+### MTU thing...
+🟨 : Well, Windows (Directly on C++) and Linux (through [`bluez` package](https://pub.dev/packages/bluez)) does not support the capability to negotiate the MTU, but yes to return the max MTU allowed, so, when you call `setMtu` you will receive the max allowed from the APIs, not a negotiated value. And why this value is important? Well, you have a size limit of the things that you want to send to your device, knowing the MTU helps to adjusts your packets sizes before sending it to the device.
+
+❌ : Web does not support neither negotiate nor getting the MTU, so, when you call `setMtu` you will receive a `null` value. Why a `null` instead of an error? Well, right now (early 2025) the Web Bluetooth API does not support the MTU, but it's on the roadmap to be implemented, so, we are returning a `null` value to indicate that the feature is not available yet, hopefully, this will change in the future.
+
+## Minimum requirements
+### Android
+
+5.0 Lollipop (API Level 21) or later. Be careful with the permissions!.
+
+### iOS
+
+iOS 14.0 or later.
+
+### macOS
+
+11.0 Big Sur or later.
+
+### Windows
+
+Windows 10.0 or later (Like as the versions supported by [Flutter](https://docs.flutter.dev/reference/supported-platforms)).
+
+### Web
+
+Chromium-based browsers:
+- Google Chrome 56 or later
+- Microsoft Edge 79 or later
+- Opera 43 or later
+- Google Chrome Android 56 or later
+- Samsung Internet 6.0 or later
+
+Unfortunatelly, neither of these browsers supports Bluetooth API:
+- Mozilla Firefox
+- Apple Safari
+- Google Android WebView
+- Apple iOS WebView
+
+### Linux
+
+We think that any Linux distribution supported by [Flutter](https://docs.flutter.dev/reference/supported-platforms) with [`bluez`](https://www.bluez.org/) stack installed should work, but we tested on Ubuntu 24.04 LTS.
 
 ## Usage
 To use this plugin, add `layrz_ble` as a [dependency in your pubspec.yaml file](https://flutter.dev/docs/development/packages-and-plugins/using-packages).
@@ -58,23 +116,18 @@ final bool startResult = await ble.startScan();
 final bool stopResult = await ble.stopScan();
 ```
 
-## Features available per platform
+### Disclaimer about some classes used on this library
 
-✅ - Supported | ❌ - Not available | 🟨 - Partially supported
+Part of the classes used on this library are from the [`layrz_models`](https://pub.dev/packages/layrz_models) package.
 
-| Feature | Android | iOS | macOS | Windows | Web | Linux |
-| --- | --- | --- | --- | --- | --- | --- |
-| Scan for BLE devices | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
-| Connect to BLE devices | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
-| Disconnect from BLE devices | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
-| Negotiate a new MTU | ✅ | ✅ | ✅ | 🟨 | ❌ | 🟨 |
-| Get services and characteristics | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
-| Read from characteristics | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
-| Write to characteristics | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
-| Subscribe to characteristic notifications | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
-| Send a payload to a BLE device | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
-| --- | --- | --- | --- | --- | --- | --- |
-| Language used | Kotlin | Swift | Swift | C++ | Dart | Dart |
+```dart
+BleDevice         // Defines the BLE device itself, and of course the packet data separated on manufacturer and service data
+BleService        // Defines the service, with the UUID and the characteristics
+BleCharacteristic // Defines the characteristic, with the UUID and the properties (In a enum format to be easy to use)
+BleProperty       // Defines the properties of the characteristic, with the most common properties defined.
+```
+
+Of course, if you think that you need more attributes, or do you want to add other, feel free to request it on [layrz_ble](https://github.com/goldenm-software/layrz_ble) repository or in the [layrz_models](https://github.com/goldenm-software/layrz_models) repository if you already has the changes done on the `layrz_ble` package. We are open to contributions and suggestions.
 
 ## Permissions and requirements
 
@@ -83,7 +136,7 @@ Before getting into the platform specific permissions, always raises the questio
 ### Android
 ```xml
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
-  <!-- Location is required for BLE scan -->
+  <!-- Location is required for BLE scan, required since Android 10 (API Level 29) -->
   <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
   <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
 
@@ -105,7 +158,7 @@ Before getting into the platform specific permissions, always raises the questio
     android:name="android.permission.BLUETOOTH_ADMIN"
     android:maxSdkVersion="30" /> <!-- This permission is only for API level 30 or below -->
 
-  <!-- Required for BLE connection -->
+  <!-- Required for BLE connection, in all API Levels -->
   <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
 
   <!-- ... -->
@@ -165,19 +218,13 @@ Your platform should have `bluez` stack installed to work, otherwise the lib wil
 
 ## FAQ
 
-### Why on iOS and macOS I'm getting an UUID instead of a Mac Address?
-Apple privacy policies are very strict, and they don't allow developers to access the MAC Address of the devices, instead, Apple OSs return a UUID for the device. Be careful with this UUID, is not an unique identifier along the time and devices. More information on [Apple Developer CBPeripheral entity documentation](https://developer.apple.com/documentation/corebluetooth/cbperipheral)
+### Why on some platforms I'm getting an UUID instead of a Mac Address?
+On web, Bluetooth API does not allow developers to access the MAC Address of the devices, instead, it returns a randomly generated string for the device. Be careful with this string, is not an unique identifier along the time and devices. More information on [mdn BluetoothDevice id property](https://developer.mozilla.org/en-US/docs/Web/API/BluetoothDevice/id).
 
-### And why on Web, I cannot get the MAC Address?
-Web Bluetooth API does not allow developers to access the MAC Address of the devices, instead, it returns a randomly generated string for the device. Be careful with this string, is not an unique identifier along the time and devices. More information on [mdn BluetoothDevice id property](https://developer.mozilla.org/en-US/docs/Web/API/BluetoothDevice/id)
+On Apple ecosystem (aka, iOS, iPadOS and macOS), Apple privacy policies are very strict, and they don't allow developers to access the MAC Address of the devices, instead, Apple OSs return a UUID for the device. Be careful with this UUID, is not an unique identifier along the time and devices. More information on [Apple Developer CBPeripheral entity documentation](https://developer.apple.com/documentation/corebluetooth/cbperipheral)
 
 ### In Web, why I need to supply the services and characteristics?
 This is a limitation of the Web Bluetooth API, you need to supply the services and characteristics to interact with the device. This is a security measure to prevent malicious websites to interact with your devices.
-
-### And, why on Web and Linux, I cannot negotiate the MTU?
-This functionality on Web Bluetooth API is currently not available, similar case with Linux, the wrapper implemented [bluez package](https://pub.dev/packages/bluez) does not support this feature.
-
-Disclaimer: On Linux and Windows, if you call `setMtu`, the response is the allowed MTU from the device and the system, not the negotiated MTU.
 
 ### Why is this package called `layrz_ble`?
 All packages developed by [Layrz](https://layrz.com) are prefixed with `layrz_`, check out our other packages on [pub.dev](https://pub.dev/publishers/goldenm.com/packages).

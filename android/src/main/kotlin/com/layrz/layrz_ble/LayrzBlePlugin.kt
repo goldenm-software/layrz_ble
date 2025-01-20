@@ -1,3 +1,5 @@
+@file:Suppress("DEPRECATION")
+
 package com.layrz.layrz_ble
 
 
@@ -51,8 +53,8 @@ class LayrzBlePlugin : FlutterPlugin, MethodCallHandler, ActivityAware,
 
     private var isScanning = false
     private var lastOperation: LastOperation? = null
-    private var currentNotifications: MutableList<String> =
-        mutableListOf()
+    private var currentNotifications: MutableList<String> = mutableListOf()
+    private var servicesAndCharacteristics: MutableMap<String, BleService> = mutableMapOf()
 
     private val scanCallback = object : ScanCallback() {
         @SuppressLint("MissingPermission")
@@ -105,7 +107,6 @@ class LayrzBlePlugin : FlutterPlugin, MethodCallHandler, ActivityAware,
                 val data = rec!!.serviceData[key]
                 if (data != null) {
                     serviceData += data
-                    Log.d(TAG, "Key: $key, Data: ${data.size}")
                 }
             }
 
@@ -126,6 +127,7 @@ class LayrzBlePlugin : FlutterPlugin, MethodCallHandler, ActivityAware,
     }
 
     private val gattCallback = object : android.bluetooth.BluetoothGattCallback() {
+        @SuppressLint("MissingPermission")
         override fun onConnectionStateChange(
             gatt: BluetoothGatt?,
             status: Int,
@@ -148,27 +150,27 @@ class LayrzBlePlugin : FlutterPlugin, MethodCallHandler, ActivityAware,
             if (result == null) return
 
             if (newState == android.bluetooth.BluetoothProfile.STATE_CONNECTED) {
-                result!!.success(true)
+                connectedDevice = gatt!!.device
+                servicesAndCharacteristics.clear()
+                Log.d(TAG, "Connected to ${connectedDevice!!.address}, discovering services")
+                gatt.discoverServices()
             } else {
                 Log.d(TAG, "Connection failed")
                 result!!.success(false)
+                result = null
             }
-            result = null
         }
 
         override fun onServicesDiscovered(gatt: BluetoothGatt?, status: Int) {
             super.onServicesDiscovered(gatt, status)
             if (connectedDevice == null) return
-            if (lastOperation != LastOperation.DISCOVER_SERVICES) return
+            if (lastOperation != LastOperation.CONNECT) return
             if (result == null) return
             if (gatt == null) return
 
             if (status == BluetoothGatt.GATT_SUCCESS) {
-                val servicesMapList: MutableList<HashMap<String, Any>> = mutableListOf()
-
                 for (service in gatt.services) {
-                    val characteristics: MutableList<HashMap<String, Any>> = mutableListOf()
-
+                    val characteristics = mutableListOf<BleCharacteristic>()
                     for (characteristic in service.characteristics) {
                         val properties = characteristic.properties
                         val propertyList: MutableList<String> = mutableListOf()
@@ -198,24 +200,22 @@ class LayrzBlePlugin : FlutterPlugin, MethodCallHandler, ActivityAware,
                             propertyList.add("EXTENDED_PROP")
                         }
 
-                        val uuid = characteristic.uuid.toString()
-
                         characteristics.add(
-                            hashMapOf(
-                                "uuid" to uuid.lowercase().trim(),
-                                "properties" to propertyList
+                            BleCharacteristic(
+                                uuid = standarizeUuid(characteristic.uuid),
+                                properties = propertyList
                             )
                         )
                     }
 
-                    servicesMapList.add(
-                        hashMapOf(
-                            "uuid" to service.uuid.toString().lowercase().trim(),
-                            "characteristics" to characteristics
-                        )
+                    servicesAndCharacteristics[standarizeUuid(service.uuid)] = BleService(
+                        uuid = standarizeUuid(service.uuid),
+                        characteristics = characteristics
                     )
                 }
-                result!!.success(servicesMapList)
+
+                Log.d(TAG, "Services discovered")
+                result!!.success(true)
                 result = null
             } else {
                 Log.d(TAG, "Discover services failed")
@@ -266,10 +266,6 @@ class LayrzBlePlugin : FlutterPlugin, MethodCallHandler, ActivityAware,
             status: Int
         ) {
             super.onCharacteristicRead(gatt, characteristic, status)
-            Log.d(
-                TAG,
-                "onCharacteristicRead ${characteristic.uuid} - ${characteristic.value}"
-            )
 
             if (lastOperation != LastOperation.READ_CHARACTERISTIC) return
             if (result == null) return
@@ -429,7 +425,12 @@ class LayrzBlePlugin : FlutterPlugin, MethodCallHandler, ActivityAware,
             bluetooth!!.adapter.bluetoothLeScanner.stopScan(scanCallback)
         }
 
+        Log.d(TAG, "Arguments received: ${call.arguments}")
+
         filteredMacAddress = call.argument<String>("macAddress")
+        if (filteredMacAddress != null) {
+            Log.d(TAG, "Filtering by macAddress: $filteredMacAddress")
+        }
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
             val perm1 = ActivityCompat.checkSelfPermission(
@@ -584,11 +585,6 @@ class LayrzBlePlugin : FlutterPlugin, MethodCallHandler, ActivityAware,
     /* Discovers the services of a BLE device */
     @SuppressLint("MissingPermission")
     private fun discoverServices(call: MethodCall, result: Result) {
-        var timeoutSeconds: Int = call.argument<Int>("timeout") ?: 30
-        if (timeoutSeconds < 1) {
-            timeoutSeconds = 1
-        }
-
         if (gatt == null) {
             Log.d(TAG, "No device connected")
             result.success(null)
@@ -596,12 +592,25 @@ class LayrzBlePlugin : FlutterPlugin, MethodCallHandler, ActivityAware,
             return
         }
 
-        this.result = result
-        lastOperation = LastOperation.DISCOVER_SERVICES
-        gatt!!.discoverServices()
-
-        // Timeout
-        spawnTimeout(operation = LastOperation.DISCOVER_SERVICES, timeoutSeconds = timeoutSeconds)
+        val output: MutableList<Map<String, Any>> = mutableListOf()
+        // Iterate over the servicesAndCharacteristics
+        for ((serviceUuid, service) in servicesAndCharacteristics) {
+            val characteristics = service.characteristics.map { characteristic ->
+                mapOf(
+                    "uuid" to characteristic.uuid,
+                    "properties" to characteristic.properties
+                )
+            }
+            output.add(
+                mapOf(
+                    "uuid" to serviceUuid,
+                    "characteristics" to characteristics
+                )
+            )
+        }
+        result.success(output)
+        this.result = null
+        return
     }
 
     /* Sets the MTU of a BLE device */
@@ -788,23 +797,42 @@ class LayrzBlePlugin : FlutterPlugin, MethodCallHandler, ActivityAware,
     /* Subscribe to a characteristic */
     @SuppressLint("MissingPermission")
     private fun startNotify(call: MethodCall, result: Result) {
-        val serviceUuid = call.argument<String>("serviceUuid")
-        if (serviceUuid == null) {
+        val rawServiceUuid = call.argument<String>("serviceUuid")
+        if (rawServiceUuid == null) {
             Log.d(TAG, "No serviceUuid provided")
             result.success(false)
             this.result = null
             return
         }
 
-        val characteristicUuid = call.argument<String>("characteristicUuid")
-        if (characteristicUuid == null) {
-            Log.d(TAG, "No characteristicUuid provided")
+        val serviceUuid: UUID?
+        try {
+            serviceUuid = UUID.fromString(rawServiceUuid)
+        } catch (e: IllegalArgumentException) {
+            Log.d(TAG, "Invalid serviceUuid provided - $rawServiceUuid")
             result.success(false)
             this.result = null
             return
         }
 
-        if (currentNotifications.contains(characteristicUuid.lowercase().trim())) {
+        val rawCharacteristicUuid = call.argument<String>("characteristicUuid")
+        if (rawCharacteristicUuid == null) {
+            Log.d(TAG, "No characteristicUuid provided")
+            result.success(false)
+            this.result = null
+            return
+        }
+        val characteristicUuid: UUID?
+        try {
+            characteristicUuid = UUID.fromString(rawCharacteristicUuid)
+        } catch (e: IllegalArgumentException) {
+            Log.d(TAG, "Invalid characteristicUuid provided - $rawCharacteristicUuid")
+            result.success(false)
+            this.result = null
+            return
+        }
+
+        if (currentNotifications.contains(standarizeUuid(characteristicUuid))) {
             Log.d(TAG, "Already subscribed")
             result.success(true)
             this.result = null
@@ -818,7 +846,7 @@ class LayrzBlePlugin : FlutterPlugin, MethodCallHandler, ActivityAware,
             return
         }
 
-        val service = gatt!!.getService(UUID.fromString(serviceUuid))
+        val service = gatt!!.getService(serviceUuid)
         if (service == null) {
             Log.d(TAG, "Service not found")
             result.success(false)
@@ -826,8 +854,7 @@ class LayrzBlePlugin : FlutterPlugin, MethodCallHandler, ActivityAware,
             return
         }
 
-        val characteristic =
-            service.getCharacteristic(UUID.fromString(characteristicUuid))
+        val characteristic = service.getCharacteristic(characteristicUuid)
         if (characteristic == null) {
             Log.d(TAG, "Characteristic not found")
             result.success(false)
@@ -852,6 +879,7 @@ class LayrzBlePlugin : FlutterPlugin, MethodCallHandler, ActivityAware,
         }
 
         val descriptor = characteristic.getDescriptor(CCD_CHARACTERISTIC)
+
         if (descriptor == null) {
             Log.d(TAG, "Descriptor not found")
             result.success(false)

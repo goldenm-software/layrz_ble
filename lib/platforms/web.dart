@@ -18,9 +18,12 @@ class LayrzBlePluginWeb extends LayrzBlePlatform {
   BluetoothDevice? _currentConnected;
   final Map<String, StreamSubscription<ByteData>> _notifications = {};
   final Map<String, BluetoothDevice> _devices = {};
+  final List<BleService> _services = [];
 
-  final StreamController<BleDevice> _scanController = StreamController<BleDevice>.broadcast();
-  final StreamController<BleEvent> _eventController = StreamController<BleEvent>.broadcast();
+  final StreamController<BleDevice> _scanController =
+      StreamController<BleDevice>.broadcast();
+  final StreamController<BleEvent> _eventController =
+      StreamController<BleEvent>.broadcast();
   final StreamController<BleCharacteristicNotification> _notifyController =
       StreamController<BleCharacteristicNotification>.broadcast();
 
@@ -31,7 +34,8 @@ class LayrzBlePluginWeb extends LayrzBlePlatform {
   Stream<BleEvent> get onEvent => _eventController.stream;
 
   @override
-  Stream<BleCharacteristicNotification> get onNotify => _notifyController.stream;
+  Stream<BleCharacteristicNotification> get onNotify =>
+      _notifyController.stream;
 
   @override
   Future<BleCapabilities> checkCapabilities() async {
@@ -46,11 +50,14 @@ class LayrzBlePluginWeb extends LayrzBlePlatform {
   }
 
   @override
-  Future<bool?> startScan({String? macAddress, List<String>? servicesUuids}) async {
+  Future<bool?> startScan(
+      {String? macAddress, List<String>? servicesUuids}) async {
     _devices.clear();
-    final requestOptions = RequestOptionsBuilder.acceptAllDevices(optionalServices: servicesUuids);
+    final requestOptions =
+        RequestOptionsBuilder.acceptAllDevices(optionalServices: servicesUuids);
     try {
-      final device = await FlutterWebBluetooth.instance.requestDevice(requestOptions);
+      final device =
+          await FlutterWebBluetooth.instance.requestDevice(requestOptions);
       final bleDevice = BleDevice(macAddress: device.id, name: device.name);
       _devices[device.id] = device;
       _scanController.add(bleDevice);
@@ -83,6 +90,43 @@ class LayrzBlePluginWeb extends LayrzBlePlatform {
 
     await device.connect(timeout: null);
     _currentConnected = device;
+    _services.clear();
+    try {
+      _currentConnected!.discoverServices();
+      final services = await _currentConnected!.discoverServices();
+
+      for (final service in services) {
+        final characteristics = await service.getCharacteristics();
+        final bleCharacteristics = characteristics.map((c) {
+          return BleCharacteristic(
+            uuid: c.uuid,
+            properties: [
+              if (c.properties.read) BleProperty.read,
+              if (c.properties.write) BleProperty.write,
+              if (c.properties.notify) BleProperty.notify,
+              if (c.properties.indicate) BleProperty.indicate,
+              if (c.properties.authenticatedSignedWrites)
+                BleProperty.authenticatedSignedWrites,
+              if (c.properties.broadcast) BleProperty.broadcast,
+              if (c.properties.writableAuxiliaries)
+                BleProperty.extendedProperties,
+              if (c.properties.writeWithoutResponse)
+                BleProperty.writeWithoutResponse,
+            ],
+          );
+        }).toList();
+
+        _services.add(BleService(
+          uuid: service.uuid,
+          characteristics: bleCharacteristics,
+        ));
+      }
+    } catch (e) {
+      log("Error discovering services: $e");
+      _currentConnected = null;
+      return false;
+    }
+
     return true;
   }
 
@@ -94,6 +138,7 @@ class LayrzBlePluginWeb extends LayrzBlePlatform {
     }
 
     _currentConnected!.disconnect();
+    _services.clear();
     _currentConnected = null;
     return true;
   }
@@ -108,39 +153,7 @@ class LayrzBlePluginWeb extends LayrzBlePlatform {
       return null;
     }
 
-    try {
-      final services = await _currentConnected!.discoverServices();
-      List<BleService> result = [];
-
-      for (final service in services) {
-        final characteristics = await service.getCharacteristics();
-        final bleCharacteristics = characteristics.map((c) {
-          return BleCharacteristic(
-            uuid: c.uuid,
-            properties: [
-              if (c.properties.read) BleProperty.read,
-              if (c.properties.write) BleProperty.write,
-              if (c.properties.notify) BleProperty.notify,
-              if (c.properties.indicate) BleProperty.indicate,
-              if (c.properties.authenticatedSignedWrites) BleProperty.authenticatedSignedWrites,
-              if (c.properties.broadcast) BleProperty.broadcast,
-              if (c.properties.writableAuxiliaries) BleProperty.extendedProperties,
-              if (c.properties.writeWithoutResponse) BleProperty.writeWithoutResponse,
-            ],
-          );
-        }).toList();
-
-        result.add(BleService(
-          uuid: service.uuid,
-          characteristics: bleCharacteristics,
-        ));
-      }
-
-      return result;
-    } catch (e) {
-      log("Error discovering services: $e");
-      return null;
-    }
+    return _services;
   }
 
   @override
@@ -160,14 +173,16 @@ class LayrzBlePluginWeb extends LayrzBlePlatform {
 
     try {
       final services = await _currentConnected!.discoverServices();
-      final service = services.firstWhereOrNull((s) => s.uuid.toLowerCase() == serviceUuid.toLowerCase());
+      final service = services.firstWhereOrNull(
+          (s) => s.uuid.toLowerCase() == serviceUuid.toLowerCase());
       if (service == null) {
         log("Service not found: $serviceUuid");
         return false;
       }
 
       try {
-        final characteristic = await service.getCharacteristic(characteristicUuid);
+        final characteristic =
+            await service.getCharacteristic(characteristicUuid);
         if (withResponse) {
           await characteristic.writeValueWithResponse(payload);
         } else {
@@ -196,7 +211,8 @@ class LayrzBlePluginWeb extends LayrzBlePlatform {
     }
 
     final services = await _currentConnected!.discoverServices();
-    final service = services.firstWhereOrNull((s) => s.uuid.toLowerCase() == serviceUuid.toLowerCase());
+    final service = services.firstWhereOrNull(
+        (s) => s.uuid.toLowerCase() == serviceUuid.toLowerCase());
     if (service == null) {
       log("Service not found: $serviceUuid");
       return null;
@@ -208,7 +224,8 @@ class LayrzBlePluginWeb extends LayrzBlePlatform {
     }
 
     try {
-      final characteristic = await service.getCharacteristic(characteristicUuid);
+      final characteristic =
+          await service.getCharacteristic(characteristicUuid);
       final value = await characteristic.readValue(timeout: timeout);
       return value.buffer.asUint8List();
     } catch (e) {
@@ -228,14 +245,16 @@ class LayrzBlePluginWeb extends LayrzBlePlatform {
     }
 
     final services = await _currentConnected!.discoverServices();
-    final service = services.firstWhereOrNull((s) => s.uuid.toLowerCase() == serviceUuid.toLowerCase());
+    final service = services.firstWhereOrNull(
+        (s) => s.uuid.toLowerCase() == serviceUuid.toLowerCase());
     if (service == null) {
       log("Service not found: $serviceUuid");
       return false;
     }
 
     try {
-      final characteristic = await service.getCharacteristic(characteristicUuid);
+      final characteristic =
+          await service.getCharacteristic(characteristicUuid);
       if (characteristic.isNotifying) {
         log("Already notifying");
         return true;
@@ -266,14 +285,16 @@ class LayrzBlePluginWeb extends LayrzBlePlatform {
     }
 
     final services = await _currentConnected!.discoverServices();
-    final service = services.firstWhereOrNull((s) => s.uuid.toLowerCase() == serviceUuid.toLowerCase());
+    final service = services.firstWhereOrNull(
+        (s) => s.uuid.toLowerCase() == serviceUuid.toLowerCase());
     if (service == null) {
       log("Service not found: $serviceUuid");
       return false;
     }
 
     try {
-      final characteristic = await service.getCharacteristic(characteristicUuid);
+      final characteristic =
+          await service.getCharacteristic(characteristicUuid);
       if (!characteristic.isNotifying) {
         log("Is not notifying");
         return true;

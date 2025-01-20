@@ -1,8 +1,23 @@
 name: layrz_ble
-description: "A simple way to interact with BLE devices in Flutter."
-version: 1.0.0
-homepage: https://github.com/goldenm-software/layrz_ble
-publish_to: "pub.dev"
+description: "A Flutter library for cross-platform Bluetooth Low Energy (BLE) communication, supporting Android, iOS, macOS, Windows, Linux, and web."
+version: 1.0.1
+repository: https://github.com/goldenm-software/layrz_ble
+
+keywords:
+  - bluetooth
+  - ble
+  - bluetooth low energy
+  - flutter
+  - cross-platform
+  - device communication
+  - android
+  - ios
+  - windows
+  - macos
+  - linux
+  - web
+  - GATT
+  - wireless communicatio
 
 environment:
   sdk: ">=3.0.0 <4.0.0"

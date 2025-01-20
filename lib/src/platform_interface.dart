@@ -20,10 +20,12 @@ abstract class LayrzBlePlatform extends PlatformInterface {
   }
 
   /// [onScan] is a stream of BLE devices detected during a scan.
-  Stream<BleDevice> get onScan => throw UnimplementedError('_scanSubscription has not been implemented.');
+  Stream<BleDevice> get onScan =>
+      throw UnimplementedError('_scanSubscription has not been implemented.');
 
   /// [onEvent] is a stream of BLE events.
-  Stream<BleEvent> get onEvent => throw UnimplementedError('_eventSubscription has not been implemented.');
+  Stream<BleEvent> get onEvent =>
+      throw UnimplementedError('_eventSubscription has not been implemented.');
 
   /// [onNotify] is a stream of BLE notifications.
   /// To add a new notification listener, use [startNotify] method.
@@ -50,7 +52,8 @@ abstract class LayrzBlePlatform extends PlatformInterface {
   /// [stopScan] stops scanning for BLE devices.
   ///
   /// This method will stop the streaming of BLE devices.
-  Future<bool?> stopScan() => throw UnimplementedError('stopScan() has not been implemented.');
+  Future<bool?> stopScan() =>
+      throw UnimplementedError('stopScan() has not been implemented.');
 
   /// [checkCapabilities] checks if the device supports BLE.
   Future<BleCapabilities> checkCapabilities() =>
@@ -61,7 +64,8 @@ abstract class LayrzBlePlatform extends PlatformInterface {
   /// Maximum Transmission Unit and it is the maximum size of a packet that can be sent in a single transmission.
   ///
   /// The return value is the new MTU size, after a negotion with the peripheral.
-  Future<int?> setMtu({required int newMtu}) => throw UnimplementedError('setMtu() has not been implemented.');
+  Future<int?> setMtu({required int newMtu}) =>
+      throw UnimplementedError('setMtu() has not been implemented.');
 
   /// [connect] connects to a BLE device.
   Future<bool?> connect({
@@ -71,7 +75,8 @@ abstract class LayrzBlePlatform extends PlatformInterface {
       throw UnimplementedError('connect() has not been implemented.');
 
   /// [disconnect] disconnects from any connected BLE device.
-  Future<bool?> disconnect() => throw UnimplementedError('disconnect() has not been implemented.');
+  Future<bool?> disconnect() =>
+      throw UnimplementedError('disconnect() has not been implemented.');
 
   /// [discoverServices] discovers the services of a BLE device.
   Future<List<BleService>?> discoverServices({
@@ -99,7 +104,8 @@ abstract class LayrzBlePlatform extends PlatformInterface {
     /// [withResponse] is a flag to indicate if the write should be with response or not.
     required bool withResponse,
   }) =>
-      throw UnimplementedError('writeCharacteristic() has not been implemented.');
+      throw UnimplementedError(
+          'writeCharacteristic() has not been implemented.');
 
   /// [readCharacteristic] reads the value of a BLE characteristic.
   /// The return value is the raw bytes of the characteristic.
@@ -115,7 +121,8 @@ abstract class LayrzBlePlatform extends PlatformInterface {
     /// [timeout] is the duration to wait for the characteristic to be read.
     Duration timeout = const Duration(seconds: 30),
   }) =>
-      throw UnimplementedError('readCharacteristic() has not been implemented.');
+      throw UnimplementedError(
+          'readCharacteristic() has not been implemented.');
 
   /// [startNotify] starts listening to notifications from a BLE characteristic.
   /// To stop listening, use [stopNotify] method and to get the notifications, use [onNotify] stream.

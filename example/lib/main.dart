@@ -129,8 +129,10 @@ class _HomePageState extends State<HomePage> {
                   color: Colors.blue,
                   onTap: () async {
                     setState(() => _isLoading = true);
-                    if (ThemedPlatform.isAndroid) await Permission.location.request();
-                    if (!ThemedPlatform.isMacOS && !ThemedPlatform.isWeb) await Permission.bluetooth.request();
+                    if (ThemedPlatform.isAndroid)
+                      await Permission.location.request();
+                    if (!ThemedPlatform.isMacOS && !ThemedPlatform.isWeb)
+                      await Permission.bluetooth.request();
 
                     if (ThemedPlatform.isAndroid) {
                       await Permission.bluetoothScan.request();
@@ -142,7 +144,8 @@ class _HomePageState extends State<HomePage> {
                     setState(() => _isLoading = false);
                     debugPrint('Start scan result: $result');
 
-                    ThemedSnackbarMessenger.of(context).showSnackbar(ThemedSnackbar(
+                    ThemedSnackbarMessenger.of(context)
+                        .showSnackbar(ThemedSnackbar(
                       message: 'Capabilities: $result',
                       color: Colors.blue,
                       icon: LayrzIcons.solarOutlineBluetoothSquare,
@@ -166,7 +169,8 @@ class _HomePageState extends State<HomePage> {
                       _isLoading = false;
                       setState(() {});
 
-                      ThemedSnackbarMessenger.of(context).showSnackbar(ThemedSnackbar(
+                      ThemedSnackbarMessenger.of(context)
+                          .showSnackbar(ThemedSnackbar(
                         message: 'Disconnected from device',
                         color: Colors.red,
                         icon: LayrzIcons.solarOutlineBluetoothSquare,
@@ -186,7 +190,8 @@ class _HomePageState extends State<HomePage> {
                         _isScanning = await plugin.startScan() ?? false;
                         setState(() => _isLoading = false);
 
-                        ThemedSnackbarMessenger.of(context).showSnackbar(ThemedSnackbar(
+                        ThemedSnackbarMessenger.of(context)
+                            .showSnackbar(ThemedSnackbar(
                           message: 'Scanning for BLE devices...',
                           color: Colors.blue,
                           icon: LayrzIcons.solarOutlineBluetoothSquare,
@@ -210,7 +215,8 @@ class _HomePageState extends State<HomePage> {
                         _isLoading = false;
                         setState(() {});
 
-                        ThemedSnackbarMessenger.of(context).showSnackbar(ThemedSnackbar(
+                        ThemedSnackbarMessenger.of(context)
+                            .showSnackbar(ThemedSnackbar(
                           message: 'Scan stopped',
                           color: Colors.red,
                           icon: LayrzIcons.solarOutlineBluetoothSquare,
@@ -231,18 +237,23 @@ class _HomePageState extends State<HomePage> {
                     return InkWell(
                       onTap: () async {
                         debugPrint('Selected device: ${device.macAddress}');
-                        debugPrint("Manufacturer data: ${_castToString(device.manufacturerData)}");
-                        debugPrint("Service data: ${_castToString(device.serviceData)}");
-                        debugPrint("Services Identifiers: ${_castServicesIdentifiers(device.servicesIdentifiers)}");
+                        debugPrint(
+                            "Manufacturer data: ${_castToString(device.manufacturerData)}");
+                        debugPrint(
+                            "Service data: ${_castToString(device.serviceData)}");
+                        debugPrint(
+                            "Services Identifiers: ${_castServicesIdentifiers(device.servicesIdentifiers)}");
                         setState(() => _isLoading = true);
-                        final result = await plugin.connect(macAddress: device.macAddress);
+                        final result =
+                            await plugin.connect(macAddress: device.macAddress);
                         if (result == true) {
                           _selectedDevice = device;
                           _services = [];
                         }
                         setState(() => _isLoading = false);
 
-                        ThemedSnackbarMessenger.of(context).showSnackbar(ThemedSnackbar(
+                        ThemedSnackbarMessenger.of(context)
+                            .showSnackbar(ThemedSnackbar(
                           message: 'Connected to device: ${device.macAddress}',
                           color: Colors.green,
                           icon: LayrzIcons.solarOutlineBluetoothSquare,
@@ -263,20 +274,24 @@ class _HomePageState extends State<HomePage> {
                                 children: [
                                   Text(
                                     device.name ?? 'Unknown device',
-                                    style: Theme.of(context).textTheme.titleSmall,
+                                    style:
+                                        Theme.of(context).textTheme.titleSmall,
                                   ),
                                   Text(
                                     device.macAddress,
-                                    style: Theme.of(context).textTheme.bodySmall,
+                                    style:
+                                        Theme.of(context).textTheme.bodySmall,
                                   ),
                                   Text(
                                     "Manufacturer data: ${_castToString(device.manufacturerData)}",
-                                    style: Theme.of(context).textTheme.bodySmall,
+                                    style:
+                                        Theme.of(context).textTheme.bodySmall,
                                     maxLines: 10,
                                   ),
                                   Text(
                                     "Service data: ${_castToString(device.serviceData)}",
-                                    style: Theme.of(context).textTheme.bodySmall,
+                                    style:
+                                        Theme.of(context).textTheme.bodySmall,
                                     maxLines: 10,
                                   ),
                                 ],
@@ -302,7 +317,8 @@ class _HomePageState extends State<HomePage> {
                       _services = await plugin.discoverServices() ?? [];
                       setState(() => _isLoading = false);
 
-                      ThemedSnackbarMessenger.of(context).showSnackbar(ThemedSnackbar(
+                      ThemedSnackbarMessenger.of(context)
+                          .showSnackbar(ThemedSnackbar(
                         message: 'Discovered ${_services.length} services',
                         color: Colors.blue,
                         icon: LayrzIcons.solarOutlineBluetoothSquare,
@@ -325,7 +341,8 @@ class _HomePageState extends State<HomePage> {
                         setState(() {});
                       }
 
-                      ThemedSnackbarMessenger.of(context).showSnackbar(ThemedSnackbar(
+                      ThemedSnackbarMessenger.of(context)
+                          .showSnackbar(ThemedSnackbar(
                         message: 'Set MTU to $result after a negotiation',
                         color: Colors.orange,
                         icon: LayrzIcons.solarOutlineBluetoothSquare,
@@ -351,7 +368,8 @@ class _HomePageState extends State<HomePage> {
                       debugPrint('Set notification listener result: $result');
                       setState(() => _isLoading = false);
 
-                      ThemedSnackbarMessenger.of(context).showSnackbar(ThemedSnackbar(
+                      ThemedSnackbarMessenger.of(context)
+                          .showSnackbar(ThemedSnackbar(
                         message: 'Notification listener set: $result',
                         color: Colors.orange,
                         icon: LayrzIcons.solarOutlineBluetoothSquare,
@@ -376,7 +394,8 @@ class _HomePageState extends State<HomePage> {
 
                       setState(() => _isLoading = false);
 
-                      ThemedSnackbarMessenger.of(context).showSnackbar(ThemedSnackbar(
+                      ThemedSnackbarMessenger.of(context)
+                          .showSnackbar(ThemedSnackbar(
                         message: 'Payload sent',
                         color: Colors.blue,
                         icon: LayrzIcons.solarOutlineBluetoothSquare,
@@ -387,7 +406,8 @@ class _HomePageState extends State<HomePage> {
                         characteristicUuid: readCharacteristic,
                       );
 
-                      debugPrint('Read characteristic result: ${ascii.decode(result?.toList() ?? [])}');
+                      debugPrint(
+                          'Read characteristic result: ${ascii.decode(result?.toList() ?? [])}');
                     },
                   ),
                 ],
@@ -411,17 +431,20 @@ class _HomePageState extends State<HomePage> {
                           Padding(
                             padding: const EdgeInsets.only(left: 10),
                             child: Column(
-                              children: (service.characteristics ?? []).map((characteristic) {
+                              children: (service.characteristics ?? [])
+                                  .map((characteristic) {
                                 return Column(
                                   children: [
                                     Text(
                                       'Characteristic: ${characteristic.uuid}',
-                                      style: Theme.of(context).textTheme.bodySmall,
+                                      style:
+                                          Theme.of(context).textTheme.bodySmall,
                                     ),
                                     const SizedBox(height: 5),
                                     Text(
                                       'Properties: ${characteristic.properties}',
-                                      style: Theme.of(context).textTheme.bodySmall,
+                                      style:
+                                          Theme.of(context).textTheme.bodySmall,
                                     ),
                                   ],
                                 );

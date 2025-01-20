@@ -65,7 +65,8 @@ class BleCapabilities {
     return BleCapabilities(
       locationPermission: map['locationPermission'] ?? false,
       bluetoothPermission: map['bluetoothPermission'] ?? false,
-      bluetoothAdminOrScanPermission: map['bluetoothAdminOrScanPermission'] ?? false,
+      bluetoothAdminOrScanPermission:
+          map['bluetoothAdminOrScanPermission'] ?? false,
       bluetoothConnectPermission: map['bluetoothConnectPermission'] ?? false,
     );
   }
