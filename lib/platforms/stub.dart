@@ -13,10 +13,12 @@ class LayrzBlePluginStub extends LayrzBlePlatform {
   }
 
   @override
-  Stream<BleDevice> get onScan => throw UnimplementedError('_scanSubscription has not been implemented.');
+  Stream<BleDevice> get onScan =>
+      throw UnimplementedError('_scanSubscription has not been implemented.');
 
   @override
-  Stream<BleEvent> get onEvent => throw UnimplementedError('_eventSubscription has not been implemented.');
+  Stream<BleEvent> get onEvent =>
+      throw UnimplementedError('_eventSubscription has not been implemented.');
 
   @override
   Stream<BleCharacteristicNotification> get onNotify =>
@@ -30,14 +32,16 @@ class LayrzBlePluginStub extends LayrzBlePlatform {
       throw UnimplementedError('startScan() has not been implemented.');
 
   @override
-  Future<bool?> stopScan() => throw UnimplementedError('stopScan() has not been implemented.');
+  Future<bool?> stopScan() =>
+      throw UnimplementedError('stopScan() has not been implemented.');
 
   @override
   Future<BleCapabilities> checkCapabilities() =>
       throw UnimplementedError('checkCapabilities() has not been implemented.');
 
   @override
-  Future<int?> setMtu({required int newMtu}) => throw UnimplementedError('setMtu() has not been implemented.');
+  Future<int?> setMtu({required int newMtu}) =>
+      throw UnimplementedError('setMtu() has not been implemented.');
 
   @override
   Future<bool?> connect({
@@ -46,7 +50,8 @@ class LayrzBlePluginStub extends LayrzBlePlatform {
       throw UnimplementedError('connect() has not been implemented.');
 
   @override
-  Future<bool?> disconnect() => throw UnimplementedError('disconnect() has not been implemented.');
+  Future<bool?> disconnect() =>
+      throw UnimplementedError('disconnect() has not been implemented.');
 
   @override
   Future<List<BleService>?> discoverServices({
@@ -62,7 +67,8 @@ class LayrzBlePluginStub extends LayrzBlePlatform {
     Duration timeout = const Duration(seconds: 30),
     required bool withResponse,
   }) =>
-      throw UnimplementedError('writeCharacteristic() has not been implemented.');
+      throw UnimplementedError(
+          'writeCharacteristic() has not been implemented.');
 
   @override
   Future<Uint8List?> readCharacteristic({
@@ -70,7 +76,8 @@ class LayrzBlePluginStub extends LayrzBlePlatform {
     required String characteristicUuid,
     Duration timeout = const Duration(seconds: 30),
   }) =>
-      throw UnimplementedError('readCharacteristic() has not been implemented.');
+      throw UnimplementedError(
+          'readCharacteristic() has not been implemented.');
 
   @override
   Future<bool?> startNotify({

@@ -31,8 +31,10 @@ class LayrzBlePluginLinux extends LayrzBlePlatform {
 
   final Map<BlueZUUID, StreamSubscription<List<String>>> _notifications = {};
 
-  final StreamController<BleDevice> _scanController = StreamController<BleDevice>.broadcast();
-  final StreamController<BleEvent> _eventController = StreamController<BleEvent>.broadcast();
+  final StreamController<BleDevice> _scanController =
+      StreamController<BleDevice>.broadcast();
+  final StreamController<BleEvent> _eventController =
+      StreamController<BleEvent>.broadcast();
   final StreamController<BleCharacteristicNotification> _notifyController =
       StreamController<BleCharacteristicNotification>.broadcast();
 
@@ -43,7 +45,8 @@ class LayrzBlePluginLinux extends LayrzBlePlatform {
   Stream<BleEvent> get onEvent => _eventController.stream;
 
   @override
-  Stream<BleCharacteristicNotification> get onNotify => _notifyController.stream;
+  Stream<BleCharacteristicNotification> get onNotify =>
+      _notifyController.stream;
 
   @override
   Future<BleCapabilities> checkCapabilities() async {
@@ -64,7 +67,8 @@ class LayrzBlePluginLinux extends LayrzBlePlatform {
   }
 
   @override
-  Future<bool?> startScan({String? macAddress, List<String>? servicesUuids}) async {
+  Future<bool?> startScan(
+      {String? macAddress, List<String>? servicesUuids}) async {
     if (_client == null) {
       log("Error initializing BlueZClient");
       return false;
@@ -176,16 +180,29 @@ class LayrzBlePluginLinux extends LayrzBlePlatform {
             BleCharacteristic(
               uuid: characteristic.uuid.toString(),
               properties: [
-                if (characteristic.flags.contains(BlueZGattCharacteristicFlag.read)) BleProperty.read,
-                if (characteristic.flags.contains(BlueZGattCharacteristicFlag.write)) BleProperty.write,
-                if (characteristic.flags.contains(BlueZGattCharacteristicFlag.notify)) BleProperty.notify,
-                if (characteristic.flags.contains(BlueZGattCharacteristicFlag.broadcast)) BleProperty.broadcast,
-                if (characteristic.flags.contains(BlueZGattCharacteristicFlag.writeWithoutResponse))
+                if (characteristic.flags
+                    .contains(BlueZGattCharacteristicFlag.read))
+                  BleProperty.read,
+                if (characteristic.flags
+                    .contains(BlueZGattCharacteristicFlag.write))
+                  BleProperty.write,
+                if (characteristic.flags
+                    .contains(BlueZGattCharacteristicFlag.notify))
+                  BleProperty.notify,
+                if (characteristic.flags
+                    .contains(BlueZGattCharacteristicFlag.broadcast))
+                  BleProperty.broadcast,
+                if (characteristic.flags
+                    .contains(BlueZGattCharacteristicFlag.writeWithoutResponse))
                   BleProperty.writeWithoutResponse,
-                if (characteristic.flags.contains(BlueZGattCharacteristicFlag.indicate)) BleProperty.indicate,
-                if (characteristic.flags.contains(BlueZGattCharacteristicFlag.authenticatedSignedWrites))
+                if (characteristic.flags
+                    .contains(BlueZGattCharacteristicFlag.indicate))
+                  BleProperty.indicate,
+                if (characteristic.flags.contains(
+                    BlueZGattCharacteristicFlag.authenticatedSignedWrites))
                   BleProperty.authenticatedSignedWrites,
-                if (characteristic.flags.contains(BlueZGattCharacteristicFlag.extendedProperties))
+                if (characteristic.flags
+                    .contains(BlueZGattCharacteristicFlag.extendedProperties))
                   BleProperty.extendedProperties,
               ],
             ),
@@ -219,7 +236,8 @@ class LayrzBlePluginLinux extends LayrzBlePlatform {
     }
 
     final characteristic = service.characteristics.firstWhereOrNull((element) {
-      return element.uuid.toString().toLowerCase() == characteristicUuid.toLowerCase();
+      return element.uuid.toString().toLowerCase() ==
+          characteristicUuid.toLowerCase();
     });
 
     if (characteristic == null) {
@@ -251,7 +269,8 @@ class LayrzBlePluginLinux extends LayrzBlePlatform {
     }
 
     final characteristic = service.characteristics.firstWhereOrNull((element) {
-      return element.uuid.toString().toLowerCase() == characteristicUuid.toLowerCase();
+      return element.uuid.toString().toLowerCase() ==
+          characteristicUuid.toLowerCase();
     });
 
     if (characteristic == null) {
@@ -287,7 +306,8 @@ class LayrzBlePluginLinux extends LayrzBlePlatform {
     }
 
     final characteristic = service.characteristics.firstWhereOrNull((element) {
-      return element.uuid.toString().toLowerCase() == characteristicUuid.toLowerCase();
+      return element.uuid.toString().toLowerCase() ==
+          characteristicUuid.toLowerCase();
     });
 
     if (characteristic == null) {
@@ -300,7 +320,8 @@ class LayrzBlePluginLinux extends LayrzBlePlatform {
       return false;
     }
 
-    _notifications[characteristic.uuid] = characteristic.propertiesChanged.listen((events) {
+    _notifications[characteristic.uuid] =
+        characteristic.propertiesChanged.listen((events) {
       debugPrint("Events: $events");
       for (final event in events) {
         if (event == 'Value') {
@@ -336,7 +357,8 @@ class LayrzBlePluginLinux extends LayrzBlePlatform {
     }
 
     final characteristic = service.characteristics.firstWhereOrNull((element) {
-      return element.uuid.toString().toLowerCase() == characteristicUuid.toLowerCase();
+      return element.uuid.toString().toLowerCase() ==
+          characteristicUuid.toLowerCase();
     });
 
     if (characteristic == null) {
@@ -364,7 +386,8 @@ class LayrzBlePluginLinux extends LayrzBlePlatform {
 
   void _onScanAdded(BlueZDevice device) {
     if (!_isScanning) return;
-    if (_macAddressFilter != null && _macAddressFilter!.toLowerCase() != device.address.toLowerCase()) {
+    if (_macAddressFilter != null &&
+        _macAddressFilter!.toLowerCase() != device.address.toLowerCase()) {
       if (kDebugMode) log("Skipping device ${device.address}");
       return;
     }
@@ -385,7 +408,8 @@ class LayrzBlePluginLinux extends LayrzBlePlatform {
     List<int> serviceData = [];
     List<List<int>> servicesIdentifiers = [];
 
-    final sortedServices = device.serviceData.keys.toList()..sort((a, b) => a.toString().compareTo(b.toString()));
+    final sortedServices = device.serviceData.keys.toList()
+      ..sort((a, b) => a.toString().compareTo(b.toString()));
     for (final serviceUuid in sortedServices) {
       final data = device.serviceData[serviceUuid] ?? [];
 
