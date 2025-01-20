@@ -30,6 +30,7 @@ class LayrzBlePluginLinux extends LayrzBlePlatform {
   BlueZDevice? _connectedDevice;
 
   final Map<BlueZUUID, StreamSubscription<List<String>>> _notifications = {};
+  final List<BleService> _services = [];
 
   final StreamController<BleDevice> _scanController =
       StreamController<BleDevice>.broadcast();
@@ -147,34 +148,13 @@ class LayrzBlePluginLinux extends LayrzBlePlatform {
     final device = _devices[macAddress.toLowerCase()]!;
     await device.connect();
     _connectedDevice = device;
+    _services.clear();
 
     _eventController.add(BleEvent.connected);
-    return true;
-  }
-
-  @override
-  Future<bool> disconnect() async {
-    _connectedDevice?.disconnect();
-    _connectedDevice = null;
-    _eventController.add(BleEvent.disconnected);
-    return true;
-  }
-
-  @override
-  Future<List<BleService>?> discoverServices({
-    Duration timeout = const Duration(seconds: 30),
-    List<String>? serviceUuids,
-  }) async {
-    if (_connectedDevice == null) {
-      log("Not connected to any device");
-      return null;
-    }
-
-    List<BleService> services = [];
 
     for (final service in _connectedDevice!.gattServices) {
       for (final characteristic in service.characteristics) {
-        services.add(BleService(
+        _services.add(BleService(
           uuid: service.uuid.toString(),
           characteristics: [
             BleCharacteristic(
@@ -210,8 +190,29 @@ class LayrzBlePluginLinux extends LayrzBlePlatform {
         ));
       }
     }
+    return true;
+  }
 
-    return services;
+  @override
+  Future<bool> disconnect() async {
+    _connectedDevice?.disconnect();
+    _connectedDevice = null;
+    _services.clear();
+    _eventController.add(BleEvent.disconnected);
+    return true;
+  }
+
+  @override
+  Future<List<BleService>?> discoverServices({
+    Duration timeout = const Duration(seconds: 30),
+    List<String>? serviceUuids,
+  }) async {
+    if (_connectedDevice == null) {
+      log("Not connected to any device");
+      return null;
+    }
+
+    return _services;
   }
 
   @override

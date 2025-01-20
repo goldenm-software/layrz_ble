@@ -90,7 +90,7 @@ class LayrzBlePluginWeb extends LayrzBlePlatform {
 
     await device.connect(timeout: null);
     _currentConnected = device;
-
+    _services.clear();
     try {
       _currentConnected!.discoverServices();
       final services = await _currentConnected!.discoverServices();
