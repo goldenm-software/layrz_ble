@@ -39,6 +39,3 @@ build/
 **/*/flutter/ephemeral/*
 **/*/Flutter/ephemeral/*
 **/*/Flutter/GeneratedPluginRegistrant.*
-
-.vscode/c_cpp_properties.json
-.vscode/settings.json

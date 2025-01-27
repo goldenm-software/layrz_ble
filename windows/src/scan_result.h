@@ -5,6 +5,7 @@
 #include <vector>
 
 #include <winrt/base.h>
+#include <flutter/standard_method_codec.h>
 
 #include <winrt/base.h>
 #include <winrt/Windows.Devices.Bluetooth.h>
@@ -33,13 +34,9 @@ namespace layrz_ble {
       void setManufacturerData(const std::vector<uint8_t>* manufacturerData);
       void setManufacturerData(std::vector<uint8_t> manufacturerData);
 
-      const std::vector<uint8_t>* ServiceData() const;
-      void setServiceData(const std::vector<uint8_t>* serviceData);
-      void setServiceData(std::vector<uint8_t> serviceData);
-
-      const std::vector<std::vector<uint8_t>>* ServicesIdentifiers() const;
-      void setServicesIdentifiers(const std::vector<std::vector<uint8_t>>* servicesIdentifiers);
-      void setServicesIdentifiers(std::vector<std::vector<uint8_t>> servicesIdentifiers);
+      const flutter::EncodableList* ServiceData() const;
+      void setServiceData(const flutter::EncodableList* serviceData);
+      void setServiceData(flutter::EncodableList serviceData);
 
       const uint64_t Address() const;
       void setAddress(uint64_t address);
@@ -52,8 +49,7 @@ namespace layrz_ble {
       std::optional<std::string> name_;
       std::optional<int64_t> rssi_;
       std::optional<std::vector<uint8_t>> manufacturerData_;
-      std::optional<std::vector<uint8_t>> serviceData_;
-      std::optional<std::vector<std::vector<uint8_t>>> servicesIdentifiers_;
+      std::optional<flutter::EncodableList> serviceData_;
       std::optional<uint64_t> address_;
 
       std::optional<BluetoothLEDevice> device_;

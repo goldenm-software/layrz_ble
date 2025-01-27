@@ -18,7 +18,12 @@ class LayrzBleNative extends LayrzBlePlatform {
       switch (call.method) {
         case 'onScan':
           try {
-            final device = BleDevice.fromJson(Map.from(call.arguments));
+            final args = Map<String, dynamic>.from(call.arguments);
+            final serviceData = call.arguments['serviceData'].map((e) {
+              return Map<String, dynamic>.from(e);
+            }).toList();
+            args['serviceData'] = serviceData;
+            final device = BleDevice.fromJson(args);
             _scanController.add(device);
           } catch (e) {
             log('Error parsing BleDevice: $e');
@@ -36,8 +41,7 @@ class LayrzBleNative extends LayrzBlePlatform {
 
         case 'onNotify':
           try {
-            final notification = BleCharacteristicNotification.fromMap(
-                Map<String, dynamic>.from(call.arguments));
+            final notification = BleCharacteristicNotification.fromMap(Map<String, dynamic>.from(call.arguments));
             _notifyController.add(notification);
           } catch (e) {
             log('Error parsing BleCharacteristicNotification: $e');
@@ -54,10 +58,8 @@ class LayrzBleNative extends LayrzBlePlatform {
   @visibleForTesting
   final methodChannel = const MethodChannel('com.layrz.layrz_ble');
 
-  final StreamController<BleDevice> _scanController =
-      StreamController<BleDevice>.broadcast();
-  final StreamController<BleEvent> _eventController =
-      StreamController<BleEvent>.broadcast();
+  final StreamController<BleDevice> _scanController = StreamController<BleDevice>.broadcast();
+  final StreamController<BleEvent> _eventController = StreamController<BleEvent>.broadcast();
   final StreamController<BleCharacteristicNotification> _notifyController =
       StreamController<BleCharacteristicNotification>.broadcast();
 
@@ -68,14 +70,14 @@ class LayrzBleNative extends LayrzBlePlatform {
   Stream<BleEvent> get onEvent => _eventController.stream;
 
   @override
-  Stream<BleCharacteristicNotification> get onNotify =>
-      _notifyController.stream;
+  Stream<BleCharacteristicNotification> get onNotify => _notifyController.stream;
 
   @override
-  Future<bool?> startScan({String? macAddress, List<String>? servicesUuids}) =>
-      methodChannel.invokeMethod<bool>(
+  Future<bool?> startScan({String? macAddress, List<String>? servicesUuids}) => methodChannel.invokeMethod<bool>(
         'startScan',
-        {'macAddress': macAddress},
+        {
+          if (macAddress != null) 'macAddress': macAddress,
+        },
       );
 
   @override
@@ -109,12 +111,10 @@ class LayrzBleNative extends LayrzBlePlatform {
   }
 
   @override
-  Future<int?> setMtu({required int newMtu}) =>
-      methodChannel.invokeMethod<int>('setMtu', newMtu);
+  Future<int?> setMtu({required int newMtu}) => methodChannel.invokeMethod<int>('setMtu', newMtu);
 
   @override
-  Future<bool?> connect({required String macAddress}) =>
-      methodChannel.invokeMethod<bool>('connect', macAddress);
+  Future<bool?> connect({required String macAddress}) => methodChannel.invokeMethod<bool>('connect', macAddress);
 
   @override
   Future<bool?> disconnect() => methodChannel.invokeMethod<bool>('disconnect');
@@ -140,8 +140,7 @@ class LayrzBleNative extends LayrzBlePlatform {
 
         for (var characteristic in service['characteristics']) {
           try {
-            characteristics.add(BleCharacteristic.fromJson(
-                Map<String, dynamic>.from(characteristic)));
+            characteristics.add(BleCharacteristic.fromJson(Map<String, dynamic>.from(characteristic)));
           } catch (e) {
             log('Error parsing BleCharacteristic: $e');
           }
@@ -166,8 +165,7 @@ class LayrzBleNative extends LayrzBlePlatform {
     Duration timeout = const Duration(seconds: 30),
     required bool withResponse,
   }) async {
-    final result = await methodChannel
-        .invokeMethod<bool>('writeCharacteristic', <String, dynamic>{
+    final result = await methodChannel.invokeMethod<bool>('writeCharacteristic', <String, dynamic>{
       'serviceUuid': serviceUuid,
       'characteristicUuid': characteristicUuid,
       'payload': payload,
@@ -189,8 +187,7 @@ class LayrzBleNative extends LayrzBlePlatform {
     required String characteristicUuid,
     Duration timeout = const Duration(seconds: 30),
   }) async {
-    final result = await methodChannel
-        .invokeMethod<Uint8List>('readCharacteristic', <String, dynamic>{
+    final result = await methodChannel.invokeMethod<Uint8List>('readCharacteristic', <String, dynamic>{
       'serviceUuid': serviceUuid,
       'characteristicUuid': characteristicUuid,
       'timeout': timeout.inSeconds,

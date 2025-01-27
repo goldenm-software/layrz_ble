@@ -82,42 +82,22 @@ namespace layrz_ble {
 
   /// @brief Get the ServiceData object
   /// @return const std::vector<uint8_t>*  
-  const std::vector<uint8_t>* BleScanResult::ServiceData() const {
+  const flutter::EncodableList* BleScanResult::ServiceData() const {
     return serviceData_ ? &(*serviceData_) : nullptr;
   }
 
   /// @brief Set the ServiceData object
   /// @param serviceData
   /// @return void  
-  void BleScanResult::setServiceData(const std::vector<uint8_t>* serviceData) {
-    serviceData_ = serviceData ? std::optional<std::vector<uint8_t>>(*serviceData) : std::nullopt;
+  void BleScanResult::setServiceData(const flutter::EncodableList* serviceData) {
+    serviceData_ = serviceData ? std::optional<flutter::EncodableList>(*serviceData) : std::nullopt;
   }
 
   /// @brief Set the ServiceData object
   /// @param serviceData
   /// @return void
-  void BleScanResult::setServiceData(std::vector<uint8_t> serviceData) {
-    serviceData_ = std::optional<std::vector<uint8_t>>(serviceData);
-  }
-
-  /// @brief Get the ServicesIdentifiers object
-  /// @return const std::vector<std::vector<uint8_t>>*  
-  const std::vector<std::vector<uint8_t>>* BleScanResult::ServicesIdentifiers() const {
-    return servicesIdentifiers_ ? &(*servicesIdentifiers_) : nullptr;
-  }
-
-  /// @brief Set the ServicesIdentifiers object
-  /// @param servicesIdentifiers
-  /// @return void
-  void BleScanResult::setServicesIdentifiers(const std::vector<std::vector<uint8_t>>* servicesIdentifiers) {
-    servicesIdentifiers_ = servicesIdentifiers ? std::optional<std::vector<std::vector<uint8_t>>>(*servicesIdentifiers) : std::nullopt;
-  }
-
-  /// @brief Set the ServicesIdentifiers object
-  /// @param servicesIdentifiers
-  /// @return void
-  void BleScanResult::setServicesIdentifiers(std::vector<std::vector<uint8_t>> servicesIdentifiers) {
-    servicesIdentifiers_ = std::optional<std::vector<std::vector<uint8_t>>>(servicesIdentifiers);
+  void BleScanResult::setServiceData(flutter::EncodableList serviceData) {
+    serviceData_ = std::optional<flutter::EncodableList>(serviceData);
   }
   
   /// @brief Get the Address object

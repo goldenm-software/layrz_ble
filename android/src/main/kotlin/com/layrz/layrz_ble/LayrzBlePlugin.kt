@@ -1,4 +1,4 @@
-@file:Suppress("DEPRECATION")
+@file:Suppress("DEPRECATION", "SpellCheckingInspection")
 
 package com.layrz.layrz_ble
 
@@ -99,15 +99,18 @@ class LayrzBlePlugin : FlutterPlugin, MethodCallHandler, ActivityAware,
                 }
             } ?: byteArrayOf()
 
-            var serviceData = byteArrayOf()
-            val servicesIdentifiers = mutableListOf<ByteArray>()
+            val serviceData = mutableListOf<Map<String, Any>>()
 
-            val sortedServices = rec?.serviceData?.keys?.sortedBy { it.toString() }
-            for (key in sortedServices ?: listOf()) {
-                val data = rec!!.serviceData[key]
-                if (data != null) {
-                    serviceData += data
-                }
+            Log.d(TAG,"Scanned device: $name")
+
+            for ((uuid, data) in rec?.serviceData ?: emptyMap()) {
+                if (uuid == null) continue
+                serviceData.add(
+                    mapOf(
+                        "uuid" to castServiceUuid(uuid.uuid),
+                        "data" to data
+                    )
+                )
             }
 
             channel.invokeMethod(
@@ -117,8 +120,7 @@ class LayrzBlePlugin : FlutterPlugin, MethodCallHandler, ActivityAware,
                     "macAddress" to macAddress,
                     "rssi" to rssi,
                     "manufacturerData" to manufacturerData,
-                    "serviceData" to serviceData,
-                    "servicesIdentifiers" to servicesIdentifiers
+                    "serviceData" to serviceData
                 )
             )
 
@@ -425,8 +427,6 @@ class LayrzBlePlugin : FlutterPlugin, MethodCallHandler, ActivityAware,
             bluetooth!!.adapter.bluetoothLeScanner.stopScan(scanCallback)
         }
 
-        Log.d(TAG, "Arguments received: ${call.arguments}")
-
         filteredMacAddress = call.argument<String>("macAddress")
         if (filteredMacAddress != null) {
             Log.d(TAG, "Filtering by macAddress: $filteredMacAddress")
@@ -677,6 +677,7 @@ class LayrzBlePlugin : FlutterPlugin, MethodCallHandler, ActivityAware,
             return
         }
 
+        Log.d(TAG, "Service: $serviceUuid")
         val service = gatt!!.getService(UUID.fromString(serviceUuid))
         if (service == null) {
             Log.d(TAG, "Service not found")
