@@ -446,14 +446,13 @@ public class LayrzBlePlugin: NSObject, FlutterPlugin, CBCentralManagerDelegate, 
             
             let manufacturerData = advertisementData[CBAdvertisementDataManufacturerDataKey] as? Data ?? Data()
             
-            var serviceData: Data = Data()
-            var servicesIdentifiers: [Data] = []
+            var serviceData: [[String: Any]] = []
             if let raw = advertisementData[CBAdvertisementDataServiceDataKey] as? [CBUUID: Data] {
-                let sorted = raw.sorted { $0.key.uuidString < $1.key.uuidString }
-                
-                for (key, data) in sorted {
-                    serviceData.append(data)
-                    servicesIdentifiers.append(key.data)
+                for (serviceUuid, data) in raw {
+                    serviceData.append([
+                        "uuid": standarizeServiceUuid(serviceUuid),
+                        "data": data
+                    ])
                 }
             }
             
@@ -463,8 +462,7 @@ public class LayrzBlePlugin: NSObject, FlutterPlugin, CBCentralManagerDelegate, 
                 "macAddress": uuid,
                 "rssi": RSSI,
                 "manufacturerData": manufacturerData,
-                "serviceData": serviceData,
-                "servicesIdentifiers": servicesIdentifiers
+                "serviceData": serviceData
             ])
         }
         
@@ -503,4 +501,9 @@ public class LayrzBlePlugin: NSObject, FlutterPlugin, CBCentralManagerDelegate, 
         private func log(_ message: String) {
             NSLog("LayrzBlePlugin/macOS: \(message)")
         }
+    
+    private func standarizeServiceUuid(_ uuid: CBUUID) -> String {
+        // Extract the values from 4 to 8
+        return uuid.uuidString.prefix(8).suffix(4).lowercased()
+    }
 }

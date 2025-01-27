@@ -334,7 +334,7 @@ packages:
       path: ".."
       relative: true
     source: path
-    version: "1.0.1"
+    version: "1.1.0"
   layrz_icons:
     dependency: "direct main"
     description:
@@ -347,10 +347,10 @@ packages:
     dependency: "direct main"
     description:
       name: layrz_models
-      sha256: "9ac3b1a0743b0b213b445afdf8ba7aeb6f9fa94e0886c844864c0eed29cd2c83"
+      sha256: "203d80c2ebd7d75c5237e161430bb2ff2920490d9f1da1f7bb897da066207915"
       url: "https://pub.dev"
     source: hosted
-    version: "3.3.21"
+    version: "3.3.30"
   layrz_theme:
     dependency: "direct main"
     description:
