@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.1.2
+
+- Added `BleCondition`, `BleConversion`, `BleParser`, `BleParserConfig`, `BleParserProperty`, `BleServiceData`, `BleOperation`, `BleParserSource` and `BleWatch` to the export.
+
 ## 1.1.1
 
 - Added Advertisement data parsers to the main class.
