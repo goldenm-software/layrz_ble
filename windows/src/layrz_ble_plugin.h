@@ -131,6 +131,8 @@ namespace layrz_ble
 
       void onCharacteristicValueChanged(GattCharacteristic sender, GattValueChangedEventArgs args);
       void onConnectionStatusChanged(BluetoothLEDevice device, IInspectable args);
+
+      std::string standarizeServiceUuid(std::string uuid);
   }; // class LayrzBlePlugin
 } // namespace layrz_ble
 

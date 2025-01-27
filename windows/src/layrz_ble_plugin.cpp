@@ -80,7 +80,6 @@ namespace layrz_ble {
 
     if(!btRadio)
       Log("No Bluetooth radio found");
-
   } // GetRadiosAync
 
   // ===============
@@ -114,11 +113,19 @@ namespace layrz_ble {
 
     // Get macAddress from arguments
     auto arguments = std::get<flutter::EncodableMap>(*method_call.arguments());
-    if(arguments.find(flutter::EncodableValue("macAddress")) != arguments.end())
+    auto macAddressFind = arguments.find(flutter::EncodableValue("macAddress"));
+    if(macAddressFind != arguments.end())
     {
-      auto macAddress = std::get<std::string>(arguments[flutter::EncodableValue("macAddress")]);
-      filteredDeviceId = toLowercase(macAddress);
-      Log("Applied filter for device with macAddress: " + filteredDeviceId);
+      try {
+        Log("Filtering by macAddress");
+        auto macAddress = std::get<std::string>(macAddressFind->second);
+        Log("Casting");
+        filteredDeviceId = toLowercase(macAddress);
+        Log("Filtered by macAddress: " + filteredDeviceId);
+      } catch (...) {
+        Log("Error filtering by macAddress");
+        filteredDeviceId = std::string("");
+      }
     }
 
     // Check if the radio is on
@@ -255,8 +262,7 @@ namespace layrz_ble {
 
             deviceInfo.setManufacturerData(manufacturerData);
 
-            std::vector<uint8_t> serviceData;
-            std::vector<std::vector<uint8_t>> servicesIdentifiers;
+            flutter::EncodableList serviceData = flutter::EncodableList();
             auto serviceItems = args.Advertisement().DataSections();
             for (const auto& section : serviceItems) 
             {
@@ -272,31 +278,40 @@ namespace layrz_ble {
                   auto reader = winrt::Windows::Storage::Streams::DataReader::FromBuffer(dataBuffer);
                   std::vector<uint8_t> additionalData(dataBuffer.Length());
                   reader.ReadBytes(winrt::array_view<uint8_t>(additionalData));
+
                   // Separate UUID from additional data
-                  std::vector<uint8_t> uuidBytes;
                   size_t uuidLength = 0;
 
-                  if (dataType == BluetoothLEAdvertisementDataTypes::ServiceData16BitUuids()) 
-                    uuidLength = 2; // 16-bit UUID
-                  else if (dataType == BluetoothLEAdvertisementDataTypes::ServiceData32BitUuids()) 
-                    uuidLength = 4; // 32-bit UUID
-                  else if (dataType == BluetoothLEAdvertisementDataTypes::ServiceData128BitUuids()) 
-                    uuidLength = 16; // 128-bit UUID
+                  if (dataType == BluetoothLEAdvertisementDataTypes::ServiceData16BitUuids())  { // 16-bit UUID
+                    uuidLength = 2;
+                  } else if (dataType == BluetoothLEAdvertisementDataTypes::ServiceData32BitUuids())  { // 32-bit UUID
+                    uuidLength = 4;
+                  } else if (dataType == BluetoothLEAdvertisementDataTypes::ServiceData128BitUuids())  { // 128-bit UUID
+                    uuidLength = 16;
+                  }
 
-                  if (additionalData.size() >= uuidLength) 
+                  std::vector<uint8_t> uuidBytes(additionalData.begin(), additionalData.begin() + uuidLength);
+                  std::vector<uint8_t> valueBytes(additionalData.begin() + uuidLength, additionalData.end());
+
+                  // Convert UUID to a string representation (e.g., hex)
+                  std::stringstream uuidStream;
+                  for (auto byte : uuidBytes) 
                   {
-                    // Extract UUID
-                    uuidBytes.assign(additionalData.begin(), additionalData.begin() + uuidLength);
-                    servicesIdentifiers.push_back(uuidBytes);
-                    // Append only remaining data (excluding UUID) to serviceData
-                    serviceData.insert(serviceData.end(), additionalData.begin() + uuidLength, additionalData.end());
-                  } // if (additionalData.size() >= uuidLength)
+                      uuidStream << std::hex << std::setw(2) << std::setfill('0') << static_cast<int>(byte);
+                  }
+                  std::string uuidStr = standarizeServiceUuid(uuidStream.str());
+
+                  // Store in serviceData
+                  flutter::EncodableMap serviceDataItem = flutter::EncodableMap();
+                  serviceDataItem[flutter::EncodableValue("uuid")] = flutter::EncodableValue(uuidStr);
+                  serviceDataItem[flutter::EncodableValue("data")] = flutter::EncodableValue(valueBytes);
+
+                  serviceData.push_back(serviceDataItem);
                 } // if (dataBuffer && dataBuffer.Length() > 0)
               } // if (dataType == BluetoothLEAdvertisementDataTypes::ServiceData16BitUuids() || ...)
             } // for (const auto& section : serviceItems)
 
             deviceInfo.setServiceData(serviceData);
-            deviceInfo.setServicesIdentifiers(servicesIdentifiers);
 
             auto name = HStringToString(args.Advertisement().LocalName());
             if (!name.empty()) 
@@ -382,12 +397,6 @@ namespace layrz_ble {
     response[flutter::EncodableValue("rssi")]             = flutter::EncodableValue(device.Rssi());
     response[flutter::EncodableValue("manufacturerData")] = flutter::EncodableValue(*device.ManufacturerData());
     response[flutter::EncodableValue("serviceData")]      = flutter::EncodableValue(*device.ServiceData());
-
-    flutter::EncodableList servicesIdentifiers = flutter::EncodableList();
-    for(const auto &serviceIdentifier : *device.ServicesIdentifiers())
-      servicesIdentifiers.push_back(flutter::EncodableValue(serviceIdentifier));
-
-    response[flutter::EncodableValue("servicesIdentifiers")] = servicesIdentifiers;
 
     if(methodChannel != nullptr)
       uiThreadHandler_.Post([this, response]() {
@@ -1106,4 +1115,8 @@ namespace layrz_ble {
       }
     }
   } // onConnectionStatusChanged
+
+  std::string LayrzBlePlugin::standarizeServiceUuid(std::string rawUuid) {
+    return rawUuid.substr(2,2) + rawUuid.substr(0,2);
+  }
 } // namespace layrz_ble
