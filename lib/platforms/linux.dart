@@ -366,7 +366,6 @@ class LayrzBlePluginLinux extends LayrzBlePlatform {
   void _onScanAdded(BlueZDevice device) {
     if (!_isScanning) return;
     if (_macAddressFilter != null && _macAddressFilter!.toLowerCase() != device.address.toLowerCase()) {
-      if (kDebugMode) log("Skipping device ${device.address}");
       return;
     }
 
@@ -383,30 +382,24 @@ class LayrzBlePluginLinux extends LayrzBlePlatform {
       manufacturerData.addAll(data);
     }
 
-    List<int> serviceData = [];
-    List<List<int>> servicesIdentifiers = [];
+    List<BleServiceData> serviceData = [];
 
-    final sortedServices = device.serviceData.keys.toList()..sort((a, b) => a.toString().compareTo(b.toString()));
-    for (final serviceUuid in sortedServices) {
-      final data = device.serviceData[serviceUuid] ?? [];
+    for (final entry in device.serviceData.entries) {
+      final bytes = entry.key.value;
+      final serviceUuid = _standarizeServiceUuid([bytes[2], bytes[3]]);
+      final data = entry.value;
 
-      serviceData.addAll(data);
-
-      final bytes = serviceUuid.value;
-
-      List<int> serviceUuidShort = [bytes[2], bytes[3]];
-      servicesIdentifiers.add(serviceUuidShort);
+      serviceData.add(BleServiceData(uuid: serviceUuid, data: data));
     }
 
     _devices[device.address.toLowerCase()] = device;
 
     return BleDevice(
-      macAddress: device.address,
+      macAddress: device.address.toLowerCase(),
       name: device.name.isEmpty ? 'Unknown' : device.name,
       rssi: device.rssi,
       manufacturerData: manufacturerData,
-      // serviceData: serviceData,
-      // servicesIdentifiers: servicesIdentifiers,
+      serviceData: serviceData,
     );
   }
 
@@ -423,5 +416,11 @@ class LayrzBlePluginLinux extends LayrzBlePlatform {
     buffer.setUint16(0, value, Endian.little);
 
     return buffer.buffer.asUint8List();
+  }
+
+  String _standarizeServiceUuid(List<int> bytes) {
+    return bytes.map((e) {
+      return e.toRadixString(16).padLeft(2, '0');
+    }).join('');
   }
 }
