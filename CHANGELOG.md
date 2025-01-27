@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.1.1
+
+- Added Advertisement data parsers to the main class.
+
 ## 1.1.0
 
 - Changed service data schema

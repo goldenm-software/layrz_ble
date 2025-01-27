@@ -126,4 +126,17 @@ class LayrzBle {
         serviceUuid: serviceUuid,
         characteristicUuid: characteristicUuid,
       );
+
+  /// [guessParser] is a helper method to guess the parser based on a provided list
+  /// This utility is for BLE parameter extraction from Advertisement Data.
+  BleParser? guessParser(List<BleParser> parsers, BleDevice device) => LayrzBlePlatform.instance.guessParser(
+        parsers,
+        device,
+      );
+
+  /// [parseData] parses the data from a BLE device using a parser.
+  Map<String, dynamic> parseData(BleParser parser, BleDevice device) => LayrzBlePlatform.instance.parseData(
+        parser,
+        device,
+      );
 }
