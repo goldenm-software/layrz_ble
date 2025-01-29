@@ -9,21 +9,7 @@ import 'src/platform_interface.dart';
 export 'src/platform_interface.dart';
 export 'src/method_channel.dart';
 export 'src/types.dart';
-export 'package:layrz_models/layrz_models.dart'
-    show
-        BleDevice,
-        BleService,
-        BleCharacteristic,
-        BleProperty,
-        BleCondition,
-        BleConversion,
-        BleParser,
-        BleParserConfig,
-        BleParserProperty,
-        BleServiceData,
-        BleOperation,
-        BleParserSource,
-        BleWatch;
+export 'package:layrz_models/layrz_models.dart' show BleDevice, BleService, BleCharacteristic, BleProperty;
 
 export 'platforms/stub.dart' if (dart.library.io) 'platforms/linux.dart';
 
@@ -139,18 +125,5 @@ class LayrzBle {
       LayrzBlePlatform.instance.stopNotify(
         serviceUuid: serviceUuid,
         characteristicUuid: characteristicUuid,
-      );
-
-  /// [guessParser] is a helper method to guess the parser based on a provided list
-  /// This utility is for BLE parameter extraction from Advertisement Data.
-  BleParser? guessParser(List<BleParser> parsers, BleDevice device) => LayrzBlePlatform.instance.guessParser(
-        parsers,
-        device,
-      );
-
-  /// [parseData] parses the data from a BLE device using a parser.
-  Map<String, dynamic> parseData(BleParser parser, BleDevice device) => LayrzBlePlatform.instance.parseData(
-        parser,
-        device,
       );
 }
