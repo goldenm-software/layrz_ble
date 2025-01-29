@@ -195,9 +195,9 @@ class _HomePageState extends State<HomePage> {
                         setState(() => _isLoading = true);
                         _devices = {};
                         _isScanning = await plugin.startScan(
-                              // macAddress: 'FE:D7:0C:C1:4B:43', // ELA PUCK RHT
-                              macAddress: 'D8:3A:DD:B0:0E:5F', // SIMULATOR
-                            ) ??
+                                // macAddress: 'FE:D7:0C:C1:4B:43', // ELA PUCK RHT
+                                // macAddress: 'D8:3A:DD:B0:0E:5F', // SIMULATOR
+                                ) ??
                             false;
                         setState(() => _isLoading = false);
 

@@ -17,7 +17,6 @@ class LayrzBleNative extends LayrzBlePlatform {
     methodChannel.setMethodCallHandler((call) async {
       switch (call.method) {
         case 'onScan':
-          log("onScan ${call.arguments}");
           try {
             final args = Map<String, dynamic>.from(call.arguments);
             if (args['serviceData'] == null) {
@@ -43,7 +42,7 @@ class LayrzBleNative extends LayrzBlePlatform {
             final device = BleDevice.fromJson(args);
             _scanController.add(device);
           } catch (e) {
-            log('Error parsing BleDevice: $e');
+            log('Error parsing BleDevice: $e - ${call.arguments}');
           }
           break;
 
