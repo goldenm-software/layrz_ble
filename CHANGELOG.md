@@ -1,5 +1,17 @@
 # Changelog
 
+## 1.2.0
+
+- Updated all platforms to support multiple manufacturer data
+
+## 1.1.3
+
+- Removed parser things from this library
+
+## 1.1.2
+
+- Added `BleCondition`, `BleConversion`, `BleParser`, `BleParserConfig`, `BleParserProperty`, `BleServiceData`, `BleOperation`, `BleParserSource` and `BleWatch` to the export.
+
 ## 1.1.1
 
 - Added Advertisement data parsers to the main class.

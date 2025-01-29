@@ -444,7 +444,19 @@ public class LayrzBlePlugin: NSObject, FlutterPlugin, CBCentralManagerDelegate, 
                 return
             }
             
-            let manufacturerData = advertisementData[CBAdvertisementDataManufacturerDataKey] as? Data ?? Data()
+            var manufacturerData: [[String: Any]] = []
+            if let rawManufacturerData = advertisementData[CBAdvertisementDataManufacturerDataKey] as? Data {
+                // Extract company ID (first 2 bytes) and manufacturer data
+                if rawManufacturerData.count >= 2 {
+                    let companyId = Int(rawManufacturerData.prefix(2).withUnsafeBytes { $0.load(as: UInt16.self) })
+                    let data = rawManufacturerData.dropFirst(2)
+
+                    manufacturerData.append([
+                        "companyId": companyId,
+                        "data": data
+                    ])
+                }
+            }
             
             var serviceData: [[String: Any]] = []
             if let raw = advertisementData[CBAdvertisementDataServiceDataKey] as? [CBUUID: Data] {
@@ -502,8 +514,7 @@ public class LayrzBlePlugin: NSObject, FlutterPlugin, CBCentralManagerDelegate, 
             NSLog("LayrzBlePlugin/macOS: \(message)")
         }
     
-    private func standarizeServiceUuid(_ uuid: CBUUID) -> String {
-        // Extract the values from 4 to 8
-        return uuid.uuidString.prefix(8).suffix(4).lowercased()
+    private func standarizeServiceUuid(_ uuid: CBUUID) -> Int {
+        return Int(uuid.data.withUnsafeBytes { $0.load(as: UInt16.self) }.littleEndian)
     }
 }

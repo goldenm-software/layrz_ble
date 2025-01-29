@@ -239,28 +239,27 @@ namespace layrz_ble {
 
           if (args.Advertisement() != nullptr)
           {
-            std::vector<uint8_t> manufacturerData;
             auto manufacturerItems = args.Advertisement().ManufacturerData();
             for (const auto &item : manufacturerItems) 
             {
-              uint16_t companyId = item.CompanyId();
-              const uint8_t* companyIdBytes = reinterpret_cast<const uint8_t*>(&companyId);
               // Append the Company ID to manufacturerData
-              manufacturerData.push_back(companyIdBytes[0]); // Low byte
-              manufacturerData.push_back(companyIdBytes[1]); // High byte
               // Extract additional data from the IBuffer
               auto dataBuffer = item.Data();
               if (dataBuffer && dataBuffer.Length() > 0) 
               {
+                std::vector<uint8_t> manufacturerData;
                 auto reader = winrt::Windows::Storage::Streams::DataReader::FromBuffer(dataBuffer);
                 std::vector<uint8_t> additionalData(dataBuffer.Length());
                 reader.ReadBytes(winrt::array_view<uint8_t>(additionalData));
                 // Append the additional data to manufacturerData
                 manufacturerData.insert(manufacturerData.end(), additionalData.begin(), additionalData.end());
+
+                deviceInfo.appendManufacturerData(
+                  item.CompanyId(),
+                  manufacturerData
+                );
               } // if (dataBuffer && dataBuffer.Length() > 0)
             } // for (const auto &item : manufacturerItems)
-
-            deviceInfo.setManufacturerData(manufacturerData);
 
             flutter::EncodableList serviceData = flutter::EncodableList();
             auto serviceItems = args.Advertisement().DataSections();
@@ -291,27 +290,14 @@ namespace layrz_ble {
                   }
 
                   std::vector<uint8_t> uuidBytes(additionalData.begin(), additionalData.begin() + uuidLength);
+                  uint16_t uuid = (uuidBytes[1] << 8) | uuidBytes[0];
                   std::vector<uint8_t> valueBytes(additionalData.begin() + uuidLength, additionalData.end());
 
-                  // Convert UUID to a string representation (e.g., hex)
-                  std::stringstream uuidStream;
-                  for (auto byte : uuidBytes) 
-                  {
-                      uuidStream << std::hex << std::setw(2) << std::setfill('0') << static_cast<int>(byte);
-                  }
-                  std::string uuidStr = standarizeServiceUuid(uuidStream.str());
 
-                  // Store in serviceData
-                  flutter::EncodableMap serviceDataItem = flutter::EncodableMap();
-                  serviceDataItem[flutter::EncodableValue("uuid")] = flutter::EncodableValue(uuidStr);
-                  serviceDataItem[flutter::EncodableValue("data")] = flutter::EncodableValue(valueBytes);
-
-                  serviceData.push_back(serviceDataItem);
+                  deviceInfo.appendServiceData(uuid, valueBytes);
                 } // if (dataBuffer && dataBuffer.Length() > 0)
               } // if (dataType == BluetoothLEAdvertisementDataTypes::ServiceData16BitUuids() || ...)
             } // for (const auto& section : serviceItems)
-
-            deviceInfo.setServiceData(serviceData);
 
             auto name = HStringToString(args.Advertisement().LocalName());
             if (!name.empty()) 
@@ -371,23 +357,34 @@ namespace layrz_ble {
     // Check if the result.deviceId is inside of visibleDevices
     auto it = visibleDevices.find(result.DeviceId());
 
-    if(it != visibleDevices.end())
-    {
+    if(it != visibleDevices.end()) {
       // Update the existing device
       // Check if the name is not empty to update it
       auto &device = it->second;
-      if(result.Name())
+      if(result.Name()) {
         device.setName(*result.Name());
-      if(result.Rssi())
+      }
+
+      if(result.Rssi()) {
         device.setRssi(result.Rssi());
-      if(!result.ManufacturerData()->empty())
-        device.setManufacturerData(*result.ManufacturerData());
-      if(!result.ServiceData()->empty())
-        device.setServiceData(*result.ServiceData());
-    }
-    else
-      // Add the new device
+      }
+
+      if (!result.ServiceData()->empty()) {
+        for (const auto &serviceData : *result.ServiceData()) {
+          device.appendServiceData(serviceData.first, serviceData.second);
+        }
+      }
+
+      if (!result.ManufacturerData()->empty()) {
+        for (const auto &mfd : *result.ManufacturerData()) {
+          device.appendManufacturerData(mfd.first, mfd.second);
+        }
+      }
+
+      visibleDevices.insert_or_assign(result.DeviceId(), device);
+    } else {
       visibleDevices.insert_or_assign(result.DeviceId(), result);
+    }
 
     const auto &device = visibleDevices[result.DeviceId()];
     flutter::EncodableMap response;
@@ -395,16 +392,40 @@ namespace layrz_ble {
     response[flutter::EncodableValue("macAddress")]       = flutter::EncodableValue(device.DeviceId());
     response[flutter::EncodableValue("name")]             = flutter::EncodableValue(device.Name() ? *device.Name() : "Unknown");
     response[flutter::EncodableValue("rssi")]             = flutter::EncodableValue(device.Rssi());
-    response[flutter::EncodableValue("manufacturerData")] = flutter::EncodableValue(*device.ManufacturerData());
-    response[flutter::EncodableValue("serviceData")]      = flutter::EncodableValue(*device.ServiceData());
+    if (device.ManufacturerData() != nullptr) {
+      flutter::EncodableList manufacturerDataList;
+      for (const auto &mfd : *device.ManufacturerData()) {
+        flutter::EncodableMap mfdMap = flutter::EncodableMap();
+        mfdMap[flutter::EncodableValue("companyId")] = flutter::EncodableValue(mfd.first);
+        mfdMap[flutter::EncodableValue("data")] = flutter::EncodableValue(mfd.second);
+        
+        manufacturerDataList.push_back(mfdMap);
+      }
 
-    if(methodChannel != nullptr)
+      response[flutter::EncodableValue("manufacturerData")] = flutter::EncodableValue(manufacturerDataList);
+    }
+    
+    if (device.ServiceData() != nullptr) {
+      flutter::EncodableList serviceDataList;
+      for (const auto &serviceData : *device.ServiceData()) {
+        flutter::EncodableMap serviceDataMap = flutter::EncodableMap();
+        serviceDataMap[flutter::EncodableValue("uuid")] = flutter::EncodableValue(serviceData.first);
+        serviceDataMap[flutter::EncodableValue("data")] = flutter::EncodableValue(serviceData.second);
+        
+        serviceDataList.push_back(serviceDataMap);
+      }
+
+      response[flutter::EncodableValue("serviceData")] = flutter::EncodableValue(serviceDataList);
+    }
+    
+    if(methodChannel != nullptr) {
       uiThreadHandler_.Post([this, response]() {
         methodChannel->InvokeMethod(
           "onScan",
           std::make_unique<flutter::EncodableValue>(response)
         );
       });
+    }
   } // handleBleScanResult
 
   /// @brief Connect to the device

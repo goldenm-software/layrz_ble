@@ -12,13 +12,17 @@ import android.bluetooth.BluetoothGattCharacteristic
 import android.bluetooth.BluetoothGattDescriptor
 import android.bluetooth.BluetoothManager
 import android.bluetooth.le.ScanCallback
+import android.bluetooth.le.ScanResult
+import android.bluetooth.le.ScanSettings
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Handler
 import android.os.Looper
+import androidx.annotation.RequiresApi
 import androidx.core.app.ActivityCompat
 import androidx.core.app.ActivityCompat.startActivityForResult
+import androidx.core.util.keyIterator
 import io.flutter.Log
 import io.flutter.embedding.engine.plugins.FlutterPlugin
 import io.flutter.embedding.engine.plugins.activity.ActivityAware
@@ -58,51 +62,50 @@ class LayrzBlePlugin : FlutterPlugin, MethodCallHandler, ActivityAware,
 
     private val scanCallback = object : ScanCallback() {
         @SuppressLint("MissingPermission")
-        override fun onScanResult(callbackType: Int, result: android.bluetooth.le.ScanResult?) {
+        override fun onScanResult(callbackType: Int, result: ScanResult?) {
             super.onScanResult(callbackType, result)
-            if (result == null) return
-            if (lastOperation != LastOperation.SCAN) return
+            val scanRecord = result?.scanRecord
+            if (result == null) {
+                Log.d(TAG, "No result")
+                return
+            }
+
+            if (lastOperation != LastOperation.SCAN) {
+                Log.d(TAG, "Not scanning")
+                return
+            }
 
             val device = result.device
-            val macAddress = device.address.lowercase()
+            val macAddress = device.address.uppercase()
 
-            if (filteredMacAddress != null && macAddress != filteredMacAddress?.lowercase()) return
+            if (filteredMacAddress != null && macAddress != filteredMacAddress) {
+//                Log.d(TAG, "Filter applied and mac address does not match - $macAddress - $filteredMacAddress")
+                return
+            }
 
-            val name = device.name ?: "Unknown"
+            val name = scanRecord?.deviceName ?: device.name ?: "Unknown"
+            Log.d(TAG, "Found device $name - $macAddress")
             val rssi = result.rssi
             val rec = result.scanRecord
 
             val rawManufacturerData = rec?.manufacturerSpecificData
-            val manufacturerData = rawManufacturerData?.let { sparseArray ->
-                // Calculate total size: 2 bytes for each manufacturer ID + data size
-                val totalSize =
-                    (0 until sparseArray.size()).sumOf { 2 + (sparseArray.valueAt(it)?.size ?: 0) }
+            val manufacturerData = mutableListOf<Map<String, Any>>()
 
-                // Preallocate a ByteArray
-                ByteArray(totalSize).also { result ->
-                    var offset = 0
-                    for (i in 0 until sparseArray.size()) {
-                        val manufacturerId = sparseArray.keyAt(i) // Manufacturer ID
-                        val data = sparseArray.valueAt(i)        // Manufacturer-specific data
-
-                        // Add the 2-byte manufacturer ID in big-endian order
-                        result[offset] = (manufacturerId shr 8).toByte() // High byte
-                        result[offset + 1] = (manufacturerId and 0xFF).toByte() // Low byte
-                        offset += 2
-
-                        // Add the manufacturer-specific data
-                        if (data != null) {
-                            System.arraycopy(data, 0, result, offset, data.size)
-                            offset += data.size
-                        }
+            if (rawManufacturerData != null) {
+                for (key in rawManufacturerData.keyIterator()) {
+                    val data = rawManufacturerData.get(key)
+                    if (data != null) {
+                        manufacturerData.add(
+                            mapOf<String, Any>(
+                                "companyId" to key,
+                                "data" to data
+                            )
+                        )
                     }
                 }
-            } ?: byteArrayOf()
+            }
 
             val serviceData = mutableListOf<Map<String, Any>>()
-
-            Log.d(TAG,"Scanned device: $name")
-
             for ((uuid, data) in rec?.serviceData ?: emptyMap()) {
                 if (uuid == null) continue
                 serviceData.add(
@@ -297,8 +300,8 @@ class LayrzBlePlugin : FlutterPlugin, MethodCallHandler, ActivityAware,
                 channel.invokeMethod(
                     "onNotify",
                     mapOf(
-                        "serviceUuid" to characteristic.service.uuid.toString().lowercase().trim(),
-                        "characteristicUuid" to characteristic.uuid.toString().lowercase().trim(),
+                        "serviceUuid" to characteristic.service.uuid.toString().uppercase().trim(),
+                        "characteristicUuid" to characteristic.uuid.toString().uppercase().trim(),
                         "value" to characteristic.value
                     )
                 )
@@ -389,7 +392,7 @@ class LayrzBlePlugin : FlutterPlugin, MethodCallHandler, ActivityAware,
             val bluetoothAdminOrScan = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
                 ActivityCompat.checkSelfPermission(
                     context,
-                    Manifest.permission.BLUETOOTH_CONNECT
+                    Manifest.permission.BLUETOOTH_SCAN
                 ) == PackageManager.PERMISSION_GRANTED
             } else {
                 ActivityCompat.checkSelfPermission(
@@ -430,6 +433,7 @@ class LayrzBlePlugin : FlutterPlugin, MethodCallHandler, ActivityAware,
         filteredMacAddress = call.argument<String>("macAddress")
         if (filteredMacAddress != null) {
             Log.d(TAG, "Filtering by macAddress: $filteredMacAddress")
+            filteredMacAddress = filteredMacAddress!!.uppercase()
         }
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
@@ -462,8 +466,11 @@ class LayrzBlePlugin : FlutterPlugin, MethodCallHandler, ActivityAware,
 
         if (bluetooth == null) {
             Log.d(TAG, "Bluetooth is null, initializing")
-            bluetooth =
+            bluetooth = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                context.getSystemService(BluetoothManager::class.java)
+            } else {
                 context.getSystemService(android.content.Context.BLUETOOTH_SERVICE) as BluetoothManager
+            }
         }
 
         val adapter = bluetooth!!.adapter
@@ -477,7 +484,7 @@ class LayrzBlePlugin : FlutterPlugin, MethodCallHandler, ActivityAware,
             Log.d(TAG, "Bluetooth is enabled, starting scan")
             isScanning = true
             lastOperation = LastOperation.SCAN
-            adapter!!.bluetoothLeScanner.startScan(scanCallback)
+            bluetooth!!.adapter.bluetoothLeScanner.startScan(scanCallback)
             result.success(true)
             this.result = null
         }
@@ -891,7 +898,7 @@ class LayrzBlePlugin : FlutterPlugin, MethodCallHandler, ActivityAware,
         descriptor.value = BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE
         gatt!!.writeDescriptor(descriptor)
 
-        currentNotifications.add(characteristic.uuid.toString().lowercase().trim())
+        currentNotifications.add(characteristic.uuid.toString().uppercase().trim())
         result.success(true)
         this.result = null
     }
@@ -915,7 +922,7 @@ class LayrzBlePlugin : FlutterPlugin, MethodCallHandler, ActivityAware,
             return
         }
 
-        if (!currentNotifications.contains(characteristicUuid.lowercase().trim())) {
+        if (!currentNotifications.contains(characteristicUuid.uppercase().trim())) {
             Log.d(TAG, "Not subscribed")
             result.success(true)
             this.result = null
@@ -954,7 +961,7 @@ class LayrzBlePlugin : FlutterPlugin, MethodCallHandler, ActivityAware,
         }
 
         gatt!!.setCharacteristicNotification(characteristic, false)
-        currentNotifications.remove(characteristic.uuid.toString().lowercase().trim())
+        currentNotifications.remove(characteristic.uuid.toString().uppercase().trim())
         result.success(true)
         this.result = null
     }
@@ -983,7 +990,10 @@ class LayrzBlePlugin : FlutterPlugin, MethodCallHandler, ActivityAware,
                         Manifest.permission.BLUETOOTH_SCAN
                     ) != PackageManager.PERMISSION_GRANTED
                 ) {
-                    bluetooth!!.adapter.bluetoothLeScanner.startScan(scanCallback)
+                    val settings = ScanSettings.Builder()
+                        .setScanMode(ScanSettings.SCAN_MODE_LOW_LATENCY)
+                        .build()
+                    bluetooth!!.adapter.bluetoothLeScanner.startScan(null, settings, scanCallback)
                     isScanning = true
                     lastOperation = LastOperation.SCAN
                     result?.success(true)

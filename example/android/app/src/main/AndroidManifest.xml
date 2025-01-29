@@ -9,7 +9,6 @@
     <!-- Required for BLE scan -->
     <uses-permission
         android:name="android.permission.BLUETOOTH_SCAN"
-        android:usesPermissionFlags="neverForLocation"
         android:minSdkVersion="31" />
     <uses-permission
         android:name="android.permission.BLUETOOTH_ADMIN"

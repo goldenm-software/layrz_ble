@@ -302,7 +302,6 @@ class LayrzBlePluginLinux extends LayrzBlePlatform {
     }
 
     _notifications[characteristic.uuid] = characteristic.propertiesChanged.listen((events) {
-      debugPrint("Events: $events");
       for (final event in events) {
         if (event == 'Value') {
           final receivedValue = characteristic.value;
@@ -373,13 +372,17 @@ class LayrzBlePluginLinux extends LayrzBlePlatform {
   }
 
   BleDevice _compose(BlueZDevice device) {
-    List<int> manufacturerData = [];
+    List<BleManufacturerData> manufacturerData = [];
     for (final entry in device.manufacturerData.entries) {
       final companyId = entry.key;
       final data = entry.value;
 
-      manufacturerData.addAll(_intToLittleEndian(companyId.id).toList());
-      manufacturerData.addAll(data);
+      if (data.isEmpty) continue;
+
+      manufacturerData.add(BleManufacturerData(
+        companyId: companyId.id,
+        data: Uint8List.fromList(data),
+      ));
     }
 
     List<BleServiceData> serviceData = [];
@@ -388,8 +391,9 @@ class LayrzBlePluginLinux extends LayrzBlePlatform {
       final bytes = entry.key.value;
       final serviceUuid = _standarizeServiceUuid([bytes[2], bytes[3]]);
       final data = entry.value;
+      if (data.isEmpty) continue;
 
-      serviceData.add(BleServiceData(uuid: serviceUuid, data: data));
+      serviceData.add(BleServiceData(uuid: serviceUuid, data: Uint8List.fromList(data)));
     }
 
     _devices[device.address.toLowerCase()] = device;
@@ -403,24 +407,10 @@ class LayrzBlePluginLinux extends LayrzBlePlatform {
     );
   }
 
-  Uint8List _intToLittleEndian(int value) {
-    if (value < 0 || value > 0xFFFF) {
-      log("Value must be between 0 and 65535 - $value");
-      return Uint8List(0);
-    }
-
-    // Create a 2-byte buffer
-    final buffer = ByteData(2);
-
-    // Write the value as little-endian
-    buffer.setUint16(0, value, Endian.little);
-
-    return buffer.buffer.asUint8List();
-  }
-
-  String _standarizeServiceUuid(List<int> bytes) {
-    return bytes.map((e) {
-      return e.toRadixString(16).padLeft(2, '0');
-    }).join('');
+  int _standarizeServiceUuid(List<int> bytes) {
+    return int.tryParse(bytes.map((e) {
+          return e.toRadixString(16).padLeft(2, '0');
+        }).join('')) ??
+        0x0000;
   }
 }
