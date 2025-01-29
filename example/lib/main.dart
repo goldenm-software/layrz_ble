@@ -49,10 +49,12 @@ class _HomePageState extends State<HomePage> {
   bool _isLoading = false;
   BleDevice? _selectedDevice;
 
-  String get payload => "";
-  String get serviceId => "";
-  String get readCharacteristic => "";
-  String get writeCharacteristic => "";
+  String get payload => "<Ac>1;get_msg;;E37A;5367</Ac>";
+  String get serviceId => "6E400001-B5A3-F393-E0A9-E50E24DCCA9E";
+  String get readCharacteristic => "6E400003-B5A3-F393-E0A9-E50E24DCCA9E";
+  String get writeCharacteristic => "6E400002-B5A3-F393-E0A9-E50E24DCCA9E";
+
+  List<String> get servicesUuids => [serviceId, readCharacteristic, writeCharacteristic];
 
   AppThemedAsset get logo => const AppThemedAsset(
         normal: 'https://cdn.layrz.com/resources/layrz/logo/normal.png',
@@ -131,12 +133,14 @@ class _HomePageState extends State<HomePage> {
                     setState(() => _isLoading = true);
                     if (ThemedPlatform.isAndroid) {
                       await Permission.location.request();
+                      await Permission.locationWhenInUse.request();
                     }
                     if (!ThemedPlatform.isMacOS && !ThemedPlatform.isWeb) {
                       await Permission.bluetooth.request();
                     }
 
                     if (ThemedPlatform.isAndroid) {
+                      await Permission.bluetooth.request();
                       await Permission.bluetoothScan.request();
                       await Permission.bluetoothConnect.request();
                     }
@@ -151,6 +155,7 @@ class _HomePageState extends State<HomePage> {
                         message: 'Capabilities: $result',
                         color: Colors.blue,
                         icon: LayrzIcons.solarOutlineBluetoothSquare,
+                        maxLines: 5,
                       ),
                     );
                   },
@@ -189,7 +194,11 @@ class _HomePageState extends State<HomePage> {
                       onTap: () async {
                         setState(() => _isLoading = true);
                         _devices = {};
-                        _isScanning = await plugin.startScan() ?? false;
+                        _isScanning = await plugin.startScan(
+                              // macAddress: 'FE:D7:0C:C1:4B:43', // ELA PUCK RHT
+                              macAddress: 'D8:3A:DD:B0:0E:5F', // SIMULATOR
+                            ) ??
+                            false;
                         setState(() => _isLoading = false);
 
                         ThemedSnackbarMessenger.of(context).showSnackbar(ThemedSnackbar(
@@ -274,11 +283,11 @@ class _HomePageState extends State<HomePage> {
                                     device.macAddress,
                                     style: Theme.of(context).textTheme.bodySmall,
                                   ),
-                                  // Text(
-                                  //   "Manufacturer data: ${_castManufaturerData(device.manufacturerData)}",
-                                  //   style: Theme.of(context).textTheme.bodySmall,
-                                  //   maxLines: 10,
-                                  // ),
+                                  Text(
+                                    "Manufacturer data: ${_castManufaturerData(device.manufacturerData)}",
+                                    style: Theme.of(context).textTheme.bodySmall,
+                                    maxLines: 10,
+                                  ),
                                   Text(
                                     "Service data: ${_castServiceData(device.serviceData)}",
                                     style: Theme.of(context).textTheme.bodySmall,
@@ -365,11 +374,40 @@ class _HomePageState extends State<HomePage> {
                   ),
                   const SizedBox(width: 10),
                   ThemedButton(
+                    color: Colors.orange,
+                    labelText: 'Set notification listener off',
+                    isLoading: _isLoading,
+                    onTap: () async {
+                      setState(() => _isLoading = true);
+                      final result = await plugin.stopNotify(
+                        serviceUuid: serviceId,
+                        characteristicUuid: readCharacteristic,
+                      );
+                      debugPrint('Set notification listener result: $result');
+                      setState(() => _isLoading = false);
+
+                      ThemedSnackbarMessenger.of(context).showSnackbar(ThemedSnackbar(
+                        message: 'Notification listener set: $result',
+                        color: Colors.orange,
+                        icon: LayrzIcons.solarOutlineBluetoothSquare,
+                      ));
+                    },
+                  ),
+                  const SizedBox(width: 10),
+                  ThemedButton(
                     color: Colors.blue,
                     labelText: 'Send a payload',
                     isLoading: _isLoading,
                     onTap: () async {
                       setState(() => _isLoading = true);
+
+                      debugPrint("Sending header");
+                      await plugin.writeCharacteristic(
+                        serviceUuid: serviceId,
+                        characteristicUuid: writeCharacteristic,
+                        payload: Uint8List.fromList("##${payload.length};1".codeUnits),
+                        withResponse: true,
+                      );
 
                       debugPrint("Sending payload");
                       await plugin.writeCharacteristic(
@@ -454,18 +492,29 @@ class _HomePageState extends State<HomePage> {
 
   String _castManufaturerData(List<BleManufacturerData> data) {
     if (data.isEmpty) return 'Empty';
-    // return data.map((e) => e.toRadixString(16).padLeft(2, '0')).join(' ');
-    return 'TBD';
+
+    List<String> result = [];
+    for (final manufacturerData in data) {
+      result.add(
+        'Company ID: ${manufacturerData.companyId.toRadixString(16).padLeft(4, '0')} - '
+        'Data: ${_castUintToString(manufacturerData.data)}',
+      );
+    }
+
+    return result.join('\n');
   }
 
   String _castServiceData(List<BleServiceData>? data) {
     if (data == null) return 'Not provided';
     if (data.isEmpty) return 'Empty';
-    String result = '';
+    List<String> result = [];
 
     for (final serviceData in data) {
-      result += 'Service: ${serviceData.uuid} - Data: ${_castUintToString(serviceData.data)}\n';
+      result.add(
+        'Service: ${serviceData.uuid.toRadixString(16).padLeft(4, '0')} - '
+        'Data: ${_castUintToString(serviceData.data)}',
+      );
     }
-    return result;
+    return result.join('\n');
   }
 }

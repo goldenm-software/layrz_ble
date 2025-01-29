@@ -60,7 +60,3 @@ flutter:
       linux:
         dartPluginClass: LayrzBlePluginLinux
         fileName: platforms/linux.dart
-
-dependency_overrides:
-  layrz_models:
-    path: ../layrz_models

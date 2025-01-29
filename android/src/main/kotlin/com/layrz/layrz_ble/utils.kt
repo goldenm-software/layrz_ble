@@ -9,7 +9,7 @@ fun standarizeUuid(uuid: UUID): String {
     return uuid.toString().uppercase()
 }
 
-fun castServiceUuid(uuid: UUID): String {
+fun castServiceUuid(uuid: UUID): Int {
     val shortUuid = uuid.toString().substring(4, 8)
-    return shortUuid
+    return Integer.parseInt(shortUuid, 16)
 }

@@ -17,6 +17,7 @@ class LayrzBleNative extends LayrzBlePlatform {
     methodChannel.setMethodCallHandler((call) async {
       switch (call.method) {
         case 'onScan':
+          log("onScan ${call.arguments}");
           try {
             final args = Map<String, dynamic>.from(call.arguments);
             if (args['serviceData'] == null) {
