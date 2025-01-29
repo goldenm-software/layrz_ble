@@ -274,11 +274,11 @@ class _HomePageState extends State<HomePage> {
                                     device.macAddress,
                                     style: Theme.of(context).textTheme.bodySmall,
                                   ),
-                                  Text(
-                                    "Manufacturer data: ${_castManufaturerData(device.manufacturerData)}",
-                                    style: Theme.of(context).textTheme.bodySmall,
-                                    maxLines: 10,
-                                  ),
+                                  // Text(
+                                  //   "Manufacturer data: ${_castManufaturerData(device.manufacturerData)}",
+                                  //   style: Theme.of(context).textTheme.bodySmall,
+                                  //   maxLines: 10,
+                                  // ),
                                   Text(
                                     "Service data: ${_castServiceData(device.serviceData)}",
                                     style: Theme.of(context).textTheme.bodySmall,
@@ -446,10 +446,16 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  String _castManufaturerData(List<int>? data) {
+  String _castUintToString(List<int>? data) {
     if (data == null) return 'Not provided';
     if (data.isEmpty) return 'Empty';
     return data.map((e) => e.toRadixString(16).padLeft(2, '0')).join(' ');
+  }
+
+  String _castManufaturerData(List<BleManufacturerData> data) {
+    if (data.isEmpty) return 'Empty';
+    // return data.map((e) => e.toRadixString(16).padLeft(2, '0')).join(' ');
+    return 'TBD';
   }
 
   String _castServiceData(List<BleServiceData>? data) {
@@ -458,7 +464,7 @@ class _HomePageState extends State<HomePage> {
     String result = '';
 
     for (final serviceData in data) {
-      result += 'Service: ${serviceData.uuid} - Data: ${_castManufaturerData(serviceData.data)}\n';
+      result += 'Service: ${serviceData.uuid} - Data: ${_castUintToString(serviceData.data)}\n';
     }
     return result;
   }

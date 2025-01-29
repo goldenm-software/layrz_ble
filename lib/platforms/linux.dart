@@ -389,7 +389,7 @@ class LayrzBlePluginLinux extends LayrzBlePlatform {
       final serviceUuid = _standarizeServiceUuid([bytes[2], bytes[3]]);
       final data = entry.value;
 
-      serviceData.add(BleServiceData(uuid: serviceUuid, data: data));
+      serviceData.add(BleServiceData(uuid: serviceUuid, data: Uint8List.fromList(data)));
     }
 
     _devices[device.address.toLowerCase()] = device;
@@ -398,8 +398,8 @@ class LayrzBlePluginLinux extends LayrzBlePlatform {
       macAddress: device.address.toLowerCase(),
       name: device.name.isEmpty ? 'Unknown' : device.name,
       rssi: device.rssi,
-      manufacturerData: manufacturerData,
-      serviceData: serviceData,
+      // manufacturerData: manufacturerData,
+      // serviceData: serviceData,
     );
   }
 
@@ -418,9 +418,10 @@ class LayrzBlePluginLinux extends LayrzBlePlatform {
     return buffer.buffer.asUint8List();
   }
 
-  String _standarizeServiceUuid(List<int> bytes) {
-    return bytes.map((e) {
-      return e.toRadixString(16).padLeft(2, '0');
-    }).join('');
+  int _standarizeServiceUuid(List<int> bytes) {
+    return int.tryParse(bytes.map((e) {
+          return e.toRadixString(16).padLeft(2, '0');
+        }).join('')) ??
+        0x0000;
   }
 }

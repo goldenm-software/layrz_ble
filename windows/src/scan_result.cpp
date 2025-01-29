@@ -1,11 +1,12 @@
 #include "scan_result.h"
+#include <iostream>
 
 namespace layrz_ble {
 
   /// @brief Construct a new BleScanResult object
   /// @param deviceId 
   /// @return
-  BleScanResult::BleScanResult(const std::string& deviceId) : deviceId_(deviceId) {}
+  BleScanResult::BleScanResult(const std::string& deviceId) : deviceId_(deviceId), manufacturerData_(), serviceData_() {}
 
   /// @brief Get the DeviceId object
   /// @return const std::string&
@@ -60,44 +61,46 @@ namespace layrz_ble {
     rssi_ = std::optional<int64_t>(rssi);
   }
 
+  const AdvPacketType* BleScanResult::ManufacturerData() const {
+    return &manufacturerData_;
+  }
+
   /// @brief Get the ManufacturerData object
-  /// @return const std::vector<uint8_t>*
-  const std::vector<uint8_t>* BleScanResult::ManufacturerData() const {
-    return manufacturerData_ ? &(*manufacturerData_) : nullptr;
+  /// @return const flutter::EncodableMap*
+  void BleScanResult::setManufacturerData(const AdvPacketType* manufacturerData) {
+    if (manufacturerData) {
+      manufacturerData_ = *manufacturerData;
+    }
   }
 
-  /// @brief Set the ManufacturerData object
-  /// @param manufacturerData
+  /// @brief  Set the ManufacturerData object
+  /// @param companyId
+  /// @param data
   /// @return void
-  void BleScanResult::setManufacturerData(const std::vector<uint8_t>* manufacturerData) {
-    manufacturerData_ = manufacturerData ? std::optional<std::vector<uint8_t>>(*manufacturerData) : std::nullopt;
-  }
-
-  /// @brief Set the ManufacturerData object
-  /// @param manufacturerData
-  /// @return void
-  void BleScanResult::setManufacturerData(std::vector<uint8_t> manufacturerData) {
-    manufacturerData_ = std::optional<std::vector<uint8_t>>(manufacturerData);
+  void BleScanResult::appendManufacturerData(const uint16_t& companyId, const std::vector<uint8_t>& data) {
+    manufacturerData_.insert_or_assign(companyId, data);
   }
 
   /// @brief Get the ServiceData object
   /// @return const std::vector<uint8_t>*  
-  const flutter::EncodableList* BleScanResult::ServiceData() const {
-    return serviceData_ ? &(*serviceData_) : nullptr;
+  const AdvPacketType* BleScanResult::ServiceData() const {
+    return &serviceData_;
   }
 
   /// @brief Set the ServiceData object
   /// @param serviceData
   /// @return void  
-  void BleScanResult::setServiceData(const flutter::EncodableList* serviceData) {
-    serviceData_ = serviceData ? std::optional<flutter::EncodableList>(*serviceData) : std::nullopt;
+  void BleScanResult::setServiceData(const AdvPacketType* serviceData) {
+    if (serviceData) {
+      serviceData_ = *serviceData;
+    }
   }
 
   /// @brief Set the ServiceData object
   /// @param serviceData
   /// @return void
-  void BleScanResult::setServiceData(flutter::EncodableList serviceData) {
-    serviceData_ = std::optional<flutter::EncodableList>(serviceData);
+  void BleScanResult::appendServiceData(const uint16_t& serviceUuid, const std::vector<uint8_t>& data) {
+    serviceData_.insert_or_assign(serviceUuid, data);
   }
   
   /// @brief Get the Address object

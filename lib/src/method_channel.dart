@@ -19,10 +19,26 @@ class LayrzBleNative extends LayrzBlePlatform {
         case 'onScan':
           try {
             final args = Map<String, dynamic>.from(call.arguments);
-            final serviceData = call.arguments['serviceData'].map((e) {
+            if (args['serviceData'] == null) {
+              args['serviceData'] = [];
+            }
+
+            final serviceData = args['serviceData'].map((e) {
               return Map<String, dynamic>.from(e);
             }).toList();
+
             args['serviceData'] = serviceData;
+
+            if (args['manufacturerData'] == null) {
+              args['manufacturerData'] = [];
+            }
+
+            final manufacturerData = args['manufacturerData'].map((e) {
+              return Map<String, dynamic>.from(e);
+            }).toList();
+
+            args['manufacturerData'] = manufacturerData;
+
             final device = BleDevice.fromJson(args);
             _scanController.add(device);
           } catch (e) {

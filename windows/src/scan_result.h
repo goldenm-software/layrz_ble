@@ -10,6 +10,8 @@
 #include <winrt/base.h>
 #include <winrt/Windows.Devices.Bluetooth.h>
 
+typedef std::map<uint16_t, std::vector<uint8_t>> AdvPacketType;
+
 namespace layrz_ble {
   using namespace winrt;
   using namespace Windows::Devices::Bluetooth;
@@ -30,13 +32,13 @@ namespace layrz_ble {
       void setRssi(int64_t* rssi);
       void setRssi(int64_t rssi);
 
-      const std::vector<uint8_t>* ManufacturerData() const;
-      void setManufacturerData(const std::vector<uint8_t>* manufacturerData);
-      void setManufacturerData(std::vector<uint8_t> manufacturerData);
+      const AdvPacketType* ManufacturerData() const;
+      void setManufacturerData(const AdvPacketType* manufacturerData);
+      void appendManufacturerData(const uint16_t& companyId, const std::vector<uint8_t>& data);
 
-      const flutter::EncodableList* ServiceData() const;
-      void setServiceData(const flutter::EncodableList* serviceData);
-      void setServiceData(flutter::EncodableList serviceData);
+      const AdvPacketType* ServiceData() const;
+      void setServiceData(const AdvPacketType* serviceData);
+      void appendServiceData(const uint16_t& serviceUuid, const std::vector<uint8_t>& data);
 
       const uint64_t Address() const;
       void setAddress(uint64_t address);
@@ -48,8 +50,10 @@ namespace layrz_ble {
       std::string deviceId_;
       std::optional<std::string> name_;
       std::optional<int64_t> rssi_;
-      std::optional<std::vector<uint8_t>> manufacturerData_;
-      std::optional<flutter::EncodableList> serviceData_;
+
+      AdvPacketType manufacturerData_;
+      AdvPacketType serviceData_;
+
       std::optional<uint64_t> address_;
 
       std::optional<BluetoothLEDevice> device_;
