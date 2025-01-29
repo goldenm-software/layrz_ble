@@ -377,6 +377,8 @@ class LayrzBlePluginLinux extends LayrzBlePlatform {
       final companyId = entry.key;
       final data = entry.value;
 
+      if (data.isEmpty) continue;
+
       manufacturerData.add(BleManufacturerData(
         companyId: companyId.id,
         data: Uint8List.fromList(data),
@@ -389,6 +391,7 @@ class LayrzBlePluginLinux extends LayrzBlePlatform {
       final bytes = entry.key.value;
       final serviceUuid = _standarizeServiceUuid([bytes[2], bytes[3]]);
       final data = entry.value;
+      if (data.isEmpty) continue;
 
       serviceData.add(BleServiceData(uuid: serviceUuid, data: Uint8List.fromList(data)));
     }
