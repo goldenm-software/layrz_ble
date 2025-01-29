@@ -302,7 +302,6 @@ class LayrzBlePluginLinux extends LayrzBlePlatform {
     }
 
     _notifications[characteristic.uuid] = characteristic.propertiesChanged.listen((events) {
-      debugPrint("Events: $events");
       for (final event in events) {
         if (event == 'Value') {
           final receivedValue = characteristic.value;
@@ -373,13 +372,15 @@ class LayrzBlePluginLinux extends LayrzBlePlatform {
   }
 
   BleDevice _compose(BlueZDevice device) {
-    List<int> manufacturerData = [];
+    List<BleManufacturerData> manufacturerData = [];
     for (final entry in device.manufacturerData.entries) {
       final companyId = entry.key;
       final data = entry.value;
 
-      manufacturerData.addAll(_intToLittleEndian(companyId.id).toList());
-      manufacturerData.addAll(data);
+      manufacturerData.add(BleManufacturerData(
+        companyId: companyId.id,
+        data: Uint8List.fromList(data),
+      ));
     }
 
     List<BleServiceData> serviceData = [];
@@ -398,24 +399,9 @@ class LayrzBlePluginLinux extends LayrzBlePlatform {
       macAddress: device.address.toLowerCase(),
       name: device.name.isEmpty ? 'Unknown' : device.name,
       rssi: device.rssi,
-      // manufacturerData: manufacturerData,
-      // serviceData: serviceData,
+      manufacturerData: manufacturerData,
+      serviceData: serviceData,
     );
-  }
-
-  Uint8List _intToLittleEndian(int value) {
-    if (value < 0 || value > 0xFFFF) {
-      log("Value must be between 0 and 65535 - $value");
-      return Uint8List(0);
-    }
-
-    // Create a 2-byte buffer
-    final buffer = ByteData(2);
-
-    // Write the value as little-endian
-    buffer.setUint16(0, value, Endian.little);
-
-    return buffer.buffer.asUint8List();
   }
 
   int _standarizeServiceUuid(List<int> bytes) {
