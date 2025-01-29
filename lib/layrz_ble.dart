@@ -9,7 +9,8 @@ import 'src/platform_interface.dart';
 export 'src/platform_interface.dart';
 export 'src/method_channel.dart';
 export 'src/types.dart';
-export 'package:layrz_models/layrz_models.dart' show BleDevice, BleService, BleCharacteristic, BleProperty;
+export 'package:layrz_models/layrz_models.dart'
+    show BleDevice, BleService, BleCharacteristic, BleProperty, BleManufacturerData, BleServiceData;
 
 export 'platforms/stub.dart' if (dart.library.io) 'platforms/linux.dart';
 
