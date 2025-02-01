@@ -128,4 +128,17 @@ namespace layrz_ble {
   void BleScanResult::setDevice(const std::optional<BluetoothLEDevice> device) {
     device_ = device;
   }
+
+  /// @brief Get the TxPower object
+  /// @return const uint8_t
+  const uint16_t BleScanResult::TxPower() const {
+    return txPower_ ? *txPower_ : 0;
+  }
+
+  /// @brief Set the TxPower object
+  /// @param txPower
+  /// @return void
+  void BleScanResult::setTxPower(uint16_t txPower) {
+    txPower_ = txPower;
+  }
 }

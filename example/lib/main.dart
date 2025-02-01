@@ -284,6 +284,10 @@ class _HomePageState extends State<HomePage> {
                                     style: Theme.of(context).textTheme.bodySmall,
                                   ),
                                   Text(
+                                    'RSSI: ${device.rssi} - TX power: ${device.txPower}',
+                                    style: Theme.of(context).textTheme.bodySmall,
+                                  ),
+                                  Text(
                                     "Manufacturer data: ${_castManufaturerData(device.manufacturerData)}",
                                     style: Theme.of(context).textTheme.bodySmall,
                                     maxLines: 10,

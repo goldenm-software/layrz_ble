@@ -402,6 +402,7 @@ class LayrzBlePluginLinux extends LayrzBlePlatform {
       macAddress: device.address.toLowerCase(),
       name: device.name.isEmpty ? 'Unknown' : device.name,
       rssi: device.rssi,
+      txPower: device.txPower,
       manufacturerData: manufacturerData,
       serviceData: serviceData,
     );

@@ -84,7 +84,6 @@ class LayrzBlePlugin : FlutterPlugin, MethodCallHandler, ActivityAware,
             }
 
             val name = scanRecord?.deviceName ?: device.name ?: "Unknown"
-            Log.d(TAG, "Found device $name - $macAddress")
             val rssi = result.rssi
             val rec = result.scanRecord
 
@@ -116,6 +115,11 @@ class LayrzBlePlugin : FlutterPlugin, MethodCallHandler, ActivityAware,
                 )
             }
 
+            var txPower: Int? = scanRecord?.txPowerLevel
+            if (txPower == Int.MIN_VALUE) {
+                txPower = null
+            }
+
             channel.invokeMethod(
                 "onScan",
                 mapOf(
@@ -123,7 +127,8 @@ class LayrzBlePlugin : FlutterPlugin, MethodCallHandler, ActivityAware,
                     "macAddress" to macAddress,
                     "rssi" to rssi,
                     "manufacturerData" to manufacturerData,
-                    "serviceData" to serviceData
+                    "serviceData" to serviceData,
+                    "txPower" to txPower,
                 )
             )
 

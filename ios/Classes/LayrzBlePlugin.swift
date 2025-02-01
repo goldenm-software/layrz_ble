@@ -467,13 +467,19 @@ public class LayrzBlePlugin: NSObject, FlutterPlugin, CBCentralManagerDelegate, 
             }
         }
         
+        var txPower: Int? = nil
+        if let rawPower = advertisementData[CBAdvertisementDataTxPowerLevelKey] as? NSNumber {
+            txPower = rawPower.intValue
+        }
+        
         devices.updateValue(peripheral, forKey: uuid)
         LayrzBlePlugin.channel!.invokeMethod("onScan", arguments: [
             "name": name ?? "Unknown",
             "macAddress": uuid,
             "rssi": RSSI,
             "manufacturerData": manufacturerData,
-            "serviceData": serviceData
+            "serviceData": serviceData,
+            "txPower": txPower
         ])
     }
     
