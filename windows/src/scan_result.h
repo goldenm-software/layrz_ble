@@ -46,6 +46,9 @@ namespace layrz_ble {
       const std::optional<BluetoothLEDevice> Device() const;
       void setDevice(const std::optional<BluetoothLEDevice> device);
 
+      const uint16_t TxPower() const;
+      void setTxPower(uint16_t txPower);
+
     private:
       std::string deviceId_;
       std::optional<std::string> name_;
@@ -57,5 +60,7 @@ namespace layrz_ble {
       std::optional<uint64_t> address_;
 
       std::optional<BluetoothLEDevice> device_;
+
+      std::optional<uint16_t> txPower_;
   };
 }

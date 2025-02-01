@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.2.1
+
+- Added txPower to the data that can be received from the device
+
 ## 1.2.0
 
 - Updated all platforms to support multiple manufacturer data

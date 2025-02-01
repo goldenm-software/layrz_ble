@@ -150,10 +150,14 @@ Before getting into the platform specific permissions, always raises the questio
   If your app has a minSdkVersion of 31 or above, you should use BLUETOOTH_SCAN permission only,
   otherwise we strongly recommend using both as shown below.
   -->
+
+  <!-- android:usesPermissionFlags="neverForLocation" is for tell Android that you dont want location,
+       but if you want to scan iBeacons or smart tags, you need to enable this -->
   <uses-permission
     android:name="android.permission.BLUETOOTH_SCAN"
     android:usesPermissionFlags="neverForLocation"
     android:minSdkVersion="31" /> <!-- This permission is only for API level 31 or above -->
+    
   <uses-permission
     android:name="android.permission.BLUETOOTH_ADMIN"
     android:maxSdkVersion="30" /> <!-- This permission is only for API level 30 or below -->

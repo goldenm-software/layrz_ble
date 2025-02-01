@@ -17,7 +17,7 @@ keywords:
   - linux
   - web
   - GATT
-  - wireless communicatio
+  - wireless communication
 
 environment:
   sdk: ">=3.0.0 <4.0.0"
@@ -32,7 +32,7 @@ dependencies:
   web: ^1.1.0
   plugin_platform_interface: ^2.0.2
   collection: ^1.18.0
-  layrz_models: ^3.3.35
+  layrz_models: ^3.3.38
   flutter_web_bluetooth: ^1.0.0
   bluez: ^0.8.2
 

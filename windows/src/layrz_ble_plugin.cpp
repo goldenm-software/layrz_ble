@@ -313,6 +313,13 @@ namespace layrz_ble {
           auto rssi = args.RawSignalStrengthInDBm();
           if (rssi)
             deviceInfo.setRssi(rssi);
+
+          // Get the txPower
+          if (args.TransmitPowerLevelInDBm()) {
+            auto txPower = args.TransmitPowerLevelInDBm().Value();
+            deviceInfo.setTxPower(txPower);
+          }
+
           handleBleScanResult(deviceInfo);
         }
       );
@@ -336,6 +343,13 @@ namespace layrz_ble {
     {
       auto signalStrength = properties.Lookup(L"System.Devices.Aep.SignalStrength").as<IPropertyValue>();
       result.setRssi(signalStrength.GetInt64());
+    }
+
+    // Get the txPower
+    if(properties.HasKey(L"System.Devices.Aep.TransmitPowerLevel"))
+    {
+      auto txPower = properties.Lookup(L"System.Devices.Aep.TransmitPowerLevel").as<IPropertyValue>();
+      result.setTxPower(txPower.GetUInt16());
     }
 
     handleBleScanResult(result);
@@ -392,6 +406,7 @@ namespace layrz_ble {
     response[flutter::EncodableValue("macAddress")]       = flutter::EncodableValue(device.DeviceId());
     response[flutter::EncodableValue("name")]             = flutter::EncodableValue(device.Name() ? *device.Name() : "Unknown");
     response[flutter::EncodableValue("rssi")]             = flutter::EncodableValue(device.Rssi());
+    response[flutter::EncodableValue("txPower")]          = flutter::EncodableValue(device.TxPower());
     if (device.ManufacturerData() != nullptr) {
       flutter::EncodableList manufacturerDataList;
       for (const auto &mfd : *device.ManufacturerData()) {
