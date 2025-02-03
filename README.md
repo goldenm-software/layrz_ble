@@ -19,6 +19,7 @@ For example, most of the libraries out there requires services and characteristi
 
 | Feature | Android | iOS | macOS | Windows | Web | Linux | Method(s) | 
 | --- | --- | --- | --- | --- | --- | --- | --- |
+| <b>Role: As a scanner</b> | --- | --- | --- | --- | --- | --- | --- |
 | Scan for BLE devices | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | `startScan`, `stopScan` and `onScan` |
 | Connect to BLE devices | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | `connect` and `onEvent` |
 | Disconnect from BLE devices | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | `disconnect` and `onEvent` |
@@ -27,8 +28,11 @@ For example, most of the libraries out there requires services and characteristi
 | Read from characteristics | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | `readCharacteristic` |
 | Write to characteristics | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | `writeCharacteristic` |
 | Subscribe to characteristic notifications | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | `startNotify`, `stopNotify` and `onNotify` |
+| <b>Role: As a BLE device</b> | --- | --- | --- | --- | --- | --- | --- |
+| Advertise | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | TBD |
+| Allow incoming connections | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | TBD |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| Language used | Kotlin | Swift | Swift | C++ | Dart | Dart | --- |
+| <b>Language used</b> | Kotlin | Swift | Swift | C++ | Dart | Dart | --- |
 
 ### MTU thing...
 🟨 : Well, Windows (Directly on C++) and Linux (through [`bluez` package](https://pub.dev/packages/bluez)) does not support the capability to negotiate the MTU, but yes to return the max MTU allowed, so, when you call `setMtu` you will receive the max allowed from the APIs, not a negotiated value. And why this value is important? Well, you have a size limit of the things that you want to send to your device, knowing the MTU helps to adjusts your packets sizes before sending it to the device.
