@@ -17,9 +17,10 @@ For example, most of the libraries out there requires services and characteristi
 
 ✅ - Supported | ❌ - Not available | 🟨 - Partially supported
 
+### Scanning and connecting
+
 | Feature | Android | iOS | macOS | Windows | Web | Linux | Method(s) | 
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| <b>Scan and connect</b> |
 | Scan for BLE devices | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | `startScan`, `stopScan` and `onScan` |
 | Connect to BLE devices | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | `connect` and `onEvent` |
 | Disconnect from BLE devices | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | `disconnect` and `onEvent` |
@@ -29,7 +30,12 @@ For example, most of the libraries out there requires services and characteristi
 | Write to characteristics | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | `writeCharacteristic` |
 | Subscribe to characteristic notifications | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | `startNotify`, `stopNotify` and `onNotify` |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| <b>Advertise</b> | --- | --- | --- | --- | --- | --- | --- |
+| Language used | Kotlin | Swift | Swift | C++ | Dart | Dart | --- |
+
+### Advertising and GATT server
+
+| Feature | Android | iOS | macOS | Windows | Web | Linux | Method(s) | 
+| --- | --- | --- | --- | --- | --- | --- | --- |
 | Advertise (On Bluetooth 4 or 5) | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | `startAdvertise` and `stopAdvertise` |
 | Services and characteristics | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | `respondReadRequest` and `respondWriteRequest` |
 | Notifications | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | `sendNotification` |
