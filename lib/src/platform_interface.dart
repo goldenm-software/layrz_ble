@@ -1,7 +1,7 @@
 import 'dart:async';
 import 'dart:typed_data';
 
-import 'package:layrz_ble/src/types.dart';
+import 'package:layrz_ble/src/types/types.dart';
 import 'package:layrz_models/layrz_models.dart';
 import 'package:plugin_platform_interface/plugin_platform_interface.dart';
 
@@ -20,16 +20,20 @@ abstract class LayrzBlePlatform extends PlatformInterface {
   }
 
   /// [onScan] is a stream of BLE devices detected during a scan.
-  Stream<BleDevice> get onScan => throw UnimplementedError('_scanSubscription has not been implemented.');
+  Stream<BleDevice> get onScan => throw UnimplementedError('onScan has not been implemented.');
 
   /// [onEvent] is a stream of BLE events.
-  Stream<BleEvent> get onEvent => throw UnimplementedError('_eventSubscription has not been implemented.');
+  Stream<BleEvent> get onEvent => throw UnimplementedError('onEvent has not been implemented.');
 
   /// [onNotify] is a stream of BLE notifications.
   /// To add a new notification listener, use [startNotify] method.
   /// This stream will emit the raw bytes of the notification.
-  Stream<BleCharacteristicNotification> get onNotify =>
-      throw UnimplementedError('_notifySubscription has not been implemented.');
+  Stream<BleCharacteristicNotification> get onNotify => throw UnimplementedError('onNotify has not been implemented.');
+
+  /// [onGattUpdate] is the stream of BLE GATT server updates.
+  /// You can listen it, but you need to use [startAdvertise] with [canConnect] set to `true` to really
+  /// start a GATT server.
+  Stream<BleGattEvent> get onGattUpdate => throw UnimplementedError('onGattUpdate has not been implemented.');
 
   /// [startScan] starts scanning for BLE devices.
   ///
@@ -44,8 +48,7 @@ abstract class LayrzBlePlatform extends PlatformInterface {
     /// [servicesUuids] is a list of service UUIDs to filter the services to be discovered.
     /// This property is only working on Web, other platforms will be ignored.
     List<String>? servicesUuids,
-  }) =>
-      throw UnimplementedError('startScan() has not been implemented.');
+  }) => throw UnimplementedError('startScan() has not been implemented.');
 
   /// [stopScan] stops scanning for BLE devices.
   ///
@@ -53,8 +56,14 @@ abstract class LayrzBlePlatform extends PlatformInterface {
   Future<bool?> stopScan() => throw UnimplementedError('stopScan() has not been implemented.');
 
   /// [checkCapabilities] checks if the device supports BLE.
-  Future<BleCapabilities> checkCapabilities() =>
-      throw UnimplementedError('checkCapabilities() has not been implemented.');
+  Future<bool> checkCapabilities() => throw UnimplementedError('checkCapabilities() has not been implemented.');
+
+  /// [checkScanPermissions] checks if the app has the permissions to scan for BLE devices.
+  Future<bool> checkScanPermissions() => throw UnimplementedError('checkScanPermissions() has not been implemented.');
+
+  /// [checkAdvertisePermissions] checks if the app has the permissions to advertise BLE devices.
+  Future<bool> checkAdvertisePermissions() =>
+      throw UnimplementedError('checkAdvertisePermissions() has not been implemented.');
 
   /// [setMtu] sets the MTU size for the BLE connection.
   /// The MTU size is the maximum number of bytes that can be sent in a single packet, also, MTU means
@@ -67,8 +76,7 @@ abstract class LayrzBlePlatform extends PlatformInterface {
   Future<bool?> connect({
     /// [macAddress] is the MAC address or UUID of the device to connect.
     required String macAddress,
-  }) =>
-      throw UnimplementedError('connect() has not been implemented.');
+  }) => throw UnimplementedError('connect() has not been implemented.');
 
   /// [disconnect] disconnects from any connected BLE device.
   Future<bool?> disconnect() => throw UnimplementedError('disconnect() has not been implemented.');
@@ -77,8 +85,7 @@ abstract class LayrzBlePlatform extends PlatformInterface {
   Future<List<BleService>?> discoverServices({
     /// [timeout] is the duration to wait for the services to be discovered.
     Duration timeout = const Duration(seconds: 30),
-  }) =>
-      throw UnimplementedError('discoverServices() has not been implemented.');
+  }) => throw UnimplementedError('discoverServices() has not been implemented.');
 
   /// [writeCharacteristic] sends a payload to a BLE characteristic.
   ///
@@ -98,8 +105,7 @@ abstract class LayrzBlePlatform extends PlatformInterface {
 
     /// [withResponse] is a flag to indicate if the write should be with response or not.
     required bool withResponse,
-  }) =>
-      throw UnimplementedError('writeCharacteristic() has not been implemented.');
+  }) => throw UnimplementedError('writeCharacteristic() has not been implemented.');
 
   /// [readCharacteristic] reads the value of a BLE characteristic.
   /// The return value is the raw bytes of the characteristic.
@@ -114,8 +120,7 @@ abstract class LayrzBlePlatform extends PlatformInterface {
 
     /// [timeout] is the duration to wait for the characteristic to be read.
     Duration timeout = const Duration(seconds: 30),
-  }) =>
-      throw UnimplementedError('readCharacteristic() has not been implemented.');
+  }) => throw UnimplementedError('readCharacteristic() has not been implemented.');
 
   /// [startNotify] starts listening to notifications from a BLE characteristic.
   /// To stop listening, use [stopNotify] method and to get the notifications, use [onNotify] stream.
@@ -125,8 +130,7 @@ abstract class LayrzBlePlatform extends PlatformInterface {
 
     /// [characteristicUuid] is the UUID of the characteristic.
     required String characteristicUuid,
-  }) =>
-      throw UnimplementedError('startNotify() has not been implemented.');
+  }) => throw UnimplementedError('startNotify() has not been implemented.');
 
   /// [stopNotify] stops listening to notifications from a BLE characteristic.
   Future<bool?> stopNotify({
@@ -135,6 +139,95 @@ abstract class LayrzBlePlatform extends PlatformInterface {
 
     /// [characteristicUuid] is the UUID of the characteristic.
     required String characteristicUuid,
-  }) =>
-      throw UnimplementedError('stopNotify() has not been implemented.');
+  }) => throw UnimplementedError('stopNotify() has not been implemented.');
+
+  /// [startAdvertise] starts advertising a BLE device.
+  ///
+  /// The advertisement packet will contain the [manufacturerData] and [serviceData] provided, and the advertisement
+  /// will include the name of the device. So, be careful with the len of the contents, you need to consider
+  /// the restrictions of the Bluetooth Low Energy specification.
+  Future<bool> startAdvertise({
+    /// [manufacturerData] is the data to be sent in the advertisement packet.
+    List<BleManufacturerData> manufacturerData = const [],
+
+    /// [serviceData] is the data to be sent in the advertisement packet.
+    List<BleServiceData> serviceData = const [],
+
+    /// [canConnect] is a flag to indicate if the device can be connected to.
+    /// This property enables the GATT Server to be started and the device to be connected to.
+    bool canConnect = false,
+
+    /// [servicesSpecs] defines the list of services to be available in the GATT Server.
+    /// This property is only used if [canConnect] is set to `true`.
+    List<BleService> servicesSpecs = const [],
+
+    /// [forceBluetooth5] is a flag to indicate if the advertisement can be using the Bluetooth 5.0 specification.
+    bool allowBluetooth5 = true,
+  }) => throw UnimplementedError('startAdvertise() has not been implemented.');
+
+  /// [stopAdvertise] stops advertising a BLE device.
+  Future<bool> stopAdvertise() => throw UnimplementedError('stopAdvertise() has not been implemented.');
+
+  /// [respondReadRequest] responds to a GATT request.
+  /// This method is designed to be a response from an event from [onGattUpdate] stream. Whhen the
+  /// [GattReadRequest] is received, you can use this method to respond to the request.
+  Future<bool> respondReadRequest({
+    /// [requestId] is the ID of the request.
+    required int requestId,
+
+    /// [macAddress] is the MAC address of the device.
+    required String macAddress,
+
+    /// [offset] is the offset of the data to be read.
+    required int offset,
+
+    /// [serviceUuid] is the UUID of the service.
+    required String serviceUuid,
+
+    /// [characteristicUuid] is the UUID of the characteristic.
+    required String characteristicUuid,
+
+    /// [data] is the data to be sent in response to the request.
+    Uint8List? data,
+  }) => throw UnimplementedError('respondReadRequest() has not been implemented.');
+
+  /// [respondWriteRequest] responds to a GATT request.
+  /// This method is designed to be a response from an event from [onGattUpdate] stream. Whhen the
+  /// [GattWriteRequest] is received, you can use this method to respond to the request.
+  Future<bool> respondWriteRequest({
+    /// [requestId] is the ID of the request.
+    required int requestId,
+
+    /// [macAddress] is the MAC address of the device.
+    required String macAddress,
+
+    /// [offset] is the offset of the data to be read.
+    required int offset,
+
+    /// [serviceUuid] is the UUID of the service.
+    required String serviceUuid,
+
+    /// [characteristicUuid] is the UUID of the characteristic.
+    required String characteristicUuid,
+
+    /// [success] is a flag to indicate if the request was successful.
+    required bool success,
+  }) => throw UnimplementedError('respondWriteRequest() has not been implemented.');
+
+  /// [sendNotification] sends a notification to a BLE characteristic.
+  /// You can use this method to send information to an specific characteristic, but requires a GATT server
+  /// enabled, so, you need to use [startAdvertise] with [canConnect] set to `true`.
+  Future<bool> sendNotification({
+    /// [serviceUuid] is the UUID of the service.
+    required String serviceUuid,
+
+    /// [characteristicUuid] is the UUID of the characteristic.
+    required String characteristicUuid,
+
+    /// [payload] is the data to send to the characteristic.
+    required Uint8List payload,
+
+    /// [requestConfirmation] is a flag to indicate if the notification should be sent with confirmation.
+    bool requestConfirmation = false,
+  }) => throw UnimplementedError('sendNotification() has not been implemented.');
 }

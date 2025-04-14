@@ -4,7 +4,7 @@ import 'package:collection/collection.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_web_plugins/flutter_web_plugins.dart';
 import 'package:layrz_ble/src/platform_interface.dart';
-import 'package:layrz_ble/src/types.dart';
+import 'package:layrz_ble/src/types/types.dart';
 import 'package:layrz_models/layrz_models.dart';
 import 'package:flutter_web_bluetooth/flutter_web_bluetooth.dart';
 
@@ -35,16 +35,13 @@ class LayrzBlePluginWeb extends LayrzBlePlatform {
   Stream<BleCharacteristicNotification> get onNotify => _notifyController.stream;
 
   @override
-  Future<BleCapabilities> checkCapabilities() async {
-    final supported = FlutterWebBluetooth.instance.isBluetoothApiSupported;
+  Future<bool> checkCapabilities() => Future.value(FlutterWebBluetooth.instance.isBluetoothApiSupported);
 
-    return BleCapabilities(
-      bluetoothAdminOrScanPermission: supported,
-      locationPermission: supported,
-      bluetoothPermission: supported,
-      bluetoothConnectPermission: supported,
-    );
-  }
+  @override
+  Future<bool> checkScanPermissions() => checkCapabilities();
+
+  @override
+  Future<bool> checkAdvertisePermissions() => Future.value(false);
 
   @override
   Future<bool?> startScan({String? macAddress, List<String>? servicesUuids}) async {
@@ -91,26 +88,24 @@ class LayrzBlePluginWeb extends LayrzBlePlatform {
 
       for (final service in services) {
         final characteristics = await service.getCharacteristics();
-        final bleCharacteristics = characteristics.map((c) {
-          return BleCharacteristic(
-            uuid: c.uuid,
-            properties: [
-              if (c.properties.read) BleProperty.read,
-              if (c.properties.write) BleProperty.write,
-              if (c.properties.notify) BleProperty.notify,
-              if (c.properties.indicate) BleProperty.indicate,
-              if (c.properties.authenticatedSignedWrites) BleProperty.authenticatedSignedWrites,
-              if (c.properties.broadcast) BleProperty.broadcast,
-              if (c.properties.writableAuxiliaries) BleProperty.extendedProperties,
-              if (c.properties.writeWithoutResponse) BleProperty.writeWithoutResponse,
-            ],
-          );
-        }).toList();
+        final bleCharacteristics =
+            characteristics.map((c) {
+              return BleCharacteristic(
+                uuid: c.uuid,
+                properties: [
+                  if (c.properties.read) BleProperty.read,
+                  if (c.properties.write) BleProperty.write,
+                  if (c.properties.notify) BleProperty.notify,
+                  if (c.properties.indicate) BleProperty.indicate,
+                  if (c.properties.authenticatedSignedWrites) BleProperty.authenticatedSignedWrites,
+                  if (c.properties.broadcast) BleProperty.broadcast,
+                  if (c.properties.writableAuxiliaries) BleProperty.extendedProperties,
+                  if (c.properties.writeWithoutResponse) BleProperty.writeWithoutResponse,
+                ],
+              );
+            }).toList();
 
-        _services.add(BleService(
-          uuid: service.uuid,
-          characteristics: bleCharacteristics,
-        ));
+        _services.add(BleService(uuid: service.uuid, characteristics: bleCharacteristics));
       }
     } catch (e) {
       log("Error discovering services: $e");
@@ -222,10 +217,7 @@ class LayrzBlePluginWeb extends LayrzBlePlatform {
   }
 
   @override
-  Future<bool?> startNotify({
-    required String serviceUuid,
-    required String characteristicUuid,
-  }) async {
+  Future<bool?> startNotify({required String serviceUuid, required String characteristicUuid}) async {
     if (_currentConnected == null) {
       log("No device connected");
       return false;
@@ -246,11 +238,13 @@ class LayrzBlePluginWeb extends LayrzBlePlatform {
       }
       await characteristic.startNotifications();
       _notifications[characteristicUuid] = characteristic.value.listen((event) {
-        _notifyController.add(BleCharacteristicNotification(
-          serviceUuid: serviceUuid,
-          characteristicUuid: characteristicUuid,
-          value: event.buffer.asUint8List(),
-        ));
+        _notifyController.add(
+          BleCharacteristicNotification(
+            serviceUuid: serviceUuid,
+            characteristicUuid: characteristicUuid,
+            value: event.buffer.asUint8List(),
+          ),
+        );
       });
       return true;
     } catch (e) {
@@ -260,10 +254,7 @@ class LayrzBlePluginWeb extends LayrzBlePlatform {
   }
 
   @override
-  Future<bool?> stopNotify({
-    required String serviceUuid,
-    required String characteristicUuid,
-  }) async {
+  Future<bool?> stopNotify({required String serviceUuid, required String characteristicUuid}) async {
     if (_currentConnected == null) {
       log("No device connected");
       return false;

@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.3.0
+
+- Added `startAdvertise()`, `stopAdvertise()`, `respondWriteRequest()` and `respondReadRequest()` methods on Android to support Advertisement using GATT server.
+
 ## 1.2.3
 
 - Segmented MethodChannel's in different channels to prevent overloading.

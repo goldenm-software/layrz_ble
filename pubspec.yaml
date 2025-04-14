@@ -1,6 +1,6 @@
 name: layrz_ble
 description: "A Flutter library for cross-platform Bluetooth Low Energy (BLE) communication, supporting Android, iOS, macOS, Windows, Linux, and web."
-version: 1.2.3
+version: 1.3.0-alpha.1
 repository: https://github.com/goldenm-software/layrz_ble_dart
 
 keywords:
@@ -20,7 +20,7 @@ keywords:
   - wireless communication
 
 environment:
-  sdk: ">=3.0.0 <4.0.0"
+  sdk: ">=3.7.0 <4.0.0"
   flutter: '>=3.27.0'
 
 dependencies:
