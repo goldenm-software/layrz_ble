@@ -2,7 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
-import 'package:layrz_ble/src/types.dart';
+import 'package:layrz_ble/src/types/types.dart';
 import 'package:layrz_models/layrz_models.dart';
 
 import 'platform_interface.dart';
@@ -16,6 +16,54 @@ class LayrzBleNative extends LayrzBlePlatform {
   LayrzBleNative() {
     eventsChannel.setMethodCallHandler((call) async {
       switch (call.method) {
+        /* GATT Server (Advertising) */
+        case 'onGattConnected':
+          try {
+            final args = Map<String, dynamic>.from(call.arguments);
+            final event = GattConnected.fromMap(args);
+            _gattController.add(event);
+          } catch (e) {
+            log('Error parsing GattConnected: $e');
+          }
+          break;
+        case 'onGattDisconnected':
+          try {
+            final event = GattDisconnected(macAddress: call.arguments);
+            _gattController.add(event);
+          } catch (e) {
+            log('Error parsing GattDisconnected: $e');
+          }
+          break;
+        case 'onGattReadRequest':
+          try {
+            final args = Map<String, dynamic>.from(call.arguments);
+            final event = GattReadRequest.fromMap(args);
+            _gattController.add(event);
+          } catch (e) {
+            log('Error parsing GattReadRequest: $e - ${call.arguments}');
+          }
+          break;
+        case 'onGattWriteRequest':
+          try {
+            final args = Map<String, dynamic>.from(call.arguments);
+            final event = GattWriteRequest.fromMap(args);
+            _gattController.add(event);
+          } catch (e) {
+            log('Error parsing GattWriteRequest: $e - ${call.arguments}');
+          }
+          break;
+        case 'onGattMtuChanged':
+          try {
+            final args = Map<String, dynamic>.from(call.arguments);
+            final event = GattMtuChanged.fromMap(args);
+            _gattController.add(event);
+          } catch (e) {
+            log('Error parsing GattMtuChanged: $e - ${call.arguments}');
+          }
+          break;
+        /* /GATT Server (Advertising) */
+
+        /* Scan and connect */
         case 'onScan':
           try {
             final args = Map<String, dynamic>.from(call.arguments);
@@ -23,9 +71,10 @@ class LayrzBleNative extends LayrzBlePlatform {
               args['serviceData'] = [];
             }
 
-            final serviceData = args['serviceData'].map((e) {
-              return Map<String, dynamic>.from(e);
-            }).toList();
+            final serviceData =
+                args['serviceData'].map((e) {
+                  return Map<String, dynamic>.from(e);
+                }).toList();
 
             args['serviceData'] = serviceData;
 
@@ -33,9 +82,10 @@ class LayrzBleNative extends LayrzBlePlatform {
               args['manufacturerData'] = [];
             }
 
-            final manufacturerData = args['manufacturerData'].map((e) {
-              return Map<String, dynamic>.from(e);
-            }).toList();
+            final manufacturerData =
+                args['manufacturerData'].map((e) {
+                  return Map<String, dynamic>.from(e);
+                }).toList();
 
             args['manufacturerData'] = manufacturerData;
 
@@ -45,7 +95,9 @@ class LayrzBleNative extends LayrzBlePlatform {
             log('Error parsing BleDevice: $e - ${call.arguments}');
           }
           break;
+        /* /Scan and connect */
 
+        /* Events */
         case 'onEvent':
           try {
             final event = BleEvent.fromPlatform(call.arguments);
@@ -63,6 +115,7 @@ class LayrzBleNative extends LayrzBlePlatform {
             log('Error parsing BleCharacteristicNotification: $e');
           }
           break;
+        /* /Events */
 
         default:
           log('Unknown method: ${call.method}');
@@ -72,6 +125,8 @@ class LayrzBleNative extends LayrzBlePlatform {
   }
 
   final checkCapabilitiesChannel = const MethodChannel('com.layrz.ble.checkCapabilities');
+  final checkScanPermissionsChannel = const MethodChannel('com.layrz.ble.checkScanPermissions');
+  final checkAdvertisePermissionsChannel = const MethodChannel('com.layrz.ble.checkAdvertisePermissions');
   final startScanChannel = const MethodChannel('com.layrz.ble.startScan');
   final stopScanChannel = const MethodChannel('com.layrz.ble.stopScan');
   final connectChannel = const MethodChannel('com.layrz.ble.connect');
@@ -83,11 +138,16 @@ class LayrzBleNative extends LayrzBlePlatform {
   final startNotifyChannel = const MethodChannel('com.layrz.ble.startNotify');
   final stopNotifyChannel = const MethodChannel('com.layrz.ble.stopNotify');
   final eventsChannel = const MethodChannel('com.layrz.ble.events');
+  final startAdvertiseChannel = const MethodChannel('com.layrz.ble.startAdvertise');
+  final stopAdvertiseChannel = const MethodChannel('com.layrz.ble.stopAdvertise');
+  final respondReadRequestChannel = const MethodChannel('com.layrz.ble.respondReadRequest');
+  final respondWriteRequestChannel = const MethodChannel('com.layrz.ble.respondWriteRequest');
 
   final StreamController<BleDevice> _scanController = StreamController<BleDevice>.broadcast();
   final StreamController<BleEvent> _eventController = StreamController<BleEvent>.broadcast();
   final StreamController<BleCharacteristicNotification> _notifyController =
       StreamController<BleCharacteristicNotification>.broadcast();
+  final StreamController<BleGattEvent> _gattController = StreamController<BleGattEvent>.broadcast();
 
   @override
   Stream<BleDevice> get onScan => _scanController.stream;
@@ -99,40 +159,26 @@ class LayrzBleNative extends LayrzBlePlatform {
   Stream<BleCharacteristicNotification> get onNotify => _notifyController.stream;
 
   @override
-  Future<bool?> startScan({String? macAddress, List<String>? servicesUuids}) => startScanChannel.invokeMethod<bool>(
-        'startScan',
-        {if (macAddress != null) 'macAddress': macAddress},
-      );
+  Stream<BleGattEvent> get onGattUpdate => _gattController.stream;
+
+  @override
+  Future<bool?> startScan({String? macAddress, List<String>? servicesUuids}) =>
+      startScanChannel.invokeMethod<bool>('startScan', {if (macAddress != null) 'macAddress': macAddress});
 
   @override
   Future<bool?> stopScan() => stopScanChannel.invokeMethod<bool>('stopScan');
 
   @override
-  Future<BleCapabilities> checkCapabilities() async {
-    debugPrint("Calling");
-    final result = await checkCapabilitiesChannel.invokeMethod<Map>('checkCapabilities');
-    if (result == null) {
-      log('Error checking BleCapabilities from native side');
-      return BleCapabilities(
-        locationPermission: false,
-        bluetoothPermission: false,
-        bluetoothAdminOrScanPermission: false,
-        bluetoothConnectPermission: false,
-      );
-    }
+  Future<bool> checkCapabilities() =>
+      checkCapabilitiesChannel.invokeMethod<bool>('checkCapabilities').then((value) => value ?? false);
 
-    try {
-      return BleCapabilities.fromMap(Map<String, dynamic>.from(result));
-    } catch (e) {
-      log('Error parsing BleCapabilities: $e');
-      return BleCapabilities(
-        locationPermission: false,
-        bluetoothPermission: false,
-        bluetoothAdminOrScanPermission: false,
-        bluetoothConnectPermission: false,
-      );
-    }
-  }
+  @override
+  Future<bool> checkScanPermissions() =>
+      checkScanPermissionsChannel.invokeMethod<bool>('checkScanPermissions').then((value) => value ?? false);
+
+  @override
+  Future<bool> checkAdvertisePermissions() =>
+      checkAdvertisePermissionsChannel.invokeMethod<bool>('checkAdvertisePermissions').then((value) => value ?? false);
 
   @override
   Future<int?> setMtu({required int newMtu}) => setMtuChannel.invokeMethod<int>('setMtu', newMtu);
@@ -148,9 +194,7 @@ class LayrzBleNative extends LayrzBlePlatform {
     /// [timeout] is the duration to wait for the services to be discovered.
     Duration timeout = const Duration(seconds: 30),
   }) async {
-    final result = await discoverServicesChannel.invokeMethod<List>('discoverServices', {
-      'timeout': timeout.inSeconds,
-    });
+    final result = await discoverServicesChannel.invokeMethod<List>('discoverServices', {'timeout': timeout.inSeconds});
     if (result == null) {
       log('Error discovering services from native side');
       return null;
@@ -170,10 +214,7 @@ class LayrzBleNative extends LayrzBlePlatform {
           }
         }
 
-        services.add(BleService(
-          uuid: service['uuid'],
-          characteristics: characteristics,
-        ));
+        services.add(BleService(uuid: service['uuid'], characteristics: characteristics));
       } catch (e) {
         log('Error parsing BleService: $e');
       }
@@ -226,10 +267,7 @@ class LayrzBleNative extends LayrzBlePlatform {
   }
 
   @override
-  Future<bool?> startNotify({
-    required String serviceUuid,
-    required String characteristicUuid,
-  }) {
+  Future<bool?> startNotify({required String serviceUuid, required String characteristicUuid}) {
     return startNotifyChannel.invokeMethod<bool>('startNotify', <String, String>{
       'serviceUuid': serviceUuid,
       'characteristicUuid': characteristicUuid,
@@ -237,13 +275,70 @@ class LayrzBleNative extends LayrzBlePlatform {
   }
 
   @override
-  Future<bool?> stopNotify({
-    required String serviceUuid,
-    required String characteristicUuid,
-  }) {
+  Future<bool?> stopNotify({required String serviceUuid, required String characteristicUuid}) {
     return stopNotifyChannel.invokeMethod<bool>('stopNotify', <String, String>{
       'serviceUuid': serviceUuid,
       'characteristicUuid': characteristicUuid,
     });
   }
+
+  @override
+  Future<bool> startAdvertise({
+    List<BleManufacturerData> manufacturerData = const [],
+    List<BleServiceData> serviceData = const [],
+    bool canConnect = true,
+    List<BleService> servicesSpecs = const [],
+    bool allowBluetooth5 = false,
+  }) {
+    return startAdvertiseChannel
+        .invokeMethod<bool>('startAdvertise', {
+          'manufacturerData':
+              manufacturerData
+                  .map((e) => {'companyId': e.companyId, 'data': Uint8List.fromList(e.data ?? [])})
+                  .toList(),
+          'serviceData': serviceData.map((e) => {'uuid': e.uuid, 'data': Uint8List.fromList(e.data ?? [])}).toList(),
+          'canConnect': canConnect,
+          'servicesSpecs': servicesSpecs.map((e) => e.toJson()).toList(),
+          'allowBluetooth5': allowBluetooth5,
+        })
+        .then((value) => value ?? false);
+  }
+
+  @override
+  Future<bool> stopAdvertise() =>
+      stopAdvertiseChannel.invokeMethod<bool>('stopAdvertise').then((value) => value ?? false);
+
+  @override
+  Future<bool> respondReadRequest({
+    required int requestId,
+    required String macAddress,
+    required int offset,
+    required String characteristicUuid,
+    Uint8List? data,
+  }) => respondReadRequestChannel
+      .invokeMethod<bool>('respondReadRequest', {
+        'requestId': requestId,
+        'macAddress': macAddress,
+        'offset': offset,
+        'characteristicUuid': characteristicUuid,
+        'data': data,
+      })
+      .then((value) => value ?? false);
+
+  @override
+  Future<bool> respondWriteRequest({
+    required int requestId,
+    required String macAddress,
+    required int offset,
+    required String characteristicUuid,
+    required bool success,
+  }) => respondWriteRequestChannel
+      .invokeMethod<bool>('respondWriteRequest', {
+        'requestId': requestId,
+        'macAddress': macAddress,
+        'offset': offset,
+        'characteristicUuid': characteristicUuid,
+        'success': success,
+      })
+      .then((value) => value ?? false);
 }
