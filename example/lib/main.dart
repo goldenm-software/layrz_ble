@@ -50,6 +50,9 @@ class _HomePageState extends State<HomePage> {
   bool _isAdvertising = false;
   BleDevice? _selectedDevice;
 
+  String get serviceUuid => '00000000-0000-0000-0000-000000000001';
+  String get readCharacteristic => '00000000-0000-0000-0000-000000000002';
+
   AppThemedAsset get logo => const AppThemedAsset(
         normal: 'https://cdn.layrz.com/resources/layrz/logo/normal.png',
         white: 'https://cdn.layrz.com/resources/layrz/logo/white.png',
@@ -80,6 +83,7 @@ class _HomePageState extends State<HomePage> {
           requestId: event.requestId,
           macAddress: event.macAddress,
           offset: event.offset,
+          serviceUuid: event.serviceUuid,
           characteristicUuid: event.characteristicUuid,
           success: true,
         );
@@ -90,6 +94,7 @@ class _HomePageState extends State<HomePage> {
           requestId: event.requestId,
           macAddress: event.macAddress,
           offset: event.offset,
+          serviceUuid: event.serviceUuid,
           characteristicUuid: event.characteristicUuid,
           data: Uint8List.fromList([0x01, 0x02, 0x03, 0x04]),
         );
@@ -256,17 +261,17 @@ class _HomePageState extends State<HomePage> {
                             canConnect: true,
                             allowBluetooth5: true,
                             servicesSpecs: [
-                              const BleService(
-                                uuid: '00000000-0000-0000-0000-000000000001',
+                              BleService(
+                                uuid: serviceUuid,
                                 characteristics: [
                                   BleCharacteristic(
-                                    uuid: '00000000-0000-0000-0000-000000000002',
+                                    uuid: readCharacteristic,
                                     properties: [
                                       BleProperty.read,
                                       BleProperty.notify,
                                     ],
                                   ),
-                                  BleCharacteristic(
+                                  const BleCharacteristic(
                                     uuid: '00000000-0000-0000-0000-000000000003',
                                     properties: [BleProperty.write],
                                   ),
@@ -305,6 +310,23 @@ class _HomePageState extends State<HomePage> {
                             color: Colors.red,
                             icon: LayrzIcons.solarOutlineBluetoothSquare,
                           ));
+                        },
+                      ),
+                      const SizedBox(width: 10),
+                      ThemedButton(
+                        isLoading: _isLoading,
+                        labelText: 'Send Service update',
+                        color: Colors.orange,
+                        onTap: () async {
+                          setState(() => _isLoading = true);
+                          final result = await plugin.sendNotification(
+                            serviceUuid: serviceUuid,
+                            characteristicUuid: readCharacteristic,
+                            payload: Uint8List.fromList([0x04, 0x03, 0x02, 0x01, 0x05]),
+                            requestConfirmation: false,
+                          );
+                          debugPrint('Send notification result: $result');
+                          setState(() => _isLoading = false);
                         },
                       ),
                     ],

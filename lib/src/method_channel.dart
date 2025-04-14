@@ -142,6 +142,7 @@ class LayrzBleNative extends LayrzBlePlatform {
   final stopAdvertiseChannel = const MethodChannel('com.layrz.ble.stopAdvertise');
   final respondReadRequestChannel = const MethodChannel('com.layrz.ble.respondReadRequest');
   final respondWriteRequestChannel = const MethodChannel('com.layrz.ble.respondWriteRequest');
+  final sendNotificationChannel = const MethodChannel('com.layrz.ble.sendNotification');
 
   final StreamController<BleDevice> _scanController = StreamController<BleDevice>.broadcast();
   final StreamController<BleEvent> _eventController = StreamController<BleEvent>.broadcast();
@@ -313,6 +314,7 @@ class LayrzBleNative extends LayrzBlePlatform {
     required int requestId,
     required String macAddress,
     required int offset,
+    required String serviceUuid,
     required String characteristicUuid,
     Uint8List? data,
   }) => respondReadRequestChannel
@@ -320,6 +322,7 @@ class LayrzBleNative extends LayrzBlePlatform {
         'requestId': requestId,
         'macAddress': macAddress,
         'offset': offset,
+        'serviceUuid': serviceUuid,
         'characteristicUuid': characteristicUuid,
         'data': data,
       })
@@ -330,6 +333,7 @@ class LayrzBleNative extends LayrzBlePlatform {
     required int requestId,
     required String macAddress,
     required int offset,
+    required String serviceUuid,
     required String characteristicUuid,
     required bool success,
   }) => respondWriteRequestChannel
@@ -337,8 +341,24 @@ class LayrzBleNative extends LayrzBlePlatform {
         'requestId': requestId,
         'macAddress': macAddress,
         'offset': offset,
+        'serviceUuid': serviceUuid,
         'characteristicUuid': characteristicUuid,
         'success': success,
+      })
+      .then((value) => value ?? false);
+
+  @override
+  Future<bool> sendNotification({
+    required String serviceUuid,
+    required String characteristicUuid,
+    required Uint8List payload,
+    bool requestConfirmation = false,
+  }) => sendNotificationChannel
+      .invokeMethod<bool>('sendNotification', {
+        'serviceUuid': serviceUuid,
+        'characteristicUuid': characteristicUuid,
+        'payload': payload,
+        'requestConfirmation': requestConfirmation,
       })
       .then((value) => value ?? false);
 }

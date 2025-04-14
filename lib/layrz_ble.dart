@@ -164,6 +164,9 @@ class LayrzBle {
     /// [offset] is the offset of the data to be read.
     required int offset,
 
+    /// [serviceUuid] is the UUID of the service.
+    required String serviceUuid,
+
     /// [characteristicUuid] is the UUID of the characteristic.
     required String characteristicUuid,
 
@@ -173,6 +176,7 @@ class LayrzBle {
     requestId: requestId,
     macAddress: macAddress,
     offset: offset,
+    serviceUuid: serviceUuid,
     characteristicUuid: characteristicUuid,
     data: data,
   );
@@ -190,6 +194,9 @@ class LayrzBle {
     /// [offset] is the offset of the data to be read.
     required int offset,
 
+    /// [serviceUuid] is the UUID of the service.
+    required String serviceUuid,
+
     /// [characteristicUuid] is the UUID of the characteristic.
     required String characteristicUuid,
 
@@ -199,7 +206,30 @@ class LayrzBle {
     requestId: requestId,
     macAddress: macAddress,
     offset: offset,
+    serviceUuid: serviceUuid,
     characteristicUuid: characteristicUuid,
     success: success,
+  );
+
+  /// [sendNotification] sends a notification to a BLE characteristic.
+  /// You can use this method to send information to an specific characteristic, but requires a GATT server
+  /// enabled, so, you need to use [startAdvertise] with [canConnect] set to `true`.
+  Future<bool> sendNotification({
+    /// [serviceUuid] is the UUID of the service.
+    required String serviceUuid,
+
+    /// [characteristicUuid] is the UUID of the characteristic.
+    required String characteristicUuid,
+
+    /// [payload] is the data to send to the characteristic.
+    required Uint8List payload,
+
+    /// [requestConfirmation] is a flag to indicate if the notification should be sent with confirmation.
+    bool requestConfirmation = false,
+  }) => LayrzBlePlatform.instance.sendNotification(
+    serviceUuid: serviceUuid,
+    characteristicUuid: characteristicUuid,
+    payload: payload,
+    requestConfirmation: requestConfirmation,
   );
 }

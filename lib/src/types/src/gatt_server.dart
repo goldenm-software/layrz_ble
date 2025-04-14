@@ -48,6 +48,9 @@ class GattReadRequest extends BleGattEvent {
   /// [offset] is the offset of the data to be read.
   final int offset;
 
+  /// [serviceUuid] is the UUID of the service.
+  final String serviceUuid;
+
   /// [characteristicUuid] is the UUID of the characteristic.
   final String characteristicUuid;
 
@@ -55,6 +58,7 @@ class GattReadRequest extends BleGattEvent {
     required this.macAddress,
     required this.requestId,
     required this.offset,
+    required this.serviceUuid,
     required this.characteristicUuid,
   });
 
@@ -63,6 +67,7 @@ class GattReadRequest extends BleGattEvent {
       macAddress: map['macAddress'] as String,
       requestId: map['requestId'] as int,
       offset: map['offset'] as int,
+      serviceUuid: map['serviceUuid'] as String,
       characteristicUuid: map['characteristicUuid'] as String,
     );
   }
@@ -72,6 +77,7 @@ class GattReadRequest extends BleGattEvent {
     return 'GattReadRequest(macAddress: $macAddress, '
         'requestId: $requestId, '
         'offset: $offset, '
+        'serviceUuid: $serviceUuid, '
         'characteristicUuid: $characteristicUuid)';
   }
 }
@@ -85,6 +91,9 @@ class GattWriteRequest extends BleGattEvent {
 
   /// [offset] is the offset of the data to be read.
   final int offset;
+
+  /// [serviceUuid] is the UUID of the service.
+  final String serviceUuid;
 
   /// [characteristicUuid] is the UUID of the characteristic.
   final String characteristicUuid;
@@ -102,6 +111,7 @@ class GattWriteRequest extends BleGattEvent {
     required this.macAddress,
     required this.requestId,
     required this.offset,
+    required this.serviceUuid,
     required this.characteristicUuid,
     this.data,
     this.preparedWrite = false,
@@ -113,6 +123,7 @@ class GattWriteRequest extends BleGattEvent {
       macAddress: map['macAddress'] as String,
       requestId: map['requestId'] as int,
       offset: map['offset'] as int,
+      serviceUuid: map['serviceUuid'] as String,
       characteristicUuid: map['characteristicUuid'] as String,
       data: map['data'] != null ? map['data'] as Uint8List : null,
       preparedWrite: map['preparedWrite'] as bool? ?? false,

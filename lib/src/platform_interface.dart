@@ -181,6 +181,9 @@ abstract class LayrzBlePlatform extends PlatformInterface {
     /// [offset] is the offset of the data to be read.
     required int offset,
 
+    /// [serviceUuid] is the UUID of the service.
+    required String serviceUuid,
+
     /// [characteristicUuid] is the UUID of the characteristic.
     required String characteristicUuid,
 
@@ -201,10 +204,30 @@ abstract class LayrzBlePlatform extends PlatformInterface {
     /// [offset] is the offset of the data to be read.
     required int offset,
 
+    /// [serviceUuid] is the UUID of the service.
+    required String serviceUuid,
+
     /// [characteristicUuid] is the UUID of the characteristic.
     required String characteristicUuid,
 
     /// [success] is a flag to indicate if the request was successful.
     required bool success,
   }) => throw UnimplementedError('respondWriteRequest() has not been implemented.');
+
+  /// [sendNotification] sends a notification to a BLE characteristic.
+  /// You can use this method to send information to an specific characteristic, but requires a GATT server
+  /// enabled, so, you need to use [startAdvertise] with [canConnect] set to `true`.
+  Future<bool> sendNotification({
+    /// [serviceUuid] is the UUID of the service.
+    required String serviceUuid,
+
+    /// [characteristicUuid] is the UUID of the characteristic.
+    required String characteristicUuid,
+
+    /// [payload] is the data to send to the characteristic.
+    required Uint8List payload,
+
+    /// [requestConfirmation] is a flag to indicate if the notification should be sent with confirmation.
+    bool requestConfirmation = false,
+  }) => throw UnimplementedError('sendNotification() has not been implemented.');
 }

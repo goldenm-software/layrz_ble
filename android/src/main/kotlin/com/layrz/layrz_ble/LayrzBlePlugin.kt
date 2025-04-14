@@ -71,6 +71,7 @@ class LayrzBlePlugin : FlutterPlugin, MethodCallHandler, ActivityAware,
 	private lateinit var stopAdvertiseChannel: MethodChannel
 	private lateinit var respondWriteRequestChannel: MethodChannel
 	private lateinit var respondReadRequestChannel: MethodChannel
+	private lateinit var sendNotificationChannel: MethodChannel
 
 	private lateinit var context: android.content.Context
 	private var bluetooth: BluetoothManager? = null
@@ -498,6 +499,7 @@ class LayrzBlePlugin : FlutterPlugin, MethodCallHandler, ActivityAware,
 						"macAddress" to device.address,
 						"requestId" to requestId,
 						"offset" to offset,
+						"serviceUuid" to standarizeUuid(characteristic.service.uuid),
 						"characteristicUuid" to standarizeUuid(characteristic.uuid),
 						"data" to value,
 						"responseNeeded" to responseNeeded,
@@ -524,6 +526,7 @@ class LayrzBlePlugin : FlutterPlugin, MethodCallHandler, ActivityAware,
 						"macAddress" to device.address,
 						"requestId" to requestId,
 						"offset" to offset,
+						"serviceUuid" to standarizeUuid(characteristic.service.uuid),
 						"characteristicUuid" to standarizeUuid(characteristic.uuid)
 					)
 				)
@@ -631,6 +634,9 @@ class LayrzBlePlugin : FlutterPlugin, MethodCallHandler, ActivityAware,
 		respondReadRequestChannel =
 			MethodChannel(flutterPluginBinding.binaryMessenger, "com.layrz.ble.respondReadRequest")
 		respondReadRequestChannel.setMethodCallHandler(this)
+		sendNotificationChannel =
+			MethodChannel(flutterPluginBinding.binaryMessenger, "com.layrz.ble.sendNotification")
+		sendNotificationChannel.setMethodCallHandler(this)
 
 		context = flutterPluginBinding.applicationContext
 	}
@@ -652,6 +658,7 @@ class LayrzBlePlugin : FlutterPlugin, MethodCallHandler, ActivityAware,
 		stopAdvertiseChannel.setMethodCallHandler(null)
 		respondWriteRequestChannel.setMethodCallHandler(null)
 		respondReadRequestChannel.setMethodCallHandler(null)
+		sendNotificationChannel.setMethodCallHandler(null)
 	}
 
 	override fun onMethodCall(call: MethodCall, result: Result) {
@@ -675,8 +682,54 @@ class LayrzBlePlugin : FlutterPlugin, MethodCallHandler, ActivityAware,
 			"stopAdvertise" -> stopAdvertise(call = call, result = result)
 			"respondReadRequest" -> respondReadRequest(call = call, result = result)
 			"respondWriteRequest" -> respondWriteRequest(call = call, result = result)
+			"sendNotification" -> sendNotification(call = call, result = result)
 			else -> result.notImplemented()
 		}
+	}
+
+	/* Publish a change into a Characteristic */
+	private fun sendNotification(call: MethodCall, result: Result) {
+		if (gattServer == null) {
+			Log.d(TAG, "Gatt server is null")
+			result.success(false)
+			return
+		}
+		val rawServiceUuid = call.argument<String>("serviceUuid")
+		val rawCharacteristicUuid = call.argument<String>("characteristicUuid")
+		val payload = call.argument<ByteArray>("payload")
+		val requestConfirmation = call.argument<Boolean>("requestConfirmation") ?: false
+		if (rawCharacteristicUuid == null || rawServiceUuid == null || payload == null) {
+			Log.d(TAG, "Invalid arguments")
+			result.success(false)
+			return
+		}
+
+		val serviceUuid = UUID.fromString(rawServiceUuid)
+		val service = gattServer!!.services.find { it.uuid == serviceUuid }
+		if (service == null) {
+			Log.d(TAG, "Service not found")
+			result.success(false)
+			return
+		}
+
+		val characteristicUuid = UUID.fromString(rawCharacteristicUuid)
+		val characteristic = service.characteristics.find { it.uuid == characteristicUuid }
+		if (characteristic == null) {
+			Log.d(TAG, "Characteristic not found")
+			result.success(false)
+			return
+		}
+
+		characteristic.value = payload
+		for (device in gattDevices.values) {
+			gattServer!!.notifyCharacteristicChanged(
+				device,
+				characteristic,
+				requestConfirmation
+			)
+		}
+
+		result.success(true)
 	}
 
 	/* Responds a Read Request received from the GATT server */
@@ -689,15 +742,15 @@ class LayrzBlePlugin : FlutterPlugin, MethodCallHandler, ActivityAware,
 		val macAddress = call.argument<String>("macAddress")
 		val requestId = call.argument<Int>("requestId")
 		val offset = call.argument<Int>("offset")
+		val rawServiceUuid = call.argument<String>("serviceUuid")
 		val rawCharacteristicUuid = call.argument<String>("characteristicUuid")
 		val value = call.argument<ByteArray?>("data")
-		if (macAddress == null || requestId == null || offset == null || rawCharacteristicUuid == null) {
+		if (macAddress == null || requestId == null || offset == null || rawCharacteristicUuid == null || rawServiceUuid == null) {
 			Log.d(TAG, "Invalid arguments")
 			result.success(false)
 			return
 		}
 
-		val characteristicUuid = UUID.fromString(rawCharacteristicUuid)
 		val device = gattDevices[macAddress]
 		if (device == null) {
 			Log.d(TAG, "Device not found")
@@ -705,9 +758,16 @@ class LayrzBlePlugin : FlutterPlugin, MethodCallHandler, ActivityAware,
 			return
 		}
 
-		val characteristic = gattServer!!.services.find { service ->
-			service.characteristics.any { it.uuid == characteristicUuid }
-		}?.characteristics?.find { it.uuid == characteristicUuid }
+		val serviceUuid = UUID.fromString(rawServiceUuid)
+		val service = gattServer!!.services.find { it.uuid == serviceUuid }
+		if (service == null) {
+			Log.d(TAG, "Service not found")
+			result.success(false)
+			return
+		}
+
+		val characteristicUuid = UUID.fromString(rawCharacteristicUuid)
+		val characteristic = service.characteristics.find { it.uuid == characteristicUuid }
 		if (characteristic == null) {
 			Log.d(TAG, "Characteristic not found")
 			result.success(false)
@@ -734,15 +794,15 @@ class LayrzBlePlugin : FlutterPlugin, MethodCallHandler, ActivityAware,
 		val macAddress = call.argument<String>("macAddress")
 		val requestId = call.argument<Int>("requestId")
 		val offset = call.argument<Int>("offset")
+		val rawServiceUuid = call.argument<String>("serviceUuid")
 		val rawCharacteristicUuid = call.argument<String>("characteristicUuid")
 		val success = call.argument<Boolean>("success")
-		if (macAddress == null || requestId == null || offset == null || rawCharacteristicUuid == null) {
+		if (macAddress == null || requestId == null || offset == null || rawCharacteristicUuid == null || rawServiceUuid == null) {
 			Log.d(TAG, "Invalid arguments")
 			result.success(false)
 			return
 		}
 
-		val characteristicUuid = UUID.fromString(rawCharacteristicUuid)
 		val device = gattDevices[macAddress]
 		if (device == null) {
 			Log.d(TAG, "Device not found")
@@ -750,9 +810,16 @@ class LayrzBlePlugin : FlutterPlugin, MethodCallHandler, ActivityAware,
 			return
 		}
 
-		val characteristic = gattServer!!.services.find { service ->
-			service.characteristics.any { it.uuid == characteristicUuid }
-		}?.characteristics?.find { it.uuid == characteristicUuid }
+		val serviceUuid = UUID.fromString(rawServiceUuid)
+		val service = gattServer!!.services.find { it.uuid == serviceUuid }
+		if (service == null) {
+			Log.d(TAG, "Service not found")
+			result.success(false)
+			return
+		}
+
+		val characteristicUuid = UUID.fromString(rawCharacteristicUuid)
+		val characteristic = service.characteristics.find { it.uuid == characteristicUuid }
 		if (characteristic == null) {
 			Log.d(TAG, "Characteristic not found")
 			result.success(false)
@@ -843,6 +910,15 @@ class LayrzBlePlugin : FlutterPlugin, MethodCallHandler, ActivityAware,
 						properties,
 						permissions
 					)
+
+					if (rawProperties.contains("NOTIFY") || rawProperties.contains("INDICATE")) {
+						gattCharacteristic.addDescriptor(
+							BluetoothGattDescriptor(
+								CCD_CHARACTERISTIC,
+								BluetoothGattDescriptor.PERMISSION_READ or BluetoothGattDescriptor.PERMISSION_WRITE
+							)
+						)
+					}
 					gattService.addCharacteristic(gattCharacteristic)
 				}
 				gattServices.add(gattService)
