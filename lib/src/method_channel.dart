@@ -110,6 +110,7 @@ class LayrzBleNative extends LayrzBlePlatform {
         case 'onNotify':
           try {
             final notification = BleCharacteristicNotification.fromMap(Map<String, dynamic>.from(call.arguments));
+            if (notification.value.isEmpty) return;
             _notifyController.add(notification);
           } catch (e) {
             log('Error parsing BleCharacteristicNotification: $e');

@@ -31,7 +31,6 @@ import android.os.Build
 import android.os.Handler
 import android.os.Looper
 import android.os.ParcelUuid
-import androidx.annotation.RequiresApi
 import androidx.core.app.ActivityCompat
 import androidx.core.app.ActivityCompat.startActivityForResult
 import androidx.core.util.keyIterator
@@ -365,69 +364,8 @@ class LayrzBlePlugin : FlutterPlugin, MethodCallHandler, ActivityAware,
 		}
 	}
 
-	private val advertiseCallback = object : AdvertiseCallback() {
-		override fun onStartSuccess(settingsInEffect: AdvertiseSettings?) {
-			super.onStartSuccess(settingsInEffect)
-			Log.i(TAG, "Advertise started successfully")
-
-			startAdvertiseResult?.success(true)
-			startAdvertiseResult = null
-
-			if (bluetooth == null) return;
-			if (gattServer != null) {
-				Log.w(TAG, "Gatt server already exists")
-				return
-			}
-
-			gattServer = bluetooth!!.openGattServer(context, gattServerCallback)
-			for (service in gattServices) {
-				Log.i(TAG, "Adding ${service.uuid} to gatt server (Bluetooth Legacy)")
-				gattServer!!.addService(service)
-			}
-		}
-
-		override fun onStartFailure(errorCode: Int) {
-			super.onStartFailure(errorCode)
-			Log.w(TAG, "Advertise failed with error code: $errorCode")
-			startAdvertiseResult?.success(false)
-			startAdvertiseResult = null
-		}
-	}
-
-	private val advertiseSetCallback = @RequiresApi(Build.VERSION_CODES.O)
-	object : AdvertisingSetCallback() {
-		override fun onAdvertisingSetStarted(advertisingSet: AdvertisingSet?, txPower: Int, status: Int) {
-			super.onAdvertisingSetStarted(advertisingSet, txPower, status)
-
-			if (status == ADVERTISE_SUCCESS) {
-				Log.i(TAG, "Advertise set started successfully")
-				startAdvertiseResult?.success(true)
-				startAdvertiseResult = null
-
-				if (bluetooth == null) return;
-				if (gattServer != null) {
-					Log.w(TAG, "Gatt server already exists")
-					return
-				}
-
-				gattServer = bluetooth!!.openGattServer(context, gattServerCallback)
-				for (service in gattServices) {
-					Log.i(TAG, "Adding ${service.uuid} to gatt server (Bluetooth 5.0)")
-					gattServer!!.addService(service)
-				}
-			} else {
-				Log.w(TAG, "Advertise set failed with error code: $status")
-				startAdvertiseResult?.success(false)
-				startAdvertiseResult = null
-			}
-		}
-
-		override fun onAdvertisingSetStopped(advertisingSet: AdvertisingSet?) {
-			super.onAdvertisingSetStopped(advertisingSet)
-
-			Log.i(TAG, "Advertise set stopped")
-		}
-	}
+	private var advertiseCallback: AdvertiseCallback? = null
+	private var advertiseSetCallback: AdvertisingSetCallback? = null
 
 	private var gattServerCallback = object : BluetoothGattServerCallback() {
 		override fun onConnectionStateChange(
@@ -594,8 +532,8 @@ class LayrzBlePlugin : FlutterPlugin, MethodCallHandler, ActivityAware,
 			value: ByteArray?
 		) {
 			super.onDescriptorWriteRequest(device, requestId, descriptor, preparedWrite, responseNeeded, offset, value)
-			Log.d(TAG, "onDescriptorWriteRequest")
-			
+			Log.d(TAG, "onDescriptorWriteRequest - UUID: ${descriptor?.uuid} - value: ${value?.contentToString()}")
+
 			if (descriptor == null || device == null) {
 				Log.d(TAG, "Device or descriptor is null")
 				gattServer!!.sendResponse(
@@ -621,6 +559,7 @@ class LayrzBlePlugin : FlutterPlugin, MethodCallHandler, ActivityAware,
 				}
 
 				if (value.contentEquals(BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE)) {
+					descriptor.characteristic.value = byteArrayOf()
 					gattServer!!.notifyCharacteristicChanged(
 						device,
 						descriptor.characteristic,
@@ -934,7 +873,13 @@ class LayrzBlePlugin : FlutterPlugin, MethodCallHandler, ActivityAware,
 		val adapter = bluetooth!!.adapter
 		val advertiser = adapter.bluetoothLeAdvertiser
 		startAdvertiseResult = result
+		for (service in gattServices) {
+			gattServer?.removeService(service)
+		}
 		gattServices.clear()
+		for (device in gattDevices.values) {
+			gattServer?.cancelConnection(device)
+		}
 		gattDevices.clear()
 
 		val rawServices = call.argument<List<Map<String, Any>>>("servicesSpecs")
@@ -1041,6 +986,40 @@ class LayrzBlePlugin : FlutterPlugin, MethodCallHandler, ActivityAware,
 				.setTxPowerLevel(AdvertisingSetParameters.TX_POWER_HIGH)
 				.build()
 
+			advertiseSetCallback = object : AdvertisingSetCallback() {
+				override fun onAdvertisingSetStarted(advertisingSet: AdvertisingSet?, txPower: Int, status: Int) {
+					super.onAdvertisingSetStarted(advertisingSet, txPower, status)
+
+					if (status == ADVERTISE_SUCCESS) {
+						Log.i(TAG, "Advertise set started successfully")
+						startAdvertiseResult?.success(true)
+						startAdvertiseResult = null
+
+						if (bluetooth == null) return;
+						if (gattServer != null) {
+							Log.w(TAG, "Gatt server already exists")
+							return
+						}
+
+						gattServer = bluetooth!!.openGattServer(context, gattServerCallback)
+						for (service in gattServices) {
+							Log.i(TAG, "Adding ${service.uuid} to gatt server (Bluetooth 5.0)")
+							gattServer!!.addService(service)
+						}
+					} else {
+						Log.w(TAG, "Advertise set failed with error code: $status")
+						startAdvertiseResult?.success(false)
+						startAdvertiseResult = null
+					}
+				}
+
+				override fun onAdvertisingSetStopped(advertisingSet: AdvertisingSet?) {
+					super.onAdvertisingSetStopped(advertisingSet)
+
+					Log.i(TAG, "Advertise set stopped")
+				}
+			}
+
 			advertiser.startAdvertisingSet(
 				parameters,
 				data.build(),
@@ -1058,6 +1037,34 @@ class LayrzBlePlugin : FlutterPlugin, MethodCallHandler, ActivityAware,
 			.setConnectable(connectable)
 			.build()
 
+		advertiseCallback = object : AdvertiseCallback() {
+			override fun onStartSuccess(settingsInEffect: AdvertiseSettings?) {
+				super.onStartSuccess(settingsInEffect)
+				Log.i(TAG, "Advertise started successfully")
+
+				startAdvertiseResult?.success(true)
+				startAdvertiseResult = null
+
+				if (bluetooth == null) return;
+				if (gattServer != null) {
+					Log.w(TAG, "Gatt server already exists")
+					return
+				}
+
+				gattServer = bluetooth!!.openGattServer(context, gattServerCallback)
+				for (service in gattServices) {
+					Log.i(TAG, "Adding ${service.uuid} to gatt server (Bluetooth Legacy)")
+					gattServer!!.addService(service)
+				}
+			}
+
+			override fun onStartFailure(errorCode: Int) {
+				super.onStartFailure(errorCode)
+				Log.w(TAG, "Advertise failed with error code: $errorCode")
+				startAdvertiseResult?.success(false)
+				startAdvertiseResult = null
+			}
+		}
 		advertiser.startAdvertising(settings, data.build(), advertiseCallback)
 	}
 
@@ -1082,17 +1089,24 @@ class LayrzBlePlugin : FlutterPlugin, MethodCallHandler, ActivityAware,
 		}
 
 		for (device in gattDevices.values) {
+			Log.i(TAG, "Cancelling connection with ${device.name} - ${device.address}")
 			gattServer?.cancelConnection(device)
 		}
 
 		gattDevices.clear()
+		for (service in gattServices) {
+			Log.i(TAG, "Removing ${service.uuid} from gatt server")
+			gattServer?.removeService(service)
+		}
 		gattServices.clear()
 		gattServer?.close()
 		gattServer = null
 
 		advertiser.stopAdvertising(advertiseCallback)
+		advertiseCallback = null
 		if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
 			advertiser.stopAdvertisingSet(advertiseSetCallback)
+			advertiseSetCallback = null
 		}
 		Log.d(TAG, "Advertisement stopped")
 		result.success(true)
