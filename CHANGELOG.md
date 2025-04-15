@@ -1,6 +1,14 @@
 # Changelog
 
-## 1.3.0
+## 1.3.0-alpha.3
+
+- Fixes on notifications on Android.
+
+## 1.3.0-alpha.2
+
+- Updated README.md
+
+## 1.3.0-alpha.1
 
 - Added `startAdvertise()`, `stopAdvertise()`, `respondWriteRequest()` and `respondReadRequest()` methods on Android to support Advertisement using GATT server.
 

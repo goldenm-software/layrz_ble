@@ -15,8 +15,6 @@ For example, most of the libraries out there requires services and characteristi
 
 ## Functionalities available per platform
 
-✅ - Supported | ❌ - Not available | 🟨 - Partially supported
-
 ### Scanning and connecting
 
 | Feature | Android | iOS | macOS | Windows | Web | Linux | Method(s) | 

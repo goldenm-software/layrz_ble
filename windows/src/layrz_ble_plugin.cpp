@@ -190,13 +190,7 @@ namespace layrz_ble {
   void LayrzBlePlugin::checkCapabilities(std::unique_ptr<flutter::MethodResult<flutter::EncodableValue>> result) {
     flutter::EncodableMap response;
     bool hasPermissions =(btRadio != nullptr);
-
-    response[flutter::EncodableValue("locationPermission")]              = flutter::EncodableValue(hasPermissions);
-    response[flutter::EncodableValue("bluetoothPermission")]             = flutter::EncodableValue(hasPermissions);
-    response[flutter::EncodableValue("bluetoothAdminOrScanPermission")]  = flutter::EncodableValue(hasPermissions);
-    response[flutter::EncodableValue("bluetoothConnectPermission")]      = flutter::EncodableValue(hasPermissions);
-
-    result->Success(response);
+    result->Success(hasPermissions);
   } // checkCapabilities
 
   /// @brief Start the scan

@@ -548,6 +548,87 @@ class LayrzBlePlugin : FlutterPlugin, MethodCallHandler, ActivityAware,
 				)
 			}
 		}
+
+		override fun onDescriptorReadRequest(
+			device: BluetoothDevice?,
+			requestId: Int,
+			offset: Int,
+			descriptor: BluetoothGattDescriptor?
+		) {
+			super.onDescriptorReadRequest(device, requestId, offset, descriptor)
+			Log.d(TAG, "onDescriptorReadRequest")
+			if (device == null || descriptor == null) {
+				Log.d(TAG, "Device or descriptor is null")
+				gattServer!!.sendResponse(
+					device,
+					requestId,
+					BluetoothGatt.GATT_FAILURE,
+					offset,
+					null
+				)
+				return
+			}
+			if (descriptor.uuid == CCD_CHARACTERISTIC) {
+				if (descriptor.value == null) {
+					Log.d(TAG, "Descriptor value is null")
+					descriptor.value = BluetoothGattDescriptor.DISABLE_NOTIFICATION_VALUE
+				}
+			}
+
+			gattServer!!.sendResponse(
+				device,
+				requestId,
+				BluetoothGatt.GATT_SUCCESS,
+				offset,
+				descriptor.value
+			)
+		}
+
+		override fun onDescriptorWriteRequest(
+			device: BluetoothDevice?,
+			requestId: Int,
+			descriptor: BluetoothGattDescriptor?,
+			preparedWrite: Boolean,
+			responseNeeded: Boolean,
+			offset: Int,
+			value: ByteArray?
+		) {
+			super.onDescriptorWriteRequest(device, requestId, descriptor, preparedWrite, responseNeeded, offset, value)
+			Log.d(TAG, "onDescriptorWriteRequest")
+			
+			if (descriptor == null || device == null) {
+				Log.d(TAG, "Device or descriptor is null")
+				gattServer!!.sendResponse(
+					device,
+					requestId,
+					BluetoothGatt.GATT_FAILURE,
+					offset,
+					null
+				)
+				return
+			}
+
+			if (descriptor.uuid == CCD_CHARACTERISTIC) {
+				descriptor.value = value
+				if (responseNeeded) {
+					gattServer!!.sendResponse(
+						device,
+						requestId,
+						BluetoothGatt.GATT_SUCCESS,
+						offset,
+						value
+					)
+				}
+
+				if (value.contentEquals(BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE)) {
+					gattServer!!.notifyCharacteristicChanged(
+						device,
+						descriptor.characteristic,
+						false
+					)
+				}
+			}
+		}
 	}
 
 	override fun onDetachedFromActivity() {
