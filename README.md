@@ -32,9 +32,11 @@ For example, most of the libraries out there requires services and characteristi
 
 | Feature | Android | iOS | macOS | Windows | Web | Linux | Method(s) | 
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| Advertise (On Bluetooth 4 or 5) | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | `startAdvertise` and `stopAdvertise` |
+| Advertise (On Bluetooth 4 or 5) | ✅* | ❌ | ❌ | ❌ | ❌ | ❌ | `startAdvertise` and `stopAdvertise` |
 | Services and characteristics | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | `respondReadRequest` and `respondWriteRequest` |
 | Notifications | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | `sendNotification` |
+
+* On Android, the stop advertisement does not disconnect the connected devices. Be careful with that.
 
 ### Languages used
 | Platform | Language |

@@ -1,4 +1,4 @@
-@file:Suppress("DEPRECATION", "SpellCheckingInspection", "MissingPermission")
+@file:Suppress("DEPRECATION", "SpellCheckingInspection", "MissingPermission", "KotlinConstantConditions")
 
 package com.layrz.layrz_ble
 
@@ -106,6 +106,8 @@ class LayrzBlePlugin : FlutterPlugin, MethodCallHandler, ActivityAware,
 	private var lastOperation: LastOperation? = null
 	private var currentNotifications: MutableList<String> = mutableListOf()
 	private var servicesAndCharacteristics: MutableMap<String, BleService> = mutableMapOf()
+
+	private var originalName: String = ""
 
 	private val scanCallback = object : ScanCallback() {
 		override fun onScanResult(callbackType: Int, result: ScanResult?) {
@@ -374,6 +376,7 @@ class LayrzBlePlugin : FlutterPlugin, MethodCallHandler, ActivityAware,
 			newState: Int
 		) {
 			super.onConnectionStateChange(device, status, newState)
+			Log.w(TAG, "onConnectionStateChange: $newState - $device - $status")
 			if (device == null) return
 
 			when (newState) {
@@ -699,7 +702,7 @@ class LayrzBlePlugin : FlutterPlugin, MethodCallHandler, ActivityAware,
 			"startNotify" -> startNotify(call = call, result = result)
 			"stopNotify" -> stopNotify(call = call, result = result)
 			"startAdvertise" -> startAdvertise(call = call, result = result)
-			"stopAdvertise" -> stopAdvertise(call = call, result = result)
+			"stopAdvertise" -> stopAdvertise(result = result)
 			"respondReadRequest" -> respondReadRequest(call = call, result = result)
 			"respondWriteRequest" -> respondWriteRequest(call = call, result = result)
 			"sendNotification" -> sendNotification(call = call, result = result)
@@ -951,7 +954,17 @@ class LayrzBlePlugin : FlutterPlugin, MethodCallHandler, ActivityAware,
 			}
 		}
 
-		val data = AdvertiseData.Builder().setIncludeDeviceName(true)
+		val data = AdvertiseData.Builder()
+
+		val name = call.argument<String>("name")
+		if (name != null) {
+			originalName = bluetooth!!.adapter.name
+			bluetooth!!.adapter.name = name
+			data.setIncludeDeviceName(true)
+		} else {
+			data.setIncludeDeviceName(false)
+		}
+
 		connectable = call.argument<Boolean>("canConnect") ?: false
 		val canBt5 = call.argument<Boolean>("allowBluetooth5") ?: true
 
@@ -995,7 +1008,7 @@ class LayrzBlePlugin : FlutterPlugin, MethodCallHandler, ActivityAware,
 						startAdvertiseResult?.success(true)
 						startAdvertiseResult = null
 
-						if (bluetooth == null) return;
+						if (bluetooth == null) return
 						if (gattServer != null) {
 							Log.w(TAG, "Gatt server already exists")
 							return
@@ -1045,7 +1058,7 @@ class LayrzBlePlugin : FlutterPlugin, MethodCallHandler, ActivityAware,
 				startAdvertiseResult?.success(true)
 				startAdvertiseResult = null
 
-				if (bluetooth == null) return;
+				if (bluetooth == null) return
 				if (gattServer != null) {
 					Log.w(TAG, "Gatt server already exists")
 					return
@@ -1069,16 +1082,11 @@ class LayrzBlePlugin : FlutterPlugin, MethodCallHandler, ActivityAware,
 	}
 
 	/* Stops the avertisement */
-	private fun stopAdvertise(call: MethodCall, result: Result) {
-		if (!checkAdvertisePermissions()) {
-			Log.d(TAG, "No permissions")
+	private fun stopAdvertise(result: Result) {
+		if (gattServer == null) {
+			Log.d(TAG, "Gatt server is null")
 			result.success(false)
 			return
-		}
-
-		if (bluetooth == null) {
-			Log.d(TAG, "Bluetooth is null, initializing")
-			bluetooth = context.getSystemService(android.content.Context.BLUETOOTH_SERVICE) as BluetoothManager
 		}
 
 		val advertiser = bluetooth!!.adapter.bluetoothLeAdvertiser
@@ -1088,26 +1096,34 @@ class LayrzBlePlugin : FlutterPlugin, MethodCallHandler, ActivityAware,
 			return
 		}
 
-		for (device in gattDevices.values) {
-			Log.i(TAG, "Cancelling connection with ${device.name} - ${device.address}")
-			gattServer?.cancelConnection(device)
+		if (originalName.isNotEmpty()) {
+			bluetooth!!.adapter.name = originalName
 		}
 
-		gattDevices.clear()
-		for (service in gattServices) {
-			Log.i(TAG, "Removing ${service.uuid} from gatt server")
-			gattServer?.removeService(service)
+		originalName = ""
+
+		for (device in gattDevices.values) {
+			gattServer!!.cancelConnection(device)
+			bluetooth!!.adapter
 		}
+		gattDevices.clear()
+		gattServer!!.clearServices()
 		gattServices.clear()
-		gattServer?.close()
+		gattServer!!.close()
 		gattServer = null
 
-		advertiser.stopAdvertising(advertiseCallback)
-		advertiseCallback = null
-		if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+		if (advertiseCallback != null) {
+			Log.i(TAG, "Stopping advertisement (Bluetooth Legacy)")
+			advertiser.stopAdvertising(advertiseCallback)
+			advertiseCallback = null
+		}
+
+		if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && advertiseSetCallback != null) {
+			Log.i(TAG, "Stopping advertisement (Bluetooth 5.0)")
 			advertiser.stopAdvertisingSet(advertiseSetCallback)
 			advertiseSetCallback = null
 		}
+
 		Log.d(TAG, "Advertisement stopped")
 		result.success(true)
 	}

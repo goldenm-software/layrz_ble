@@ -163,6 +163,10 @@ abstract class LayrzBlePlatform extends PlatformInterface {
 
     /// [forceBluetooth5] is a flag to indicate if the advertisement can be using the Bluetooth 5.0 specification.
     bool allowBluetooth5 = true,
+
+    /// [name] will be the name of the device on advertisement.
+    /// If you don't provide a name, the device will not be advertised with a name.
+    String? name,
   }) => throw UnimplementedError('startAdvertise() has not been implemented.');
 
   /// [stopAdvertise] stops advertising a BLE device.

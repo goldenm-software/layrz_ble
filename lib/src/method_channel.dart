@@ -291,6 +291,7 @@ class LayrzBleNative extends LayrzBlePlatform {
     bool canConnect = true,
     List<BleService> servicesSpecs = const [],
     bool allowBluetooth5 = false,
+    String? name,
   }) {
     return startAdvertiseChannel
         .invokeMethod<bool>('startAdvertise', {
@@ -302,6 +303,7 @@ class LayrzBleNative extends LayrzBlePlatform {
           'canConnect': canConnect,
           'servicesSpecs': servicesSpecs.map((e) => e.toJson()).toList(),
           'allowBluetooth5': allowBluetooth5,
+          'name': name,
         })
         .then((value) => value ?? false);
   }

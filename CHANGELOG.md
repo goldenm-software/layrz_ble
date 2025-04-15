@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.3.0-alpha.5
+
+- Some fixes related with the advertisement on Android.
+
 ## 1.3.0-alpha.4
 
 - Solved issues related to the advertisement stop and start, before throws a error 3 (Already advertising) when you try to start the advertisement after stopping it. Now, it will stop and start the advertisement without any error.
