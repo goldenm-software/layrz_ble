@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.3.0-beta.1
+
+- Applied fixes related to the return information of `checkCapabilities` on darwin (iOS and macOS).
+
 ## 1.3.0-alpha.6
 
 - Some fixes on Android

@@ -317,7 +317,7 @@ On Apple ecosystem (aka, iOS, iPadOS and macOS), Apple privacy policies are very
 This is a limitation of the Web Bluetooth API, you need to supply the services and characteristics to interact with the device. This is a security measure to prevent malicious websites to interact with your devices.
 
 ### What's the target of the advertisement segment of this library?
-We are targeting to provide support for Android and iOS at the moment, later maybe we will add support for other platforms, but right now, we are focusing on Android and iOS.
+We are targeting to provide support for Android at the moment, later maybe we will add support for other platforms, but right now, we are focusing on Android.
 
 ### Why is this package called `layrz_ble`?
 All packages developed by [Layrz](https://layrz.com) are prefixed with `layrz_`, check out our other packages on [pub.dev](https://pub.dev/publishers/goldenm.com/packages).
