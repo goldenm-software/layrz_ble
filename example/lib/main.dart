@@ -248,13 +248,13 @@ class _HomePageState extends State<HomePage> {
                           _isAdvertising = await plugin.startAdvertise(
                             manufacturerData: [
                               const BleManufacturerData(
-                                companyId: 0xffff,
-                                data: [0xff],
+                                companyId: 0x1234,
+                                data: [0x00, 0x01, 0x02, 0x03],
                               ),
                             ],
                             serviceData: [
                               const BleServiceData(
-                                uuid: 0xffff,
+                                uuid: 0x1234,
                                 data: [0xff],
                               ),
                             ],

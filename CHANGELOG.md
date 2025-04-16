@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.3.0-alpha.6
+
+- Some fixes on Android
+- Tested the implementation on Windows, and does not work due to some unknown restrictions.
+
 ## 1.3.0-alpha.5
 
 - Some fixes related with the advertisement on Android.

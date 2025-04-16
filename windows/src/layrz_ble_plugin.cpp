@@ -1,17 +1,19 @@
 #include "layrz_ble_plugin.h"
 namespace layrz_ble {
-  std::unique_ptr<flutter::MethodChannel<flutter::EncodableValue>>LayrzBlePlugin::checkCapabilitiesChannel = nullptr;
-  std::unique_ptr<flutter::MethodChannel<flutter::EncodableValue>>LayrzBlePlugin::startScanChannel = nullptr;
-  std::unique_ptr<flutter::MethodChannel<flutter::EncodableValue>>LayrzBlePlugin::stopScanChannel = nullptr;
-  std::unique_ptr<flutter::MethodChannel<flutter::EncodableValue>>LayrzBlePlugin::connectChannel = nullptr;
-  std::unique_ptr<flutter::MethodChannel<flutter::EncodableValue>>LayrzBlePlugin::disconnectChannel = nullptr;
-  std::unique_ptr<flutter::MethodChannel<flutter::EncodableValue>>LayrzBlePlugin::discoverServicesChannel = nullptr;
-  std::unique_ptr<flutter::MethodChannel<flutter::EncodableValue>>LayrzBlePlugin::setMtuChannel = nullptr;
-  std::unique_ptr<flutter::MethodChannel<flutter::EncodableValue>>LayrzBlePlugin::writeCharacteristicChannel = nullptr;
-  std::unique_ptr<flutter::MethodChannel<flutter::EncodableValue>>LayrzBlePlugin::readCharacteristicChannel = nullptr;
-  std::unique_ptr<flutter::MethodChannel<flutter::EncodableValue>>LayrzBlePlugin::startNotifyChannel = nullptr;
-  std::unique_ptr<flutter::MethodChannel<flutter::EncodableValue>>LayrzBlePlugin::stopNotifyChannel = nullptr;
-  std::unique_ptr<flutter::MethodChannel<flutter::EncodableValue>>LayrzBlePlugin::eventsChannel = nullptr;
+  std::unique_ptr<flutter::MethodChannel<flutter::EncodableValue>> LayrzBlePlugin::checkCapabilitiesChannel = nullptr;
+  std::unique_ptr<flutter::MethodChannel<flutter::EncodableValue>> LayrzBlePlugin::checkScanPermissionsChannel = nullptr;
+  std::unique_ptr<flutter::MethodChannel<flutter::EncodableValue>> LayrzBlePlugin::checkAdvertisePermissionsChannel = nullptr;
+  std::unique_ptr<flutter::MethodChannel<flutter::EncodableValue>> LayrzBlePlugin::startScanChannel = nullptr;
+  std::unique_ptr<flutter::MethodChannel<flutter::EncodableValue>> LayrzBlePlugin::stopScanChannel = nullptr;
+  std::unique_ptr<flutter::MethodChannel<flutter::EncodableValue>> LayrzBlePlugin::connectChannel = nullptr;
+  std::unique_ptr<flutter::MethodChannel<flutter::EncodableValue>> LayrzBlePlugin::disconnectChannel = nullptr;
+  std::unique_ptr<flutter::MethodChannel<flutter::EncodableValue>> LayrzBlePlugin::discoverServicesChannel = nullptr;
+  std::unique_ptr<flutter::MethodChannel<flutter::EncodableValue>> LayrzBlePlugin::setMtuChannel = nullptr;
+  std::unique_ptr<flutter::MethodChannel<flutter::EncodableValue>> LayrzBlePlugin::writeCharacteristicChannel = nullptr;
+  std::unique_ptr<flutter::MethodChannel<flutter::EncodableValue>> LayrzBlePlugin::readCharacteristicChannel = nullptr;
+  std::unique_ptr<flutter::MethodChannel<flutter::EncodableValue>> LayrzBlePlugin::startNotifyChannel = nullptr;
+  std::unique_ptr<flutter::MethodChannel<flutter::EncodableValue>> LayrzBlePlugin::stopNotifyChannel = nullptr;
+  std::unique_ptr<flutter::MethodChannel<flutter::EncodableValue>> LayrzBlePlugin::eventsChannel = nullptr;
 
   std::string LayrzBlePlugin::filteredDeviceId = std::string("");
   std::unique_ptr<BleScanResult> LayrzBlePlugin::connectedDevice = nullptr;
@@ -26,92 +28,169 @@ namespace layrz_ble {
       "com.layrz.ble.checkCapabilities",
       &flutter::StandardMethodCodec::GetInstance()
     );
+    checkCapabilitiesChannel->SetMethodCallHandler([plugin_pointer = plugin.get()](const auto &call, auto result) {
+      plugin_pointer->HandleMethodCall(call, std::move(result));
+    });
+
+    checkScanPermissionsChannel = std::make_unique<flutter::MethodChannel<flutter::EncodableValue>>(
+      registrar->messenger(),
+      "com.layrz.ble.checkScanPermissions",
+      &flutter::StandardMethodCodec::GetInstance()
+    );
+    checkScanPermissionsChannel->SetMethodCallHandler([plugin_pointer = plugin.get()](const auto &call, auto result) {
+      plugin_pointer->HandleMethodCall(call, std::move(result));
+    });
+
+    checkAdvertisePermissionsChannel = std::make_unique<flutter::MethodChannel<flutter::EncodableValue>>(
+      registrar->messenger(),
+      "com.layrz.ble.checkAdvertisePermissions",
+      &flutter::StandardMethodCodec::GetInstance()
+    );
+    checkAdvertisePermissionsChannel->SetMethodCallHandler([plugin_pointer = plugin.get()](const auto &call, auto result) {
+      plugin_pointer->HandleMethodCall(call, std::move(result));
+    });
+
     startScanChannel = std::make_unique<flutter::MethodChannel<flutter::EncodableValue>>(
       registrar->messenger(),
       "com.layrz.ble.startScan",
       &flutter::StandardMethodCodec::GetInstance()
     );
+    startScanChannel->SetMethodCallHandler([plugin_pointer = plugin.get()](const auto &call, auto result) {
+      plugin_pointer->HandleMethodCall(call, std::move(result));
+    });
+
     stopScanChannel = std::make_unique<flutter::MethodChannel<flutter::EncodableValue>>(
       registrar->messenger(),
       "com.layrz.ble.stopScan",
       &flutter::StandardMethodCodec::GetInstance()
     );
+    stopScanChannel->SetMethodCallHandler([plugin_pointer = plugin.get()](const auto &call, auto result) {
+      plugin_pointer->HandleMethodCall(call, std::move(result));
+    });
+
     connectChannel = std::make_unique<flutter::MethodChannel<flutter::EncodableValue>>(
       registrar->messenger(),
       "com.layrz.ble.connect",
       &flutter::StandardMethodCodec::GetInstance()
     );
+    connectChannel->SetMethodCallHandler([plugin_pointer = plugin.get()](const auto &call, auto result) {
+      plugin_pointer->HandleMethodCall(call, std::move(result));
+    });
+
     disconnectChannel = std::make_unique<flutter::MethodChannel<flutter::EncodableValue>>(
       registrar->messenger(),
       "com.layrz.ble.disconnect",
       &flutter::StandardMethodCodec::GetInstance()
     );
+    disconnectChannel->SetMethodCallHandler([plugin_pointer = plugin.get()](const auto &call, auto result) {
+      plugin_pointer->HandleMethodCall(call, std::move(result));
+    });
+
     discoverServicesChannel = std::make_unique<flutter::MethodChannel<flutter::EncodableValue>>(
       registrar->messenger(),
       "com.layrz.ble.discoverServices",
       &flutter::StandardMethodCodec::GetInstance()
     );
+    discoverServicesChannel->SetMethodCallHandler([plugin_pointer = plugin.get()](const auto &call, auto result) {
+      plugin_pointer->HandleMethodCall(call, std::move(result));
+    });
+
     setMtuChannel = std::make_unique<flutter::MethodChannel<flutter::EncodableValue>>(
       registrar->messenger(),
       "com.layrz.ble.setMtu",
       &flutter::StandardMethodCodec::GetInstance()
     );
+    setMtuChannel->SetMethodCallHandler([plugin_pointer = plugin.get()](const auto &call, auto result) {
+      plugin_pointer->HandleMethodCall(call, std::move(result));
+    });
+
     writeCharacteristicChannel = std::make_unique<flutter::MethodChannel<flutter::EncodableValue>>(
       registrar->messenger(),
       "com.layrz.ble.writeCharacteristic",
       &flutter::StandardMethodCodec::GetInstance()
     );
+    writeCharacteristicChannel->SetMethodCallHandler([plugin_pointer = plugin.get()](const auto &call, auto result) {
+      plugin_pointer->HandleMethodCall(call, std::move(result));
+    });
+
     readCharacteristicChannel = std::make_unique<flutter::MethodChannel<flutter::EncodableValue>>(
       registrar->messenger(),
       "com.layrz.ble.readCharacteristic",
       &flutter::StandardMethodCodec::GetInstance()
     );
+    readCharacteristicChannel->SetMethodCallHandler([plugin_pointer = plugin.get()](const auto &call, auto result) {
+      plugin_pointer->HandleMethodCall(call, std::move(result));
+    });
+
     startNotifyChannel = std::make_unique<flutter::MethodChannel<flutter::EncodableValue>>(
       registrar->messenger(),
       "com.layrz.ble.startNotify",
       &flutter::StandardMethodCodec::GetInstance()
     );
+    startNotifyChannel->SetMethodCallHandler([plugin_pointer = plugin.get()](const auto &call, auto result) {
+      plugin_pointer->HandleMethodCall(call, std::move(result));
+    });
+
     stopNotifyChannel = std::make_unique<flutter::MethodChannel<flutter::EncodableValue>>(
       registrar->messenger(),
       "com.layrz.ble.stopNotify",
       &flutter::StandardMethodCodec::GetInstance()
     );
+    stopNotifyChannel->SetMethodCallHandler([plugin_pointer = plugin.get()](const auto &call, auto result) {
+      plugin_pointer->HandleMethodCall(call, std::move(result));
+    });
+
     eventsChannel = std::make_unique<flutter::MethodChannel<flutter::EncodableValue>>(
       registrar->messenger(),
       "com.layrz.ble.events",
       &flutter::StandardMethodCodec::GetInstance()
     );
-    checkCapabilitiesChannel->SetMethodCallHandler([plugin_pointer = plugin.get()](const auto &call, auto result) {
+    eventsChannel->SetMethodCallHandler([plugin_pointer = plugin.get()](const auto &call, auto result) {
       plugin_pointer->HandleMethodCall(call, std::move(result));
     });
-    startScanChannel->SetMethodCallHandler([plugin_pointer = plugin.get()](const auto &call, auto result) {
+
+    startAdvertiseChannel = std::make_unique<flutter::MethodChannel<flutter::EncodableValue>>(
+      registrar->messenger(),
+      "com.layrz.ble.startAdvertise",
+      &flutter::StandardMethodCodec::GetInstance()
+    );
+    startAdvertiseChannel->SetMethodCallHandler([plugin_pointer = plugin.get()](const auto &call, auto result) {
       plugin_pointer->HandleMethodCall(call, std::move(result));
     });
-    stopScanChannel->SetMethodCallHandler([plugin_pointer = plugin.get()](const auto &call, auto result) {
+
+    stopAdvertiseChannel = std::make_unique<flutter::MethodChannel<flutter::EncodableValue>>(
+      registrar->messenger(),
+      "com.layrz.ble.stopAdvertise",
+      &flutter::StandardMethodCodec::GetInstance()
+    );
+    stopAdvertiseChannel->SetMethodCallHandler([plugin_pointer = plugin.get()](const auto &call, auto result) {
       plugin_pointer->HandleMethodCall(call, std::move(result));
     });
-    connectChannel->SetMethodCallHandler([plugin_pointer = plugin.get()](const auto &call, auto result) {
+
+    respondWriteRequestChannel = std::make_unique<flutter::MethodChannel<flutter::EncodableValue>>(
+      registrar->messenger(),
+      "com.layrz.ble.respondWriteRequest",
+      &flutter::StandardMethodCodec::GetInstance()
+    );
+    respondWriteRequestChannel->SetMethodCallHandler([plugin_pointer = plugin.get()](const auto &call, auto result) {
       plugin_pointer->HandleMethodCall(call, std::move(result));
     });
-    disconnectChannel->SetMethodCallHandler([plugin_pointer = plugin.get()](const auto &call, auto result) {
+
+    respondReadRequestChannel = std::make_unique<flutter::MethodChannel<flutter::EncodableValue>>(
+      registrar->messenger(),
+      "com.layrz.ble.respondReadRequest",
+      &flutter::StandardMethodCodec::GetInstance()
+    );
+    respondReadRequestChannel->SetMethodCallHandler([plugin_pointer = plugin.get()](const auto &call, auto result) {
       plugin_pointer->HandleMethodCall(call, std::move(result));
     });
-    discoverServicesChannel->SetMethodCallHandler([plugin_pointer = plugin.get()](const auto &call, auto result) {
-      plugin_pointer->HandleMethodCall(call, std::move(result));
-    });
-    setMtuChannel->SetMethodCallHandler([plugin_pointer = plugin.get()](const auto &call, auto result) {
-      plugin_pointer->HandleMethodCall(call, std::move(result));
-    });
-    writeCharacteristicChannel->SetMethodCallHandler([plugin_pointer = plugin.get()](const auto &call, auto result) {
-      plugin_pointer->HandleMethodCall(call, std::move(result));
-    });
-    readCharacteristicChannel->SetMethodCallHandler([plugin_pointer = plugin.get()](const auto &call, auto result) {
-      plugin_pointer->HandleMethodCall(call, std::move(result));
-    });
-    startNotifyChannel->SetMethodCallHandler([plugin_pointer = plugin.get()](const auto &call, auto result) {
-      plugin_pointer->HandleMethodCall(call, std::move(result));
-    });
-    stopNotifyChannel->SetMethodCallHandler([plugin_pointer = plugin.get()](const auto &call, auto result) {
+
+    sendNotificationChannel = std::make_unique<flutter::MethodChannel<flutter::EncodableValue>>(
+      registrar->messenger(),
+      "com.layrz.ble.sendNotification",
+      &flutter::StandardMethodCodec::GetInstance()
+    );
+    sendNotificationChannel->SetMethodCallHandler([plugin_pointer = plugin.get()](const auto &call, auto result) {
       plugin_pointer->HandleMethodCall(call, std::move(result));
     });
 
@@ -138,30 +217,85 @@ namespace layrz_ble {
     Log("Handling method call: " + method_call.method_name());
     auto method = method_call.method_name();
 
-    if (method.compare("checkCapabilities") == 0)
+    /* Permissions validation */
+    if (method.compare("checkCapabilities") == 0) {
       checkCapabilities(std::move(result));
-    else if (method.compare("startScan") == 0)
+      return;
+    }
+    if (method.compare("checkScanPermissions") == 0) {
+      checkScanPermissions(std::move(result));
+      return;
+    }
+    if (method.compare("checkAdvertisePermissions") == 0) {
+      checkAdvertisePermissions(std::move(result));
+      return;
+    }
+
+    /* Methods for SCAN */
+    if (method.compare("startScan") == 0) {
       startScan(method_call, std::move(result));
-    else if (method.compare("stopScan") == 0)
+      return;
+    }
+    if (method.compare("stopScan") == 0) {
       stopScan(method_call, std::move(result));
-    else if (method.compare("connect") == 0)
+      return;
+    }
+    if (method.compare("connect") == 0) {
       connect(method_call, std::move(result));
-    else if (method.compare("disconnect") == 0)
+      return;
+    }
+    if (method.compare("disconnect") == 0) {
       disconnect(method_call, std::move(result));
-    else if (method.compare("discoverServices") == 0)
+      return;
+    }
+    if (method.compare("discoverServices") == 0) {
       discoverServices(method_call, std::move(result));
-    else if (method.compare("setMtu") == 0)
+      return;
+    }
+    if (method.compare("setMtu") == 0) {
       setMtu(method_call, std::move(result));
-    else if (method.compare("readCharacteristic") == 0)
+      return;
+    }
+    if (method.compare("readCharacteristic") == 0) {
       readCharacteristic(method_call, std::move(result));
-    else if (method.compare("writeCharacteristic") == 0)
+      return;
+    }
+    if (method.compare("writeCharacteristic") == 0) {
       writeCharacteristic(method_call, std::move(result));
-    else if (method.compare("startNotify") == 0)
+      return;
+    }
+    if (method.compare("startNotify") == 0) {
       startNotify(method_call, std::move(result));
-    else if (method.compare("stopNotify") == 0)
+      return;
+    }
+    if (method.compare("stopNotify") == 0) {
       stopNotify(method_call, std::move(result));
-    else
-      result->NotImplemented();
+      return;
+    }
+
+    /* Methods for ADVERTISE */
+    if (method.compare("startAdvertise") == 0) {
+      startAdvertise(method_call, std::move(result));
+      return;
+    }
+    if (method.compare("stopAdvertise") == 0) {
+      stopAdvertise(method_call, std::move(result));
+      return;
+    }
+    if (method.compare("respondWriteRequest") == 0) {
+      respondWriteRequest(method_call, std::move(result));
+      return;
+    }
+    if (method.compare("respondReadRequest") == 0) {
+      respondReadRequest(method_call, std::move(result));
+      return;
+    }
+    if (method.compare("sendNotification") == 0) {
+      sendNotification(method_call, std::move(result));
+      return;
+    }
+
+    result->NotImplemented();
   } // HandleMethodCall
 
   /// @brief Get the Radios object
@@ -192,6 +326,20 @@ namespace layrz_ble {
     bool hasPermissions =(btRadio != nullptr);
     result->Success(hasPermissions);
   } // checkCapabilities
+
+  /// @brief Check the scan permissions
+  /// @param result
+  /// @return void
+  void LayrzBlePlugin::checkScanPermissions(std::unique_ptr<flutter::MethodResult<flutter::EncodableValue>> result) {
+    checkCapabilities(std::move(result));
+  } // checkScanPermissions
+
+  /// @brief Check the advertise permissions
+  /// @param result
+  /// @return void
+  void LayrzBlePlugin::checkAdvertisePermissions(std::unique_ptr<flutter::MethodResult<flutter::EncodableValue>> result) {
+    result->Success(false);
+  } // checkAdvertisePermissions
 
   /// @brief Start the scan
   /// @param method_call

@@ -56,6 +56,8 @@ namespace layrz_ble
       );
 
       static std::unique_ptr<flutter::MethodChannel<flutter::EncodableValue>> checkCapabilitiesChannel;
+      static std::unique_ptr<flutter::MethodChannel<flutter::EncodableValue>> checkScanPermissionsChannel;
+      static std::unique_ptr<flutter::MethodChannel<flutter::EncodableValue>> checkAdvertisePermissionsChannel;
       static std::unique_ptr<flutter::MethodChannel<flutter::EncodableValue>> startScanChannel;
       static std::unique_ptr<flutter::MethodChannel<flutter::EncodableValue>> stopScanChannel;
       static std::unique_ptr<flutter::MethodChannel<flutter::EncodableValue>> connectChannel;
@@ -67,6 +69,7 @@ namespace layrz_ble
       static std::unique_ptr<flutter::MethodChannel<flutter::EncodableValue>> startNotifyChannel;
       static std::unique_ptr<flutter::MethodChannel<flutter::EncodableValue>> stopNotifyChannel;
       static std::unique_ptr<flutter::MethodChannel<flutter::EncodableValue>> eventsChannel;
+
       static std::string filteredDeviceId;
 
       std::unordered_map<std::string, BleService> servicesAndCharacteristics{};
@@ -87,6 +90,9 @@ namespace layrz_ble
 
     private:
       void checkCapabilities(std::unique_ptr<flutter::MethodResult<flutter::EncodableValue>> result);
+      void checkScanPermissions(std::unique_ptr<flutter::MethodResult<flutter::EncodableValue>> result);
+      void checkAdvertisePermissions(std::unique_ptr<flutter::MethodResult<flutter::EncodableValue>> result);
+
       void startScan(
         const flutter::MethodCall<flutter::EncodableValue> &method_call,
         std::unique_ptr<flutter::MethodResult<flutter::EncodableValue>> result
@@ -99,7 +105,6 @@ namespace layrz_ble
       void handleScanResult(DeviceInformation device);
       void handleBleScanResult(BleScanResult& result);
 
-      //Pancho
       winrt::fire_and_forget connect(
         const flutter::MethodCall<flutter::EncodableValue> &method_call,
         std::unique_ptr<flutter::MethodResult<flutter::EncodableValue>> result
@@ -139,6 +144,32 @@ namespace layrz_ble
         const flutter::MethodCall<flutter::EncodableValue> &method_call,
         std::unique_ptr<flutter::MethodResult<flutter::EncodableValue>> result
       );
+
+      winrt::fire_and_forget startAdvertise(
+        const flutter::MethodCall<flutter::EncodableValue> &method_call,
+        std::unique_ptr<flutter::MethodResult<flutter::EncodableValue>> result
+      );
+
+      winrt::fire_and_forget stopAdvertise(
+        const flutter::MethodCall<flutter::EncodableValue> &method_call,
+        std::unique_ptr<flutter::MethodResult<flutter::EncodableValue>> result
+      );
+
+      winrt::fire_and_forget respondWriteRequest(
+        const flutter::MethodCall<flutter::EncodableValue> &method_call,
+        std::unique_ptr<flutter::MethodResult<flutter::EncodableValue>> result
+      );
+
+      winrt::fire_and_forget respondReadRequest(
+        const flutter::MethodCall<flutter::EncodableValue> &method_call,
+        std::unique_ptr<flutter::MethodResult<flutter::EncodableValue>> result
+      );
+
+      winrt::fire_and_forget sendNotification(
+        const flutter::MethodCall<flutter::EncodableValue> &method_call,
+        std::unique_ptr<flutter::MethodResult<flutter::EncodableValue>> result
+      );
+
 
       void onCharacteristicValueChanged(GattCharacteristic sender, GattValueChangedEventArgs args);
       void onConnectionStatusChanged(BluetoothLEDevice device, IInspectable args);

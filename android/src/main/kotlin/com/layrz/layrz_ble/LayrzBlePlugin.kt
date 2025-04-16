@@ -1180,14 +1180,35 @@ class LayrzBlePlugin : FlutterPlugin, MethodCallHandler, ActivityAware,
 
 	/* Validates if the app has BLE permissions granted for Advertise */
 	private fun checkAdvertisePermissions(): Boolean {
-		if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-			return ActivityCompat.checkSelfPermission(
+		val location = ActivityCompat.checkSelfPermission(
+			context,
+			Manifest.permission.ACCESS_FINE_LOCATION
+		) == PackageManager.PERMISSION_GRANTED
+
+		val bluetooth = ActivityCompat.checkSelfPermission(
+			context,
+			Manifest.permission.BLUETOOTH
+		) == PackageManager.PERMISSION_GRANTED
+
+		val bluetoothConnect = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+			ActivityCompat.checkSelfPermission(
+				context,
+				Manifest.permission.BLUETOOTH_CONNECT
+			) == PackageManager.PERMISSION_GRANTED
+		} else {
+			true
+		}
+
+		val bluetoothAdvertise = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+			ActivityCompat.checkSelfPermission(
 				context,
 				Manifest.permission.BLUETOOTH_ADVERTISE
 			) == PackageManager.PERMISSION_GRANTED
+		} else {
+			true
 		}
 
-		return true
+		return location && bluetooth && bluetoothConnect && bluetoothAdvertise
 	}
 
 	/* Starts the scanning */
