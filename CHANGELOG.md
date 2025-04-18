@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.3.0-beta.2
+
+- Added multi-connection support on Android. Pending on other platforms.
+
 ## 1.3.0-beta.1
 
 - Applied fixes related to the return information of `checkCapabilities` on darwin (iOS and macOS).

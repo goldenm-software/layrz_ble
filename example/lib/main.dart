@@ -104,22 +104,15 @@ class _HomePageState extends State<HomePage> {
     });
 
     _ble.onEvent.listen((BleEvent event) {
-      switch (event) {
-        case BleEvent.connected:
-          debugPrint('Connected to device');
-          break;
-        case BleEvent.disconnected:
-          debugPrint('Disconnected from device');
-          _selectedDevice = null;
-          setState(() {});
-          break;
-        case BleEvent.scanStopped:
-          debugPrint('Scan stopped');
-          _isScanning = false;
-          setState(() {});
-          break;
-        default:
-          break;
+      // if (event is BleConnected) {
+      //   _devices
+      //   return;
+      // }
+
+      if (event is BleDisconnected) {
+        debugPrint('Disconnected from device: ${event.macAddress}');
+        _selectedDevice = null;
+        _services = [];
       }
     });
 
@@ -389,9 +382,7 @@ class _HomePageState extends State<HomePage> {
                       onTap: () async {
                         debugPrint('Selected device: ${device.macAddress}');
                         setState(() => _isLoading = true);
-                        final result = await plugin.connect(
-                          macAddress: device.macAddress,
-                        );
+                        final result = await plugin.connect(macAddress: device.macAddress);
                         if (result == true) {
                           _selectedDevice = device;
                           _services = [];
@@ -458,15 +449,15 @@ class _HomePageState extends State<HomePage> {
                     labelText: 'Discover services',
                     isLoading: _isLoading,
                     onTap: () async {
-                      setState(() => _isLoading = true);
-                      _services = await plugin.discoverServices() ?? [];
-                      setState(() => _isLoading = false);
+                      // setState(() => _isLoading = true);
+                      // _services = await plugin.discoverServices() ?? [];
+                      // setState(() => _isLoading = false);
 
-                      ThemedSnackbarMessenger.of(context).showSnackbar(ThemedSnackbar(
-                        message: 'Discovered ${_services.length} services',
-                        color: Colors.blue,
-                        icon: LayrzIcons.solarOutlineBluetoothSquare,
-                      ));
+                      // ThemedSnackbarMessenger.of(context).showSnackbar(ThemedSnackbar(
+                      //   message: 'Discovered ${_services.length} services',
+                      //   color: Colors.blue,
+                      //   icon: LayrzIcons.solarOutlineBluetoothSquare,
+                      // ));
                     },
                   ),
                   const SizedBox(width: 10),
@@ -475,21 +466,21 @@ class _HomePageState extends State<HomePage> {
                     labelText: 'Set MTU to 512',
                     isLoading: _isLoading,
                     onTap: () async {
-                      setState(() => _isLoading = true);
-                      final result = await plugin.setMtu(newMtu: 512);
-                      debugPrint('Set MTU result: $result');
-                      setState(() => _isLoading = false);
+                      // setState(() => _isLoading = true);
+                      // final result = await plugin.setMtu(newMtu: 512);
+                      // debugPrint('Set MTU result: $result');
+                      // setState(() => _isLoading = false);
 
-                      if (result != null) {
-                        mtu = result;
-                        setState(() {});
-                      }
+                      // if (result != null) {
+                      //   mtu = result;
+                      //   setState(() {});
+                      // }
 
-                      ThemedSnackbarMessenger.of(context).showSnackbar(ThemedSnackbar(
-                        message: 'Set MTU to $result after a negotiation',
-                        color: Colors.orange,
-                        icon: LayrzIcons.solarOutlineBluetoothSquare,
-                      ));
+                      // ThemedSnackbarMessenger.of(context).showSnackbar(ThemedSnackbar(
+                      //   message: 'Set MTU to $result after a negotiation',
+                      //   color: Colors.orange,
+                      //   icon: LayrzIcons.solarOutlineBluetoothSquare,
+                      // ));
                     },
                   ),
                 ],

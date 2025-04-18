@@ -52,20 +52,23 @@ class LayrzBlePluginWeb extends LayrzBlePlatform {
       final bleDevice = BleDevice(macAddress: device.id, name: device.name);
       _devices[device.id] = device;
       _scanController.add(bleDevice);
-      _eventController.add(BleEvent.scanStopped);
+      _eventController.add(BleScanStopped());
       return true;
     } catch (e) {
-      _eventController.add(BleEvent.scanStopped);
+      _eventController.add(BleScanStopped());
       log("Error getting device: $e");
       return false;
     }
   }
 
   @override
-  Future<bool?> stopScan() => Future.value(true);
+  Future<bool?> stopScan() {
+    _eventController.add(BleScanStopped());
+    return Future.value(true);
+  }
 
   @override
-  Future<int?> setMtu({required int newMtu}) async {
+  Future<int?> setMtu({required String macAddress, required int newMtu}) async {
     log("Feature not supported on Web");
     return null;
   }
@@ -117,7 +120,7 @@ class LayrzBlePluginWeb extends LayrzBlePlatform {
   }
 
   @override
-  Future<bool?> disconnect() async {
+  Future<bool?> disconnect({String? macAddress}) async {
     if (_currentConnected == null) {
       log("No device connected");
       return true;
@@ -131,6 +134,7 @@ class LayrzBlePluginWeb extends LayrzBlePlatform {
 
   @override
   Future<List<BleService>?> discoverServices({
+    required String macAddress,
     Duration timeout = const Duration(seconds: 30),
     List<String>? serviceUuids,
   }) async {
@@ -144,6 +148,7 @@ class LayrzBlePluginWeb extends LayrzBlePlatform {
 
   @override
   Future<bool> writeCharacteristic({
+    required String macAddress,
     required String serviceUuid,
     required String characteristicUuid,
     required Uint8List payload,
@@ -185,6 +190,7 @@ class LayrzBlePluginWeb extends LayrzBlePlatform {
 
   @override
   Future<Uint8List?> readCharacteristic({
+    required String macAddress,
     required String serviceUuid,
     required String characteristicUuid,
     Duration timeout = const Duration(seconds: 30),
@@ -217,7 +223,11 @@ class LayrzBlePluginWeb extends LayrzBlePlatform {
   }
 
   @override
-  Future<bool?> startNotify({required String serviceUuid, required String characteristicUuid}) async {
+  Future<bool?> startNotify({
+    required String macAddress,
+    required String serviceUuid,
+    required String characteristicUuid,
+  }) async {
     if (_currentConnected == null) {
       log("No device connected");
       return false;
@@ -240,6 +250,7 @@ class LayrzBlePluginWeb extends LayrzBlePlatform {
       _notifications[characteristicUuid] = characteristic.value.listen((event) {
         _notifyController.add(
           BleCharacteristicNotification(
+            macAddress: 'TBD',
             serviceUuid: serviceUuid,
             characteristicUuid: characteristicUuid,
             value: event.buffer.asUint8List(),
@@ -254,7 +265,11 @@ class LayrzBlePluginWeb extends LayrzBlePlatform {
   }
 
   @override
-  Future<bool?> stopNotify({required String serviceUuid, required String characteristicUuid}) async {
+  Future<bool?> stopNotify({
+    required String macAddress,
+    required String serviceUuid,
+    required String characteristicUuid,
+  }) async {
     if (_currentConnected == null) {
       log("No device connected");
       return false;

@@ -98,13 +98,30 @@ class LayrzBleNative extends LayrzBlePlatform {
         /* /Scan and connect */
 
         /* Events */
-        case 'onEvent':
+        case 'onConnected':
           try {
-            final event = BleEvent.fromPlatform(call.arguments);
+            final event = BleConnected.fromMap(Map<String, dynamic>.from(call.arguments));
             _eventController.add(event);
           } catch (e) {
-            log('Error parsing BleEvent: $e');
+            log('Error parsing BleConnected: $e - ${call.arguments}');
           }
+          break;
+
+        case 'onDisconnected':
+          try {
+            final event = BleDisconnected.fromMap(Map<String, dynamic>.from(call.arguments));
+            _eventController.add(event);
+          } catch (e) {
+            log('Error parsing BleDisconnected: $e - ${call.arguments}');
+          }
+          break;
+
+        case 'onScanStarted':
+          _eventController.add(BleScanStarted());
+          break;
+
+        case 'onScanStopped':
+          _eventController.add(BleScanStopped());
           break;
 
         case 'onNotify':
@@ -183,20 +200,24 @@ class LayrzBleNative extends LayrzBlePlatform {
       checkAdvertisePermissionsChannel.invokeMethod<bool>('checkAdvertisePermissions').then((value) => value ?? false);
 
   @override
-  Future<int?> setMtu({required int newMtu}) => setMtuChannel.invokeMethod<int>('setMtu', newMtu);
+  Future<int?> setMtu({required String macAddress, required int newMtu}) =>
+      setMtuChannel.invokeMethod<int>('setMtu', {'macAddress': macAddress, 'newMtu': newMtu});
 
   @override
   Future<bool?> connect({required String macAddress}) => connectChannel.invokeMethod<bool>('connect', macAddress);
 
   @override
-  Future<bool?> disconnect() => disconnectChannel.invokeMethod<bool>('disconnect');
+  Future<bool?> disconnect({String? macAddress}) => disconnectChannel.invokeMethod<bool>('disconnect', macAddress);
 
   @override
   Future<List<BleService>?> discoverServices({
-    /// [timeout] is the duration to wait for the services to be discovered.
+    required String macAddress,
     Duration timeout = const Duration(seconds: 30),
   }) async {
-    final result = await discoverServicesChannel.invokeMethod<List>('discoverServices', {'timeout': timeout.inSeconds});
+    final result = await discoverServicesChannel.invokeMethod<List>('discoverServices', {
+      'timeout': timeout.inSeconds,
+      'macAddress': macAddress,
+    });
     if (result == null) {
       log('Error discovering services from native side');
       return null;
@@ -226,6 +247,7 @@ class LayrzBleNative extends LayrzBlePlatform {
 
   @override
   Future<bool> writeCharacteristic({
+    required String macAddress,
     required String serviceUuid,
     required String characteristicUuid,
     required Uint8List payload,
@@ -233,6 +255,7 @@ class LayrzBleNative extends LayrzBlePlatform {
     required bool withResponse,
   }) async {
     final result = await writeCharacteristicChannel.invokeMethod<bool>('writeCharacteristic', <String, dynamic>{
+      'macAddress': macAddress,
       'serviceUuid': serviceUuid,
       'characteristicUuid': characteristicUuid,
       'payload': payload,
@@ -250,11 +273,13 @@ class LayrzBleNative extends LayrzBlePlatform {
 
   @override
   Future<Uint8List?> readCharacteristic({
+    required String macAddress,
     required String serviceUuid,
     required String characteristicUuid,
     Duration timeout = const Duration(seconds: 30),
   }) async {
     final result = await readCharacteristicChannel.invokeMethod<Uint8List>('readCharacteristic', <String, dynamic>{
+      'macAddress': macAddress,
       'serviceUuid': serviceUuid,
       'characteristicUuid': characteristicUuid,
       'timeout': timeout.inSeconds,
@@ -269,16 +294,26 @@ class LayrzBleNative extends LayrzBlePlatform {
   }
 
   @override
-  Future<bool?> startNotify({required String serviceUuid, required String characteristicUuid}) {
+  Future<bool?> startNotify({
+    required String macAddress,
+    required String serviceUuid,
+    required String characteristicUuid,
+  }) {
     return startNotifyChannel.invokeMethod<bool>('startNotify', <String, String>{
+      'macAddress': macAddress,
       'serviceUuid': serviceUuid,
       'characteristicUuid': characteristicUuid,
     });
   }
 
   @override
-  Future<bool?> stopNotify({required String serviceUuid, required String characteristicUuid}) {
+  Future<bool?> stopNotify({
+    required String macAddress,
+    required String serviceUuid,
+    required String characteristicUuid,
+  }) {
     return stopNotifyChannel.invokeMethod<bool>('stopNotify', <String, String>{
+      'macAddress': macAddress,
       'serviceUuid': serviceUuid,
       'characteristicUuid': characteristicUuid,
     });

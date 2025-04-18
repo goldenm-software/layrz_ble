@@ -1,52 +1,28 @@
 part of '../types.dart';
 
-enum BleEvent {
-  /// [onScan] is an event that is triggered when a BLE device is found.
-  onScan,
+abstract class BleEvent {}
 
-  /// [connected] is an event that is triggered when a BLE device is connected.
-  connected,
+class BleConnected extends BleEvent {
+  final String macAddress;
+  final String? name;
 
-  /// [disconnected] is an event that is triggered when a BLE device is disconnected.
-  disconnected,
+  BleConnected({required this.macAddress, this.name});
 
-  /// [unknown] is an event that is triggered when an unknown event is received.
-  unknown,
-
-  /// [scanStopped] is an event that is triggered when the scan is stopped.
-  /// This event can be triggered by the user or by the system when you are connected to a device.
-  scanStopped;
-
-  @override
-  String toString() => toPlatform();
-
-  String toPlatform() {
-    switch (this) {
-      case BleEvent.onScan:
-        return 'ON_SCAN';
-      case BleEvent.connected:
-        return 'CONNECTED';
-      case BleEvent.disconnected:
-        return 'DISCONNECTED';
-      case BleEvent.scanStopped:
-        return 'SCAN_STOPPED';
-      default:
-        return 'UNKNOWN';
-    }
-  }
-
-  static BleEvent fromPlatform(String platform) {
-    switch (platform) {
-      case 'ON_SCAN':
-        return BleEvent.onScan;
-      case 'CONNECTED':
-        return BleEvent.connected;
-      case 'DISCONNECTED':
-        return BleEvent.disconnected;
-      case 'SCAN_STOPPED':
-        return BleEvent.scanStopped;
-      default:
-        return BleEvent.unknown;
-    }
+  static BleConnected fromMap(Map<String, dynamic> map) {
+    return BleConnected(macAddress: map['macAddress'], name: map['name']);
   }
 }
+
+class BleDisconnected extends BleEvent {
+  final String macAddress;
+
+  BleDisconnected({required this.macAddress});
+
+  static BleDisconnected fromMap(Map<String, dynamic> map) {
+    return BleDisconnected(macAddress: map['macAddress']);
+  }
+}
+
+class BleScanStarted extends BleEvent {}
+
+class BleScanStopped extends BleEvent {}

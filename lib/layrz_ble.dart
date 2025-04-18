@@ -70,30 +70,42 @@ class LayrzBle {
   ///
   /// The return value is the new MTU size, after a negotion with
   /// the peripheral.
-  Future<int?> setMtu({required int newMtu}) => LayrzBlePlatform.instance.setMtu(newMtu: newMtu);
+  Future<int?> setMtu({required String macAddress, required int newMtu}) =>
+      LayrzBlePlatform.instance.setMtu(macAddress: macAddress, newMtu: newMtu);
 
   /// [connect] connects to a BLE device.
   Future<bool?> connect({required String macAddress}) => LayrzBlePlatform.instance.connect(macAddress: macAddress);
 
   /// [disconnect] disconnects from any connected BLE device.
-  Future<bool?> disconnect() => LayrzBlePlatform.instance.disconnect();
+  Future<bool?> disconnect({
+    /// [macAddress] is the MAC address that you want to disconnect.
+    ///
+    /// In case of that value is `null`, the disconnect will be from all connected devices.
+    String? macAddress,
+  }) => LayrzBlePlatform.instance.disconnect(macAddress: macAddress);
 
   /// [discoverServices] discovers the services of a BLE device.
   Future<List<BleService>?> discoverServices({
+    /// [macAddress] is the MAC address of the device.
+    required String macAddress,
+
     /// [timeout] is the duration to wait for the services to be discovered.
     Duration timeout = const Duration(seconds: 30),
-  }) => LayrzBlePlatform.instance.discoverServices(timeout: timeout);
+  }) => LayrzBlePlatform.instance.discoverServices(macAddress: macAddress, timeout: timeout);
 
   /// [writeCharacteristic] sends a payload to a BLE characteristic.
   ///
   /// The return value is `true` if the payload was sent successfully.
   Future<bool> writeCharacteristic({
+    /// [macAddress] is the MAC address of the device.
+    required String macAddress,
     required String serviceUuid,
     required String characteristicUuid,
     required Uint8List payload,
     Duration timeout = const Duration(seconds: 30),
     required bool withResponse,
   }) => LayrzBlePlatform.instance.writeCharacteristic(
+    macAddress: macAddress,
     serviceUuid: serviceUuid,
     characteristicUuid: characteristicUuid,
     payload: payload,
@@ -105,18 +117,54 @@ class LayrzBle {
   /// The return value is the raw bytes of the characteristic.
   ///
   /// If the characteristic is not readable, this method will return `null`.
-  Future<Uint8List?> readCharacteristic({required String serviceUuid, required String characteristicUuid}) =>
-      LayrzBlePlatform.instance.readCharacteristic(serviceUuid: serviceUuid, characteristicUuid: characteristicUuid);
+  Future<Uint8List?> readCharacteristic({
+    /// [macAddress] is the MAC address of the device.
+    required String macAddress,
+
+    /// [serviceUuid] is the UUID of the service.
+    required String serviceUuid,
+
+    /// [characteristicUuid] is the UUID of the characteristic.
+    required String characteristicUuid,
+  }) => LayrzBlePlatform.instance.readCharacteristic(
+    macAddress: macAddress,
+    serviceUuid: serviceUuid,
+    characteristicUuid: characteristicUuid,
+  );
 
   /// [startNotify] starts listening to notifications from a
   /// BLE characteristic. To stop listening, use [stopNotify] method and
   /// to get the notifications, use [onNotify] stream.
-  Future<bool?> startNotify({required String serviceUuid, required String characteristicUuid}) =>
-      LayrzBlePlatform.instance.startNotify(serviceUuid: serviceUuid, characteristicUuid: characteristicUuid);
+  Future<bool?> startNotify({
+    /// [macAddress] is the MAC address of the device.
+    required String macAddress,
+
+    /// [serviceUuid] is the UUID of the service.
+    required String serviceUuid,
+
+    /// [characteristicUuid] is the UUID of the characteristic.
+    required String characteristicUuid,
+  }) => LayrzBlePlatform.instance.startNotify(
+    macAddress: macAddress,
+    serviceUuid: serviceUuid,
+    characteristicUuid: characteristicUuid,
+  );
 
   /// [stopNotify] stops listening to notifications from a BLE characteristic.
-  Future<bool?> stopNotify({required String serviceUuid, required String characteristicUuid}) =>
-      LayrzBlePlatform.instance.stopNotify(serviceUuid: serviceUuid, characteristicUuid: characteristicUuid);
+  Future<bool?> stopNotify({
+    /// [macAddress] is the MAC address of the device.
+    required String macAddress,
+
+    /// [serviceUuid] is the UUID of the service.
+    required String serviceUuid,
+
+    /// [characteristicUuid] is the UUID of the characteristic.
+    required String characteristicUuid,
+  }) => LayrzBlePlatform.instance.stopNotify(
+    macAddress: macAddress,
+    serviceUuid: serviceUuid,
+    characteristicUuid: characteristicUuid,
+  );
 
   /// [startAdvertise] starts advertising a BLE device.
   ///

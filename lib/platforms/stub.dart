@@ -40,21 +40,25 @@ class LayrzBlePluginStub extends LayrzBlePlatform {
       throw UnimplementedError('checkAdvertisePermissions() has not been implemented.');
 
   @override
-  Future<int?> setMtu({required int newMtu}) => throw UnimplementedError('setMtu() has not been implemented.');
+  Future<int?> setMtu({required String macAddress, required int newMtu}) =>
+      throw UnimplementedError('setMtu() has not been implemented.');
 
   @override
   Future<bool?> connect({required String macAddress}) =>
       throw UnimplementedError('connect() has not been implemented.');
 
   @override
-  Future<bool?> disconnect() => throw UnimplementedError('disconnect() has not been implemented.');
+  Future<bool?> disconnect({String? macAddress}) => throw UnimplementedError('disconnect() has not been implemented.');
 
   @override
-  Future<List<BleService>?> discoverServices({Duration timeout = const Duration(seconds: 30)}) =>
-      throw UnimplementedError('discoverServices() has not been implemented.');
+  Future<List<BleService>?> discoverServices({
+    required String macAddress,
+    Duration timeout = const Duration(seconds: 30),
+  }) => throw UnimplementedError('discoverServices() has not been implemented.');
 
   @override
   Future<bool> writeCharacteristic({
+    required String macAddress,
     required String serviceUuid,
     required String characteristicUuid,
     required Uint8List payload,
@@ -64,16 +68,23 @@ class LayrzBlePluginStub extends LayrzBlePlatform {
 
   @override
   Future<Uint8List?> readCharacteristic({
+    required String macAddress,
     required String serviceUuid,
     required String characteristicUuid,
     Duration timeout = const Duration(seconds: 30),
   }) => throw UnimplementedError('readCharacteristic() has not been implemented.');
 
   @override
-  Future<bool?> startNotify({required String serviceUuid, required String characteristicUuid}) =>
-      throw UnimplementedError('startNotify() has not been implemented.');
+  Future<bool?> startNotify({
+    required String macAddress,
+    required String serviceUuid,
+    required String characteristicUuid,
+  }) => throw UnimplementedError('startNotify() has not been implemented.');
 
   @override
-  Future<bool?> stopNotify({required String serviceUuid, required String characteristicUuid}) =>
-      throw UnimplementedError('stopNotify() has not been implemented.');
+  Future<bool?> stopNotify({
+    required String macAddress,
+    required String serviceUuid,
+    required String characteristicUuid,
+  }) => throw UnimplementedError('stopNotify() has not been implemented.');
 }

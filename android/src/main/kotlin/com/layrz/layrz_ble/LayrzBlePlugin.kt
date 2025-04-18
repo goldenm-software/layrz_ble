@@ -95,8 +95,6 @@ class LayrzBlePlugin : FlutterPlugin, MethodCallHandler, ActivityAware,
 	private var filteredMacAddress: String? = null
 	private val devices: HashMap<String, BluetoothDevice> = HashMap()
 	private var searchingMacAddress: String? = null
-	private var gatt: BluetoothGatt? = null
-	private var connectedDevice: BluetoothDevice? = null
 	private var connectable: Boolean = false
 	private var gattServer: BluetoothGattServer? = null
 	private var gattDevices: MutableMap<String, BluetoothDevice> = mutableMapOf()
@@ -104,8 +102,9 @@ class LayrzBlePlugin : FlutterPlugin, MethodCallHandler, ActivityAware,
 
 	private var isScanning = false
 	private var lastOperation: LastOperation? = null
+	private var connectedDevices: MutableMap<String, BluetoothGatt> = mutableMapOf()
 	private var currentNotifications: MutableList<String> = mutableListOf()
-	private var servicesAndCharacteristics: MutableMap<String, BleService> = mutableMapOf()
+	private var servicesAndCharacteristics: MutableMap<String, List<BleService>> = mutableMapOf()
 
 	private var originalName: String = ""
 
@@ -185,43 +184,47 @@ class LayrzBlePlugin : FlutterPlugin, MethodCallHandler, ActivityAware,
 			newState: Int
 		) {
 			super.onConnectionStateChange(gatt, status, newState)
-			if (connectedDevice == null) return
-			if (lastOperation != LastOperation.CONNECT) {
-				if (status == BluetoothGatt.STATE_DISCONNECTED) {
-					Log.d(TAG, "Disconnected")
-					gatt?.disconnect()
-					connectedDevice = null
-					servicesAndCharacteristics.clear()
+			Log.d(TAG, "onConnectionStateChange: $newState - $status")
+			if (gatt == null) return;
+			val addr = gatt.device.address.uppercase()
+
+			when (newState) {
+				BluetoothProfile.STATE_CONNECTED -> {
+					connectedDevices[addr] = gatt
+					servicesAndCharacteristics.remove(addr)
+					Log.i(TAG, "Connected to ${gatt.device.address}, discovering services")
+					gatt.discoverServices()
+				}
+
+				BluetoothProfile.STATE_DISCONNECTED -> {
+					Log.w(TAG, "${gatt.device.address} disconnected")
+					gatt.disconnect()
+					connectedDevices.remove(addr)
+					servicesAndCharacteristics.remove(addr)
 					Handler(Looper.getMainLooper()).post {
 						eventsChannel.invokeMethod(
-							"onEvent",
-							"DISCONNECTED"
+							"onDisconnected",
+							mutableMapOf(
+								"macAddress" to addr,
+								"name" to gatt.device.name
+							)
 						)
 					}
-					return
+				}
+
+				else -> {
+					Log.e(TAG, "Unknown state: $newState")
 				}
 			}
-
-			if (newState == BluetoothProfile.STATE_CONNECTED) {
-				connectedDevice = gatt!!.device
-				servicesAndCharacteristics.clear()
-				Log.d(TAG, "Connected to ${connectedDevice!!.address}, discovering services")
-				gatt.discoverServices()
-			} else {
-				Log.d(TAG, "Connection failed")
-				connectResult?.success(false)
-				connectResult = null
-			}
-
 			coroutine?.cancel()
 			coroutine = null
 		}
 
 		override fun onServicesDiscovered(gatt: BluetoothGatt?, status: Int) {
 			super.onServicesDiscovered(gatt, status)
-			if (connectedDevice == null) return
 			if (lastOperation != LastOperation.CONNECT) return
 			if (gatt == null) return
+			val addr = gatt.device.address.uppercase()
 
 			if (status == BluetoothGatt.GATT_SUCCESS) {
 				for (service in gatt.services) {
@@ -264,16 +267,33 @@ class LayrzBlePlugin : FlutterPlugin, MethodCallHandler, ActivityAware,
 						)
 					}
 
-					servicesAndCharacteristics[standarizeUuid(service.uuid)] = BleService(
-						service = service,
-						uuid = standarizeUuid(service.uuid),
-						characteristics = characteristics
+					if (servicesAndCharacteristics[addr] == null) {
+						servicesAndCharacteristics[addr] = mutableListOf()
+					}
+
+					Log.d(TAG, "Service discovered: ${standarizeUuid(service.uuid)} for $addr")
+					servicesAndCharacteristics[addr] = servicesAndCharacteristics[addr]!!.plus(
+						BleService(
+							service = service,
+							uuid = standarizeUuid(service.uuid),
+							characteristics = characteristics
+						)
 					)
 				}
 
 				Log.d(TAG, "Services discovered")
 				connectResult?.success(true)
 				connectResult = null
+
+				Handler(Looper.getMainLooper()).post {
+					eventsChannel.invokeMethod(
+						"onConnected",
+						mutableMapOf(
+							"macAddress" to addr,
+							"name" to gatt.device.name
+						)
+					)
+				}
 			} else {
 				Log.d(TAG, "Discover services failed")
 				connectResult?.success(false)
@@ -357,6 +377,7 @@ class LayrzBlePlugin : FlutterPlugin, MethodCallHandler, ActivityAware,
 				eventsChannel.invokeMethod(
 					"onNotify",
 					mapOf(
+						"macAddress" to gatt.device.address,
 						"serviceUuid" to characteristic.service.uuid.toString().uppercase().trim(),
 						"characteristicUuid" to characteristic.uuid.toString().uppercase().trim(),
 						"value" to characteristic.value
@@ -694,8 +715,8 @@ class LayrzBlePlugin : FlutterPlugin, MethodCallHandler, ActivityAware,
 			"startScan" -> startScan(call = call, result = result)
 			"stopScan" -> stopScan(result = result)
 			"connect" -> connect(call = call, result = result)
-			"disconnect" -> disconnect(result = result)
-			"discoverServices" -> discoverServices(result = result)
+			"disconnect" -> disconnect(call = call, result = result)
+			"discoverServices" -> discoverServices(call = call, result = result)
 			"setMtu" -> setMtu(call = call, result = result)
 			"writeCharacteristic" -> writeCharacteristic(call = call, result = result)
 			"readCharacteristic" -> readCharacteristic(call = call, result = result)
@@ -1249,6 +1270,9 @@ class LayrzBlePlugin : FlutterPlugin, MethodCallHandler, ActivityAware,
 			bluetooth!!.adapter.bluetoothLeScanner.startScan(scanCallback)
 			result.success(true)
 			startScanResult = null
+			Handler(Looper.getMainLooper()).post {
+				eventsChannel.invokeMethod("onScanStarted", null)
+			}
 		}
 	}
 
@@ -1276,12 +1300,14 @@ class LayrzBlePlugin : FlutterPlugin, MethodCallHandler, ActivityAware,
 		}
 
 		val adapter = bluetooth!!.adapter
-
 		Log.d(TAG, "Stopping scan")
 		adapter!!.bluetoothLeScanner.stopScan(scanCallback)
 		result.success(true)
 		stopScanResult = null
 		filteredMacAddress = null
+		Handler(Looper.getMainLooper()).post {
+			eventsChannel.invokeMethod("onScanStopped", null)
+		}
 	}
 
 	/* Connects to a BLE device */
@@ -1302,54 +1328,82 @@ class LayrzBlePlugin : FlutterPlugin, MethodCallHandler, ActivityAware,
 			return
 		}
 
-		if (!devices.containsKey(searchingMacAddress!!)) {
+		val macAddress = searchingMacAddress!!.uppercase()
+
+		if (!devices.containsKey(macAddress)) {
 			Log.d(TAG, "Device not found")
 			result.success(false)
 			connectResult = null
 			return
 		}
 
-		if (isScanning) {
-			isScanning = false
-			Handler(Looper.getMainLooper()).post {
-				eventsChannel.invokeMethod("onEvent", "SCAN_STOPPED")
-			}
-			bluetooth!!.adapter.bluetoothLeScanner.stopScan(scanCallback)
+		if (connectedDevices.containsKey(macAddress)) {
+			Log.d(TAG, "Device already connected")
+			result.success(true)
+			connectResult = null
+			return
 		}
 
-		connectedDevice = devices[searchingMacAddress!!]!!
+		val device = devices[macAddress]!!
 		connectResult = result
 		lastOperation = LastOperation.CONNECT
-		gatt = connectedDevice!!.connectGatt(context, false, gattCallback)
+		val gatt = device.connectGatt(context, false, gattCallback)
 		gatt!!.connect()
 	}
 
 	/* Disconnects from a BLE device */
-	private fun disconnect(result: Result) {
-		if (gatt == null) {
-			Log.d(TAG, "No device connected")
-			result.success(false)
-			disconnectResult = null
-			return
+	private fun disconnect(call: MethodCall, result: Result) {
+		val macAddress = call.arguments as String?
+		if (macAddress == null) {
+			for (device in connectedDevices.values) {
+				device.disconnect()
+			}
+			servicesAndCharacteristics.clear()
+			connectedDevices.clear()
+		} else {
+			val device = connectedDevices[macAddress]
+			if (device == null) {
+				Log.d(TAG, "Device not connected")
+				result.success(false)
+				disconnectResult = null
+				return
+			}
+			device.disconnect()
+			servicesAndCharacteristics.remove(macAddress)
+			connectedDevices.remove(macAddress)
 		}
-
-		gatt!!.disconnect()
 		result.success(true)
 		disconnectResult = null
 	}
 
 	/* Discovers the services of a BLE device */
-	private fun discoverServices(result: Result) {
-		if (gatt == null) {
-			Log.d(TAG, "No device connected")
+	private fun discoverServices(call: MethodCall, result: Result) {
+		val output: MutableList<Map<String, Any>> = mutableListOf()
+
+		val macAddress = call.argument<String>("macAddress")
+		if (macAddress == null) {
+			Log.d(TAG, "No macAddress provided")
 			result.success(null)
 			discoverServicesResult = null
 			return
 		}
 
-		val output: MutableList<Map<String, Any>> = mutableListOf()
-		// Iterate over the servicesAndCharacteristics
-		for ((serviceUuid, service) in servicesAndCharacteristics) {
+		if (!connectedDevices.containsKey(macAddress)) {
+			Log.d(TAG, "Device not connected")
+			result.success(null)
+			discoverServicesResult = null
+			return
+		}
+
+		if (!servicesAndCharacteristics.containsKey(macAddress)) {
+			Log.d(TAG, "Services not found")
+			result.success(null)
+			discoverServicesResult = null
+			return
+		}
+
+		val services = servicesAndCharacteristics[macAddress]!!
+		for (service in services) {
 			val characteristics = service.characteristics.map { characteristic ->
 				mapOf(
 					"uuid" to characteristic.uuid,
@@ -1358,7 +1412,7 @@ class LayrzBlePlugin : FlutterPlugin, MethodCallHandler, ActivityAware,
 			}
 			output.add(
 				mapOf(
-					"uuid" to serviceUuid,
+					"uuid" to service.uuid,
 					"characteristics" to characteristics
 				)
 			)
@@ -1370,7 +1424,7 @@ class LayrzBlePlugin : FlutterPlugin, MethodCallHandler, ActivityAware,
 
 	/* Sets the MTU of a BLE device */
 	private fun setMtu(call: MethodCall, result: Result) {
-		val newMtu = call.arguments as Int?
+		val newMtu = call.argument<Int>("newMtu")
 		if (newMtu == null) {
 			Log.d(TAG, "No mtu provided")
 			result.success(null)
@@ -1378,13 +1432,22 @@ class LayrzBlePlugin : FlutterPlugin, MethodCallHandler, ActivityAware,
 			return
 		}
 
-		if (gatt == null) {
-			Log.d(TAG, "No device connected")
+		val macAddress = call.argument<String>("macAddress")
+		if (macAddress == null) {
+			Log.d(TAG, "No macAddress provided")
 			result.success(null)
 			setMtuResult = null
 			return
 		}
 
+		if (!connectedDevices.containsKey(macAddress)) {
+			Log.d(TAG, "Device not connected")
+			result.success(null)
+			setMtuResult = null
+			return
+		}
+
+		val gatt = connectedDevices[macAddress]
 		setMtuResult = result
 		lastOperation = LastOperation.SET_MTU
 		gatt!!.requestMtu(newMtu)
@@ -1397,7 +1460,30 @@ class LayrzBlePlugin : FlutterPlugin, MethodCallHandler, ActivityAware,
 
 	/* Sends a payload to a BLE device */
 	private fun writeCharacteristic(call: MethodCall, result: Result) {
-		val serviceUuid = call.argument<String>("serviceUuid")
+		val macAddress = call.argument<String>("macAddress")
+		if (macAddress == null) {
+			Log.d(TAG, "No macAddress provided")
+			result.success(null)
+			writeCharacteristicResult = null
+			return
+		}
+
+		if (!connectedDevices.containsKey(macAddress)) {
+			Log.d(TAG, "Device not connected")
+			result.success(null)
+			writeCharacteristicResult = null
+			return
+		}
+
+		val gatt = connectedDevices[macAddress]
+		if (gatt == null) {
+			Log.d(TAG, "No device connected")
+			result.success(null)
+			writeCharacteristicResult = null
+			return
+		}
+
+		val serviceUuid = call.argument<String>("serviceUuid")?.uppercase()
 		if (serviceUuid == null) {
 			Log.d(TAG, "No serviceUuid provided")
 			result.success(null)
@@ -1405,7 +1491,7 @@ class LayrzBlePlugin : FlutterPlugin, MethodCallHandler, ActivityAware,
 			return
 		}
 
-		val characteristicUuid = call.argument<String>("characteristicUuid")
+		val characteristicUuid = call.argument<String>("characteristicUuid")?.uppercase()
 		if (characteristicUuid == null) {
 			Log.d(TAG, "No characteristicUuid provided")
 			result.success(null)
@@ -1428,15 +1514,8 @@ class LayrzBlePlugin : FlutterPlugin, MethodCallHandler, ActivityAware,
 
 		val writeType = call.argument<Boolean>("withResponse") ?: true
 
-		if (gatt == null) {
-			Log.d(TAG, "No device connected")
-			result.success(null)
-			writeCharacteristicResult = null
-			return
-		}
-
 		Log.d(TAG, "Service: $serviceUuid")
-		val service = servicesAndCharacteristics[serviceUuid]
+		val service = servicesAndCharacteristics[macAddress]?.find { it.uuid == serviceUuid }
 		if (service == null) {
 			Log.d(TAG, "Service not found")
 			result.success(null)
@@ -1452,7 +1531,7 @@ class LayrzBlePlugin : FlutterPlugin, MethodCallHandler, ActivityAware,
 			return
 		}
 
-		if (!characteristic.properties.contains("WRITE")) {
+		if (!characteristic.properties.contains("WRITE") && !characteristic.properties.contains("WRITE_WO_RSP")) {
 			Log.d(TAG, "Characteristic does not support write")
 			result.success(null)
 			writeCharacteristicResult = null
@@ -1468,7 +1547,7 @@ class LayrzBlePlugin : FlutterPlugin, MethodCallHandler, ActivityAware,
 			BluetoothGattCharacteristic.WRITE_TYPE_NO_RESPONSE
 		}
 		if (Build.VERSION.SDK_INT > Build.VERSION_CODES.TIRAMISU) {
-			gatt!!.writeCharacteristic(
+			gatt.writeCharacteristic(
 				characteristic.characteristic,
 				payload,
 				type,
@@ -1476,7 +1555,7 @@ class LayrzBlePlugin : FlutterPlugin, MethodCallHandler, ActivityAware,
 		} else {
 			characteristic.characteristic.value = payload
 			characteristic.characteristic.writeType = type
-			gatt!!.writeCharacteristic(characteristic.characteristic)
+			gatt.writeCharacteristic(characteristic.characteristic)
 		}
 
 		// Timeout
@@ -1488,7 +1567,30 @@ class LayrzBlePlugin : FlutterPlugin, MethodCallHandler, ActivityAware,
 
 	/* Reads a payload from a BLE device */
 	private fun readCharacteristic(call: MethodCall, result: Result) {
-		val serviceUuid = call.argument<String>("serviceUuid")
+		val macAddress = call.argument<String>("macAddress")
+		if (macAddress == null) {
+			Log.d(TAG, "No macAddress provided")
+			result.success(null)
+			readCharacteristicResult = null
+			return
+		}
+
+		if (!connectedDevices.containsKey(macAddress)) {
+			Log.d(TAG, "Device not connected")
+			result.success(null)
+			readCharacteristicResult = null
+			return
+		}
+
+		val gatt = connectedDevices[macAddress]
+		if (gatt == null) {
+			Log.d(TAG, "No device connected")
+			result.success(null)
+			readCharacteristicResult = null
+			return
+		}
+
+		val serviceUuid = call.argument<String>("serviceUuid")?.uppercase()
 		if (serviceUuid == null) {
 			Log.d(TAG, "No serviceUuid provided")
 			result.success(null)
@@ -1496,7 +1598,7 @@ class LayrzBlePlugin : FlutterPlugin, MethodCallHandler, ActivityAware,
 			return
 		}
 
-		val characteristicUuid = call.argument<String>("characteristicUuid")
+		val characteristicUuid = call.argument<String>("characteristicUuid")?.uppercase()
 		if (characteristicUuid == null) {
 			Log.d(TAG, "No characteristicUuid provided")
 			result.success(null)
@@ -1509,14 +1611,7 @@ class LayrzBlePlugin : FlutterPlugin, MethodCallHandler, ActivityAware,
 			timeoutSeconds = 1
 		}
 
-		if (gatt == null) {
-			Log.d(TAG, "No device connected")
-			result.success(null)
-			readCharacteristicResult = null
-			return
-		}
-
-		val service = gatt!!.getService(UUID.fromString(serviceUuid))
+		val service = gatt.getService(UUID.fromString(serviceUuid))
 		if (service == null) {
 			Log.d(TAG, "Service not found")
 			result.success(null)
@@ -1542,7 +1637,7 @@ class LayrzBlePlugin : FlutterPlugin, MethodCallHandler, ActivityAware,
 
 		readCharacteristicResult = result
 		lastOperation = LastOperation.READ_CHARACTERISTIC
-		gatt!!.readCharacteristic(characteristic)
+		gatt.readCharacteristic(characteristic)
 
 		// Timeout
 		spawnTimeout(
@@ -1553,48 +1648,22 @@ class LayrzBlePlugin : FlutterPlugin, MethodCallHandler, ActivityAware,
 
 	/* Subscribe to a characteristic */
 	private fun startNotify(call: MethodCall, result: Result) {
-		val rawServiceUuid = call.argument<String>("serviceUuid")
-		if (rawServiceUuid == null) {
-			Log.d(TAG, "No serviceUuid provided")
+		val macAddress = call.argument<String>("macAddress")?.uppercase()
+		if (macAddress == null) {
+			Log.d(TAG, "No macAddress provided")
 			result.success(false)
 			startNotifyResult = null
 			return
 		}
 
-		val serviceUuid: UUID?
-		try {
-			serviceUuid = UUID.fromString(rawServiceUuid)
-		} catch (e: IllegalArgumentException) {
-			Log.d(TAG, "Invalid serviceUuid provided - $rawServiceUuid")
+		if (!connectedDevices.containsKey(macAddress)) {
+			Log.d(TAG, "Device not connected")
 			result.success(false)
 			startNotifyResult = null
 			return
 		}
 
-		val rawCharacteristicUuid = call.argument<String>("characteristicUuid")
-		if (rawCharacteristicUuid == null) {
-			Log.d(TAG, "No characteristicUuid provided")
-			result.success(false)
-			startNotifyResult = null
-			return
-		}
-		val characteristicUuid: UUID?
-		try {
-			characteristicUuid = UUID.fromString(rawCharacteristicUuid)
-		} catch (e: IllegalArgumentException) {
-			Log.d(TAG, "Invalid characteristicUuid provided - $rawCharacteristicUuid")
-			result.success(false)
-			startNotifyResult = null
-			return
-		}
-
-		if (currentNotifications.contains(standarizeUuid(characteristicUuid))) {
-			Log.d(TAG, "Already subscribed")
-			result.success(true)
-			startNotifyResult = null
-			return
-		}
-
+		val gatt = connectedDevices[macAddress]
 		if (gatt == null) {
 			Log.d(TAG, "No device connected")
 			result.success(false)
@@ -1602,7 +1671,31 @@ class LayrzBlePlugin : FlutterPlugin, MethodCallHandler, ActivityAware,
 			return
 		}
 
-		val service = servicesAndCharacteristics[standarizeUuid(serviceUuid)]
+		val serviceUuid = call.argument<String>("serviceUuid")?.uppercase()
+		if (serviceUuid == null) {
+			Log.d(TAG, "No serviceUuid provided")
+			result.success(false)
+			startNotifyResult = null
+			return
+		}
+
+		val characteristicUuid = call.argument<String>("characteristicUuid")?.uppercase()
+		if (characteristicUuid == null) {
+			Log.d(TAG, "No characteristicUuid provided")
+			result.success(false)
+			startNotifyResult = null
+			return
+		}
+
+		val keyOfMap = "${characteristicUuid}-${macAddress}"
+		if (currentNotifications.contains(keyOfMap)) {
+			Log.d(TAG, "Already subscribed")
+			result.success(true)
+			startNotifyResult = null
+			return
+		}
+
+		val service = servicesAndCharacteristics[macAddress]?.find { it.uuid == serviceUuid }
 		if (service == null) {
 			Log.d(TAG, "Service not found")
 			result.success(false)
@@ -1610,8 +1703,7 @@ class LayrzBlePlugin : FlutterPlugin, MethodCallHandler, ActivityAware,
 			return
 		}
 
-		val characteristic =
-			service.characteristics.find { it.uuid == standarizeUuid(characteristicUuid) }
+		val characteristic = service.characteristics.find { it.uuid == characteristicUuid }
 		if (characteristic == null) {
 			Log.d(TAG, "Characteristic not found")
 			result.success(false)
@@ -1626,11 +1718,11 @@ class LayrzBlePlugin : FlutterPlugin, MethodCallHandler, ActivityAware,
 			return
 		}
 
-		val notificationResult = gatt!!.setCharacteristicNotification(
+		val notificationResult = gatt.setCharacteristicNotification(
 			characteristic.characteristic,
 			true
 		)
-		Log.d(TAG, "Notification subscription result: $notificationResult")
+
 		if (!notificationResult) {
 			Log.d(TAG, "Notification failed")
 			result.success(false)
@@ -1648,16 +1740,39 @@ class LayrzBlePlugin : FlutterPlugin, MethodCallHandler, ActivityAware,
 		}
 
 		descriptor.value = BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE
-		gatt!!.writeDescriptor(descriptor)
+		gatt.writeDescriptor(descriptor)
 
-		currentNotifications.add(characteristic.uuid.uppercase().trim())
+		currentNotifications.add(keyOfMap)
 		result.success(true)
 		startNotifyResult = null
 	}
 
 	/* Unsubscribe from a characteristic */
 	private fun stopNotify(call: MethodCall, result: Result) {
-		val rawServiceUuid = call.argument<String>("serviceUuid")
+		val macAddress = call.argument<String>("macAddress")
+		if (macAddress == null) {
+			Log.d(TAG, "No macAddress provided")
+			result.success(false)
+			stopNotifyResult = null
+			return
+		}
+
+		if (!connectedDevices.containsKey(macAddress)) {
+			Log.d(TAG, "Device not connected")
+			result.success(false)
+			stopNotifyResult = null
+			return
+		}
+
+		val gatt = connectedDevices[macAddress]
+		if (gatt == null) {
+			Log.d(TAG, "No device connected")
+			result.success(false)
+			stopNotifyResult = null
+			return
+		}
+
+		val rawServiceUuid = call.argument<String>("serviceUuid")?.uppercase()
 		if (rawServiceUuid == null) {
 			Log.d(TAG, "No serviceUuid provided")
 			result.success(false)
@@ -1675,7 +1790,7 @@ class LayrzBlePlugin : FlutterPlugin, MethodCallHandler, ActivityAware,
 			return
 		}
 
-		val rawCharacteristicUuid = call.argument<String>("characteristicUuid")
+		val rawCharacteristicUuid = call.argument<String>("characteristicUuid")?.uppercase()
 		if (rawCharacteristicUuid == null) {
 			Log.d(TAG, "No characteristicUuid provided")
 			result.success(false)
@@ -1693,21 +1808,15 @@ class LayrzBlePlugin : FlutterPlugin, MethodCallHandler, ActivityAware,
 			return
 		}
 
-		if (!currentNotifications.contains(characteristicUuid.toString().uppercase().trim())) {
+		val keyOfMap = "${standarizeUuid(characteristicUuid)}-${macAddress}"
+		if (!currentNotifications.contains(keyOfMap)) {
 			Log.d(TAG, "Not subscribed")
 			result.success(true)
 			stopNotifyResult = null
 			return
 		}
 
-		if (gatt == null) {
-			Log.d(TAG, "No device connected")
-			result.success(false)
-			stopNotifyResult = null
-			return
-		}
-
-		val service = servicesAndCharacteristics[standarizeUuid(serviceUuid)]
+		val service = servicesAndCharacteristics[macAddress]?.find { it.uuid == standarizeUuid(serviceUuid) }
 		if (service == null) {
 			Log.d(TAG, "Service not found")
 			result.success(false)
@@ -1731,8 +1840,8 @@ class LayrzBlePlugin : FlutterPlugin, MethodCallHandler, ActivityAware,
 			return
 		}
 
-		gatt!!.setCharacteristicNotification(characteristic.characteristic, false)
-		currentNotifications.remove(characteristic.uuid.uppercase().trim())
+		gatt.setCharacteristicNotification(characteristic.characteristic, false)
+		currentNotifications.remove(keyOfMap)
 		result.success(true)
 		stopNotifyResult = null
 	}
@@ -1764,7 +1873,6 @@ class LayrzBlePlugin : FlutterPlugin, MethodCallHandler, ActivityAware,
 					}
 
 					LastOperation.CONNECT -> {
-						gatt?.disconnect()
 						connectResult?.success(false)
 						connectResult = null
 					}
@@ -1800,6 +1908,9 @@ class LayrzBlePlugin : FlutterPlugin, MethodCallHandler, ActivityAware,
 					lastOperation = LastOperation.SCAN
 					startScanResult?.success(true)
 					startScanResult = null
+					Handler(Looper.getMainLooper()).post {
+						eventsChannel.invokeMethod("onScanStarted", null)
+					}
 				} else {
 					Log.d(TAG, "No location permission")
 					startScanResult?.success(false)

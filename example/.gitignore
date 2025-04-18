@@ -45,3 +45,5 @@ app.*.map.json
 /android/app/release
 
 lib/main.demo.dart
+lib/main.galileo.dart
+lib/constants.galileo.dart

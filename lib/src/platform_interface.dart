@@ -70,7 +70,8 @@ abstract class LayrzBlePlatform extends PlatformInterface {
   /// Maximum Transmission Unit and it is the maximum size of a packet that can be sent in a single transmission.
   ///
   /// The return value is the new MTU size, after a negotion with the peripheral.
-  Future<int?> setMtu({required int newMtu}) => throw UnimplementedError('setMtu() has not been implemented.');
+  Future<int?> setMtu({required String macAddress, required int newMtu}) =>
+      throw UnimplementedError('setMtu() has not been implemented.');
 
   /// [connect] connects to a BLE device.
   Future<bool?> connect({
@@ -79,10 +80,18 @@ abstract class LayrzBlePlatform extends PlatformInterface {
   }) => throw UnimplementedError('connect() has not been implemented.');
 
   /// [disconnect] disconnects from any connected BLE device.
-  Future<bool?> disconnect() => throw UnimplementedError('disconnect() has not been implemented.');
+  Future<bool?> disconnect({
+    /// [macAddress] is the MAC address that you want to disconnect.
+    ///
+    /// In case of that value is `null`, the disconnect will be from all connected devices.
+    String? macAddress,
+  }) => throw UnimplementedError('disconnect() has not been implemented.');
 
   /// [discoverServices] discovers the services of a BLE device.
   Future<List<BleService>?> discoverServices({
+    /// [macAddress] is the MAC address of the device.
+    required String macAddress,
+
     /// [timeout] is the duration to wait for the services to be discovered.
     Duration timeout = const Duration(seconds: 30),
   }) => throw UnimplementedError('discoverServices() has not been implemented.');
@@ -91,6 +100,9 @@ abstract class LayrzBlePlatform extends PlatformInterface {
   ///
   /// The return value is `true` if the payload was sent successfully.
   Future<bool> writeCharacteristic({
+    /// [macAddress] is the MAC address of the device.
+    required String macAddress,
+
     /// [serviceUuid] is the UUID of the service.
     required String serviceUuid,
 
@@ -112,6 +124,9 @@ abstract class LayrzBlePlatform extends PlatformInterface {
   ///
   /// If the characteristic is not readable, this method will return null.
   Future<Uint8List?> readCharacteristic({
+    /// [macAddress] is the MAC address of the device.
+    required String macAddress,
+
     /// [serviceUuid] is the UUID of the service.
     required String serviceUuid,
 
@@ -125,6 +140,9 @@ abstract class LayrzBlePlatform extends PlatformInterface {
   /// [startNotify] starts listening to notifications from a BLE characteristic.
   /// To stop listening, use [stopNotify] method and to get the notifications, use [onNotify] stream.
   Future<bool?> startNotify({
+    /// [macAddress] is the MAC address of the device.
+    required String macAddress,
+
     /// [serviceUuid] is the UUID of the service.
     required String serviceUuid,
 
@@ -134,6 +152,9 @@ abstract class LayrzBlePlatform extends PlatformInterface {
 
   /// [stopNotify] stops listening to notifications from a BLE characteristic.
   Future<bool?> stopNotify({
+    /// [macAddress] is the MAC address of the device.
+    required String macAddress,
+
     /// [serviceUuid] is the UUID of the service.
     required String serviceUuid,
 
