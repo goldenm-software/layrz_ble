@@ -38,6 +38,12 @@ class LayrzBlePluginLinux extends LayrzBlePlatform {
       StreamController<BleCharacteristicNotification>.broadcast();
 
   @override
+  bool get isAdvertising => false;
+
+  @override
+  bool get isScanning => _isScanning;
+
+  @override
   Stream<BleDevice> get onScan => _scanController.stream;
 
   @override
@@ -61,6 +67,9 @@ class LayrzBlePluginLinux extends LayrzBlePlatform {
 
   @override
   Future<bool> checkAdvertisePermissions() => Future.value(false);
+
+  @override
+  Future<BleStatus> getStatuses() => Future.value(BleStatus(advertising: false, scanning: _isScanning));
 
   @override
   Future<bool> startScan({String? macAddress, List<String>? servicesUuids}) async {
@@ -417,11 +426,9 @@ class LayrzBlePluginLinux extends LayrzBlePlatform {
 
   int _standarizeServiceUuid(List<int> bytes) {
     return int.tryParse(
-          bytes
-              .map((e) {
-                return e.toRadixString(16).padLeft(2, '0');
-              })
-              .join(''),
+          bytes.map((e) {
+            return e.toRadixString(16).padLeft(2, '0');
+          }).join(''),
         ) ??
         0x0000;
   }

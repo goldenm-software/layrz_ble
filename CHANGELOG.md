@@ -3,6 +3,9 @@
 ## 1.3.0-beta.3
 
 - Downgraded sdk to preserve legacy formatting.
+- Added `getStatuses` to get the status of the connection.
+- Added getters of `isAdvertising` and `isScanning` to get the current status.
+- Reviewed Web and Linux based on the recent changes.
 
 ## 1.3.0-beta.2
 

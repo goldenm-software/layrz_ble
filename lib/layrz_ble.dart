@@ -15,6 +15,18 @@ export 'package:layrz_models/layrz_models.dart'
 export 'platforms/stub.dart' if (dart.library.io) 'platforms/linux.dart';
 
 class LayrzBle {
+  /// [isAdvertising] is a getter that returns `true` if the device is advertising.
+  /// This property is updated based on the functions `startAdvertise` and `stopAdvertise`.
+  ///
+  /// Also, can be updated automatically when you call `getStatuses` method.
+  bool get isAdvertising => LayrzBlePlatform.instance.isAdvertising;
+
+  /// [isScanning] is a getter that returns `true` if the device is scanning.
+  /// This property is updated based on the functions `startScan` and `stopScan`.
+  ///
+  /// Also, can be updated automatically when you call `getStatuses` method.
+  bool get isScanning => LayrzBlePlatform.instance.isScanning;
+
   /// [onScan] is a stream of BLE devices detected during a scan.
   Stream<BleDevice> get onScan => LayrzBlePlatform.instance.onScan;
 
@@ -30,6 +42,9 @@ class LayrzBle {
   /// You can listen it, but you need to use [startAdvertise] with [canConnect] set to `true` to really
   /// start a GATT server.
   Stream<BleGattEvent> get onGattUpdate => LayrzBlePlatform.instance.onGattUpdate;
+
+  /// [getStatuses] is a getter function that returns the status of the BLE components statuses.
+  Future<BleStatus> getStatuses() => LayrzBlePlatform.instance.getStatuses();
 
   /// [startScan] starts scanning for BLE devices.
   ///
