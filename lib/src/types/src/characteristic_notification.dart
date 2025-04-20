@@ -1,37 +1,25 @@
 part of '../types.dart';
 
-class BleCharacteristicNotification {
-  /// [macAddress] is the MAC address of the device.
-  final String macAddress;
+@freezed
+abstract class BleCharacteristicNotification with _$BleCharacteristicNotification {
+  const BleCharacteristicNotification._();
 
-  /// [serviceUuid] is the UUID of the service.
-  final String serviceUuid;
+  /// [BleCharacteristicNotification] is the notification received from a BLE characteristic.
+  /// It contains the MAC address of the device, the UUID of the service,
+  const factory BleCharacteristicNotification({
+    /// [macAddress] is the MAC address of the device.
+    required String macAddress,
 
-  /// [characteristicUuid] is the UUID of the characteristic.
-  final String characteristicUuid;
+    /// [serviceUuid] is the UUID of the service.
+    required String serviceUuid,
 
-  /// [payload] is the data received from the characteristic.
-  final Uint8List value;
+    /// [characteristicUuid] is the UUID of the characteristic.
+    required String characteristicUuid,
 
-  BleCharacteristicNotification({
-    required this.macAddress,
-    required this.serviceUuid,
-    required this.characteristicUuid,
-    required this.value,
-  });
+    /// [payload] is the data received from the characteristic.
+    @UintListConverter() required Uint8List value,
+  }) = _BleCharacteristicNotification;
 
-  factory BleCharacteristicNotification.fromMap(Map<String, dynamic> map) {
-    return BleCharacteristicNotification(
-      macAddress: map['macAddress'],
-      serviceUuid: map['serviceUuid'],
-      characteristicUuid: map['characteristicUuid'],
-      value: Uint8List.fromList(List<int>.from(map['value'])),
-    );
-  }
-
-  @override
-  String toString() {
-    return 'BleCharacteristicNotification(serviceUuid: $serviceUuid, '
-        'characteristicUuid: $characteristicUuid, value: $value)';
-  }
+  factory BleCharacteristicNotification.fromJson(Map<String, dynamic> json) =>
+      _$BleCharacteristicNotificationFromJson(json);
 }

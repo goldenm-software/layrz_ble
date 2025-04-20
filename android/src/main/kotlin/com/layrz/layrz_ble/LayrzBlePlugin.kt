@@ -25,6 +25,8 @@ import android.bluetooth.le.AdvertisingSetParameters
 import android.bluetooth.le.ScanCallback
 import android.bluetooth.le.ScanResult
 import android.bluetooth.le.ScanSettings
+import android.content.BroadcastReceiver
+import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Build
@@ -51,10 +53,12 @@ import kotlinx.coroutines.launch
 import java.util.UUID
 
 class LayrzBlePlugin : FlutterPlugin, MethodCallHandler, ActivityAware,
-											 PluginRegistry.ActivityResultListener {
+											 PluginRegistry.ActivityResultListener, BroadcastReceiver() {
 	private lateinit var checkCapabilitiesChannel: MethodChannel
 	private lateinit var checkScanPermissionsChannel: MethodChannel
 	private lateinit var checkAdvertisePermissionsChannel: MethodChannel
+	private lateinit var getStatusesChannel: MethodChannel
+
 	private lateinit var startScanChannel: MethodChannel
 	private lateinit var stopScanChannel: MethodChannel
 	private lateinit var connectChannel: MethodChannel
@@ -66,6 +70,7 @@ class LayrzBlePlugin : FlutterPlugin, MethodCallHandler, ActivityAware,
 	private lateinit var startNotifyChannel: MethodChannel
 	private lateinit var stopNotifyChannel: MethodChannel
 	private lateinit var eventsChannel: MethodChannel
+
 	private lateinit var startAdvertiseChannel: MethodChannel
 	private lateinit var stopAdvertiseChannel: MethodChannel
 	private lateinit var respondWriteRequestChannel: MethodChannel
@@ -185,7 +190,7 @@ class LayrzBlePlugin : FlutterPlugin, MethodCallHandler, ActivityAware,
 		) {
 			super.onConnectionStateChange(gatt, status, newState)
 			Log.d(TAG, "onConnectionStateChange: $newState - $status")
-			if (gatt == null) return;
+			if (gatt == null) return
 			val addr = gatt.device.address.uppercase()
 
 			when (newState) {
@@ -635,6 +640,10 @@ class LayrzBlePlugin : FlutterPlugin, MethodCallHandler, ActivityAware,
 			"com.layrz.ble.checkAdvertisePermissions"
 		)
 		checkAdvertisePermissionsChannel.setMethodCallHandler(this)
+		getStatusesChannel =
+			MethodChannel(flutterPluginBinding.binaryMessenger, "com.layrz.ble.getStatuses")
+		getStatusesChannel.setMethodCallHandler(this)
+
 		startScanChannel =
 			MethodChannel(flutterPluginBinding.binaryMessenger, "com.layrz.ble.startScan")
 		startScanChannel.setMethodCallHandler(this)
@@ -666,6 +675,7 @@ class LayrzBlePlugin : FlutterPlugin, MethodCallHandler, ActivityAware,
 		stopNotifyChannel.setMethodCallHandler(this)
 		eventsChannel = MethodChannel(flutterPluginBinding.binaryMessenger, "com.layrz.ble.events")
 		eventsChannel.setMethodCallHandler(this)
+
 		startAdvertiseChannel =
 			MethodChannel(flutterPluginBinding.binaryMessenger, "com.layrz.ble.startAdvertise")
 		startAdvertiseChannel.setMethodCallHandler(this)
@@ -683,10 +693,19 @@ class LayrzBlePlugin : FlutterPlugin, MethodCallHandler, ActivityAware,
 		sendNotificationChannel.setMethodCallHandler(this)
 
 		context = flutterPluginBinding.applicationContext
+
+		context.registerReceiver(
+			this,
+			android.content.IntentFilter(BluetoothAdapter.ACTION_STATE_CHANGED)
+		)
 	}
 
 	override fun onDetachedFromEngine(binding: FlutterPlugin.FlutterPluginBinding) {
 		checkCapabilitiesChannel.setMethodCallHandler(null)
+		checkScanPermissionsChannel.setMethodCallHandler(null)
+		checkAdvertisePermissionsChannel.setMethodCallHandler(null)
+		getStatusesChannel.setMethodCallHandler(null)
+
 		startScanChannel.setMethodCallHandler(null)
 		stopScanChannel.setMethodCallHandler(null)
 		connectChannel.setMethodCallHandler(null)
@@ -698,11 +717,14 @@ class LayrzBlePlugin : FlutterPlugin, MethodCallHandler, ActivityAware,
 		startNotifyChannel.setMethodCallHandler(null)
 		stopNotifyChannel.setMethodCallHandler(null)
 		eventsChannel.setMethodCallHandler(null)
+
 		startAdvertiseChannel.setMethodCallHandler(null)
 		stopAdvertiseChannel.setMethodCallHandler(null)
 		respondWriteRequestChannel.setMethodCallHandler(null)
 		respondReadRequestChannel.setMethodCallHandler(null)
 		sendNotificationChannel.setMethodCallHandler(null)
+
+		context.unregisterReceiver(this)
 	}
 
 	override fun onMethodCall(call: MethodCall, result: Result) {
@@ -712,6 +734,7 @@ class LayrzBlePlugin : FlutterPlugin, MethodCallHandler, ActivityAware,
 			"checkCapabilities" -> checkCapabilities(result = result)
 			"checkScanPermissions" -> result.success(checkScanPermissions())
 			"checkAdvertisePermissions" -> result.success(checkAdvertisePermissions())
+			"getStatuses" -> getStatuses(result = result)
 			"startScan" -> startScan(call = call, result = result)
 			"stopScan" -> stopScan(result = result)
 			"connect" -> connect(call = call, result = result)
@@ -729,6 +752,15 @@ class LayrzBlePlugin : FlutterPlugin, MethodCallHandler, ActivityAware,
 			"sendNotification" -> sendNotification(call = call, result = result)
 			else -> result.notImplemented()
 		}
+	}
+
+	/* Gets the current status of all procedures */
+	private fun getStatuses(result: Result) {
+		val statuses = mapOf(
+			"scanning" to isScanning,
+			"advertising" to (gattServer != null)
+		)
+		result.success(statuses)
 	}
 
 	/* Publish a change into a Characteristic */
@@ -895,6 +927,13 @@ class LayrzBlePlugin : FlutterPlugin, MethodCallHandler, ActivityAware,
 		}
 
 		val adapter = bluetooth!!.adapter
+		if (!adapter.isEnabled) {
+			Log.d(TAG, "Bluetooth is not enabled, requesting to enable. You will need to manually re-try")
+			val btEnableIntent = Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE)
+			startActivityForResult(activity!!, btEnableIntent, REQUEST_ENABLE_BT, null)
+			return result.success(false)
+		}
+
 		val advertiser = adapter.bluetoothLeAdvertiser
 		startAdvertiseResult = result
 		for (service in gattServices) {
@@ -1106,14 +1145,14 @@ class LayrzBlePlugin : FlutterPlugin, MethodCallHandler, ActivityAware,
 	private fun stopAdvertise(result: Result) {
 		if (gattServer == null) {
 			Log.d(TAG, "Gatt server is null")
-			result.success(false)
+			result.success(true)
 			return
 		}
 
 		val advertiser = bluetooth!!.adapter.bluetoothLeAdvertiser
 		if (advertiser == null) {
 			Log.d(TAG, "Bluetooth advertiser is null")
-			result.success(false)
+			result.success(true)
 			return
 		}
 
@@ -1259,20 +1298,19 @@ class LayrzBlePlugin : FlutterPlugin, MethodCallHandler, ActivityAware,
 		val adapter = bluetooth!!.adapter
 
 		if (!adapter.isEnabled) {
-			Log.d(TAG, "Bluetooth is not enabled, requesting to enable")
+			Log.d(TAG, "Bluetooth is not enabled, requesting to enable. You will need to manually re-try")
 			val btEnableIntent = Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE)
 			startActivityForResult(activity!!, btEnableIntent, REQUEST_ENABLE_BT, null)
-			startScanResult = result
-		} else {
-			Log.d(TAG, "Bluetooth is enabled, starting scan")
-			isScanning = true
-			lastOperation = LastOperation.SCAN
-			bluetooth!!.adapter.bluetoothLeScanner.startScan(scanCallback)
-			result.success(true)
-			startScanResult = null
-			Handler(Looper.getMainLooper()).post {
-				eventsChannel.invokeMethod("onScanStarted", null)
-			}
+			return result.success(false)
+		}
+		Log.d(TAG, "Bluetooth is enabled, starting scan")
+		isScanning = true
+		lastOperation = LastOperation.SCAN
+		bluetooth!!.adapter.bluetoothLeScanner.startScan(scanCallback)
+		result.success(true)
+		startScanResult = null
+		Handler(Looper.getMainLooper()).post {
+			eventsChannel.invokeMethod("onScanStarted", null)
 		}
 	}
 
@@ -1287,7 +1325,7 @@ class LayrzBlePlugin : FlutterPlugin, MethodCallHandler, ActivityAware,
 
 		if (!checkScanPermissions()) {
 			Log.d(TAG, "No permissions")
-			result.success(false)
+			result.success(true)
 			stopScanResult = null
 			return
 		}
@@ -1866,7 +1904,7 @@ class LayrzBlePlugin : FlutterPlugin, MethodCallHandler, ActivityAware,
 						bluetooth!!.adapter.bluetoothLeScanner.stopScan(scanCallback)
 						isScanning = false
 						Handler(Looper.getMainLooper()).post {
-							eventsChannel.invokeMethod("onEvent", "SCAN_STOPPED")
+							eventsChannel.invokeMethod("onScanStopped", "SCAN_STOPPED")
 						}
 						startScanResult?.success(false)
 						startScanResult = null
@@ -1930,5 +1968,48 @@ class LayrzBlePlugin : FlutterPlugin, MethodCallHandler, ActivityAware,
 		coroutine?.cancel()
 		coroutine = null
 		return false
+	}
+
+	override fun onReceive(context: Context?, intent: Intent?) {
+		Log.d(TAG, "onReceive $intent")
+		if (intent?.action == BluetoothAdapter.ACTION_STATE_CHANGED) {
+			when (intent.getIntExtra(BluetoothAdapter.EXTRA_STATE, BluetoothAdapter.ERROR)) {
+				BluetoothAdapter.STATE_OFF -> notifyOff()
+				BluetoothAdapter.STATE_TURNING_OFF -> forceStopAll()
+				BluetoothAdapter.STATE_ON -> notifyOn()
+				else -> Log.i(TAG, "Bluetooth state changed")
+			}
+		}
+	}
+
+	private fun notifyOff() {
+		Log.i(TAG, "Bluetooth is turned off")
+		Handler(Looper.getMainLooper()).post {
+			eventsChannel.invokeMethod("onBluetoothOff", "BLUETOOTH_OFF")
+		}
+	}
+
+	private fun notifyOn() {
+		Log.i(TAG, "Bluetooth is turned on")
+		Handler(Looper.getMainLooper()).post {
+			eventsChannel.invokeMethod("onBluetoothOn", "BLUETOOTH_ON")
+		}
+	}
+
+	private fun forceStopAll() {
+		Log.i(TAG, "Bluetooth is stopping")
+		gattServer?.clearServices()
+		gattServer?.close()
+		gattServer = null
+
+		devices.clear()
+		servicesAndCharacteristics.clear()
+		gattServices.clear()
+		gattDevices.clear()
+
+		val bluetooth = bluetooth ?: return
+		if (isScanning) {
+			bluetooth.adapter.bluetoothLeScanner.stopScan(scanCallback)
+		}
 	}
 }

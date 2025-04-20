@@ -1,0 +1,13 @@
+targets:
+  $default:
+    sources:
+      exclude:
+        - linux/flutter/ephemeral/**
+        - example/linux/flutter/ephemeral/**
+        - windows/flutter/ephemeral/**
+        - example/windows/flutter/ephemeral/**
+        - .dart_tool/**
+    builders:
+      json_serializable:
+        options:
+          explicit_to_json: true

@@ -20,7 +20,7 @@ keywords:
   - wireless communication
 
 environment:
-  sdk: ">=3.7.0 <4.0.0"
+  sdk: ">=3.6.0 <4.0.0"
   flutter: '>=3.27.0'
 
 dependencies:
@@ -32,15 +32,19 @@ dependencies:
   web: ^1.1.0
   plugin_platform_interface: ^2.0.2
   collection: ^1.18.0
-  layrz_models: ^3.3.38
+  layrz_models: ^3.4.0-beta.1
   flutter_web_bluetooth: ^1.0.0
   bluez: ^0.8.2
+  freezed_annotation: ^3.0.0
+  json_annotation: ^4.9.0
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
-
-  flutter_lints: ^4.0.0
+  flutter_lints: ^5.0.0
+  build_runner: ^2.4.15
+  freezed: ^3.0.6
+  json_serializable: ^6.9.5
 
 flutter:
   plugin:

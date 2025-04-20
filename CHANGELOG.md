@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.3.0-beta.3
+
+- Downgraded sdk to preserve legacy formatting.
+
 ## 1.3.0-beta.2
 
 - Added multi-connection support on Android. Pending on other platforms.

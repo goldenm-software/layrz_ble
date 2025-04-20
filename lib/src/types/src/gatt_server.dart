@@ -1,164 +1,109 @@
 part of '../types.dart';
 
-sealed class BleGattEvent {}
-
-class GattConnected extends BleGattEvent {
-  /// [macAddress] is the ID of the device.
-  final String macAddress;
-
-  /// [name] is the name of the device.
-  /// Can be null if not available.
-  final String? name;
-
-  GattConnected({required this.macAddress, required this.name});
-
-  factory GattConnected.fromMap(Map<String, dynamic> map) {
-    return GattConnected(macAddress: map['macAddress'] as String, name: map['name'] as String?);
-  }
-
-  @override
-  String toString() {
-    return 'GattConnected(macAddress: $macAddress, name: $name)';
-  }
+sealed class BleGattEvent {
+  const BleGattEvent.event();
 }
 
-class GattDisconnected extends BleGattEvent {
-  /// [macAddress] is the ID of the device.
-  final String macAddress;
+@freezed
+abstract class GattConnected extends BleGattEvent with _$GattConnected {
+  const GattConnected._() : super.event();
 
-  GattDisconnected({required this.macAddress});
+  /// [GattConnected] is the event received when a device is connected.
+  const factory GattConnected({
+    /// [macAddress] is the ID of the device.
+    required String macAddress,
 
-  factory GattDisconnected.fromMap(Map<String, dynamic> map) {
-    return GattDisconnected(macAddress: map['macAddress'] as String);
-  }
+    /// [name] is the name of the device.
+    /// Can be null if not available.
+    String? name,
+  }) = _GattConnected;
 
-  @override
-  String toString() {
-    return 'GattDisconnected(macAddress: $macAddress)';
-  }
+  factory GattConnected.fromJson(Map<String, dynamic> json) => _$GattConnectedFromJson(json);
 }
 
-class GattReadRequest extends BleGattEvent {
-  /// [macAddress] is the ID of the device.
-  final String macAddress;
+@freezed
+abstract class GattDisconnected extends BleGattEvent with _$GattDisconnected {
+  const GattDisconnected._() : super.event();
 
-  /// [requestId] is the ID of the request.
-  final int requestId;
+  const factory GattDisconnected({
+    /// [macAddress] is the ID of the device.
+    required String macAddress,
+  }) = _GattDisconnected;
 
-  /// [offset] is the offset of the data to be read.
-  final int offset;
-
-  /// [serviceUuid] is the UUID of the service.
-  final String serviceUuid;
-
-  /// [characteristicUuid] is the UUID of the characteristic.
-  final String characteristicUuid;
-
-  GattReadRequest({
-    required this.macAddress,
-    required this.requestId,
-    required this.offset,
-    required this.serviceUuid,
-    required this.characteristicUuid,
-  });
-
-  factory GattReadRequest.fromMap(Map<String, dynamic> map) {
-    return GattReadRequest(
-      macAddress: map['macAddress'] as String,
-      requestId: map['requestId'] as int,
-      offset: map['offset'] as int,
-      serviceUuid: map['serviceUuid'] as String,
-      characteristicUuid: map['characteristicUuid'] as String,
-    );
-  }
-
-  @override
-  String toString() {
-    return 'GattReadRequest(macAddress: $macAddress, '
-        'requestId: $requestId, '
-        'offset: $offset, '
-        'serviceUuid: $serviceUuid, '
-        'characteristicUuid: $characteristicUuid)';
-  }
+  factory GattDisconnected.fromJson(Map<String, dynamic> json) => _$GattDisconnectedFromJson(json);
 }
 
-class GattWriteRequest extends BleGattEvent {
-  /// [macAddress] is the ID of the device.
-  final String macAddress;
+@freezed
+abstract class GattReadRequest extends BleGattEvent with _$GattReadRequest {
+  const GattReadRequest._() : super.event();
 
-  /// [requestId] is the ID of the request.
-  final int requestId;
+  /// [GattReadRequest] is the event received when a read request is received.
+  const factory GattReadRequest({
+    /// [macAddress] is the ID of the device.
+    required String macAddress,
 
-  /// [offset] is the offset of the data to be read.
-  final int offset;
+    /// [requestId] is the ID of the request.
+    required int requestId,
 
-  /// [serviceUuid] is the UUID of the service.
-  final String serviceUuid;
+    /// [offset] is the offset of the data to be read.
+    required int offset,
 
-  /// [characteristicUuid] is the UUID of the characteristic.
-  final String characteristicUuid;
+    /// [serviceUuid] is the UUID of the service.
+    required String serviceUuid,
 
-  /// [data] is the data to be written.
-  final Uint8List? data;
+    /// [characteristicUuid] is the UUID of the characteristic.
+    required String characteristicUuid,
+  }) = _GattReadRequest;
 
-  /// [preparedWrite] is true if the request is a prepared write request.
-  final bool preparedWrite;
-
-  /// [responseNeeded] is true if the request needs a response.
-  final bool responseNeeded;
-
-  GattWriteRequest({
-    required this.macAddress,
-    required this.requestId,
-    required this.offset,
-    required this.serviceUuid,
-    required this.characteristicUuid,
-    this.data,
-    this.preparedWrite = false,
-    this.responseNeeded = false,
-  });
-
-  factory GattWriteRequest.fromMap(Map<String, dynamic> map) {
-    return GattWriteRequest(
-      macAddress: map['macAddress'] as String,
-      requestId: map['requestId'] as int,
-      offset: map['offset'] as int,
-      serviceUuid: map['serviceUuid'] as String,
-      characteristicUuid: map['characteristicUuid'] as String,
-      data: map['data'] != null ? map['data'] as Uint8List : null,
-      preparedWrite: map['preparedWrite'] as bool? ?? false,
-      responseNeeded: map['responseNeeded'] as bool? ?? false,
-    );
-  }
-
-  @override
-  String toString() {
-    return 'GattWriteRequest('
-        'macAddress: $macAddress, '
-        'requestId: $requestId, '
-        'offset: $offset, '
-        'characteristicUuid: $characteristicUuid, '
-        'data: $data, '
-        'preparedWrite: $preparedWrite, '
-        'responseNeeded: $responseNeeded)';
-  }
+  factory GattReadRequest.fromJson(Map<String, dynamic> json) => _$GattReadRequestFromJson(json);
 }
 
-class GattMtuChanged extends BleGattEvent {
-  /// [macAddress] is the ID of the device.
-  final String macAddress;
+@freezed
+abstract class GattWriteRequest extends BleGattEvent with _$GattWriteRequest {
+  const GattWriteRequest._() : super.event();
 
-  /// [mtu] is the new MTU size.
-  final int mtu;
+  /// [GattWriteRequest] is the event received when a write request is received.
+  const factory GattWriteRequest({
+    /// [macAddress] is the ID of the device.
+    required String macAddress,
 
-  GattMtuChanged({required this.macAddress, required this.mtu});
+    /// [requestId] is the ID of the request.
+    required int requestId,
 
-  factory GattMtuChanged.fromMap(Map<String, dynamic> map) {
-    return GattMtuChanged(macAddress: map['macAddress'] as String, mtu: map['mtu'] as int);
-  }
+    /// [offset] is the offset of the data to be read.
+    required int offset,
 
-  @override
-  String toString() {
-    return 'GattMtuChanged(macAddress: $macAddress, mtu: $mtu)';
-  }
+    /// [serviceUuid] is the UUID of the service.
+    required String serviceUuid,
+
+    /// [characteristicUuid] is the UUID of the characteristic.
+    required String characteristicUuid,
+
+    /// [data] is the data to be written.
+    @UintListOrNullConverter() Uint8List? data,
+
+    /// [preparedWrite] is true if the request is a prepared write request.
+    @Default(false) bool preparedWrite,
+
+    /// [responseNeeded] is true if the request needs a response.
+    @Default(false) bool responseNeeded,
+  }) = _GattWriteRequest;
+
+  factory GattWriteRequest.fromJson(Map<String, dynamic> json) => _$GattWriteRequestFromJson(json);
+}
+
+@freezed
+abstract class GattMtuChanged extends BleGattEvent with _$GattMtuChanged {
+  const GattMtuChanged._() : super.event();
+
+  /// [GattMtuChanged] is the event received when the MTU size is changed.
+  const factory GattMtuChanged({
+    /// [macAddress] is the ID of the device.
+    required String macAddress,
+
+    /// [mtu] is the new MTU size.
+    required int mtu,
+  }) = _GattMtuChanged;
+
+  factory GattMtuChanged.fromJson(Map<String, dynamic> json) => _$GattMtuChangedFromJson(json);
 }

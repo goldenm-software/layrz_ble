@@ -1,4 +1,4 @@
-library layrz_ble;
+library;
 
 import 'dart:typed_data';
 
@@ -46,7 +46,8 @@ class LayrzBle {
     /// be discovered.
     /// This property is only working on Web, other platforms will be ignored.
     List<String>? servicesUuids,
-  }) => LayrzBlePlatform.instance.startScan(macAddress: macAddress, servicesUuids: servicesUuids);
+  }) =>
+      LayrzBlePlatform.instance.startScan(macAddress: macAddress, servicesUuids: servicesUuids);
 
   /// [stopScan] stops scanning for BLE devices.
   ///
@@ -82,7 +83,8 @@ class LayrzBle {
     ///
     /// In case of that value is `null`, the disconnect will be from all connected devices.
     String? macAddress,
-  }) => LayrzBlePlatform.instance.disconnect(macAddress: macAddress);
+  }) =>
+      LayrzBlePlatform.instance.disconnect(macAddress: macAddress);
 
   /// [discoverServices] discovers the services of a BLE device.
   Future<List<BleService>?> discoverServices({
@@ -91,7 +93,8 @@ class LayrzBle {
 
     /// [timeout] is the duration to wait for the services to be discovered.
     Duration timeout = const Duration(seconds: 30),
-  }) => LayrzBlePlatform.instance.discoverServices(macAddress: macAddress, timeout: timeout);
+  }) =>
+      LayrzBlePlatform.instance.discoverServices(macAddress: macAddress, timeout: timeout);
 
   /// [writeCharacteristic] sends a payload to a BLE characteristic.
   ///
@@ -104,14 +107,15 @@ class LayrzBle {
     required Uint8List payload,
     Duration timeout = const Duration(seconds: 30),
     required bool withResponse,
-  }) => LayrzBlePlatform.instance.writeCharacteristic(
-    macAddress: macAddress,
-    serviceUuid: serviceUuid,
-    characteristicUuid: characteristicUuid,
-    payload: payload,
-    timeout: timeout,
-    withResponse: withResponse,
-  );
+  }) =>
+      LayrzBlePlatform.instance.writeCharacteristic(
+        macAddress: macAddress,
+        serviceUuid: serviceUuid,
+        characteristicUuid: characteristicUuid,
+        payload: payload,
+        timeout: timeout,
+        withResponse: withResponse,
+      );
 
   /// [readCharacteristic] reads the value of a BLE characteristic.
   /// The return value is the raw bytes of the characteristic.
@@ -126,11 +130,12 @@ class LayrzBle {
 
     /// [characteristicUuid] is the UUID of the characteristic.
     required String characteristicUuid,
-  }) => LayrzBlePlatform.instance.readCharacteristic(
-    macAddress: macAddress,
-    serviceUuid: serviceUuid,
-    characteristicUuid: characteristicUuid,
-  );
+  }) =>
+      LayrzBlePlatform.instance.readCharacteristic(
+        macAddress: macAddress,
+        serviceUuid: serviceUuid,
+        characteristicUuid: characteristicUuid,
+      );
 
   /// [startNotify] starts listening to notifications from a
   /// BLE characteristic. To stop listening, use [stopNotify] method and
@@ -144,11 +149,12 @@ class LayrzBle {
 
     /// [characteristicUuid] is the UUID of the characteristic.
     required String characteristicUuid,
-  }) => LayrzBlePlatform.instance.startNotify(
-    macAddress: macAddress,
-    serviceUuid: serviceUuid,
-    characteristicUuid: characteristicUuid,
-  );
+  }) =>
+      LayrzBlePlatform.instance.startNotify(
+        macAddress: macAddress,
+        serviceUuid: serviceUuid,
+        characteristicUuid: characteristicUuid,
+      );
 
   /// [stopNotify] stops listening to notifications from a BLE characteristic.
   Future<bool?> stopNotify({
@@ -160,11 +166,12 @@ class LayrzBle {
 
     /// [characteristicUuid] is the UUID of the characteristic.
     required String characteristicUuid,
-  }) => LayrzBlePlatform.instance.stopNotify(
-    macAddress: macAddress,
-    serviceUuid: serviceUuid,
-    characteristicUuid: characteristicUuid,
-  );
+  }) =>
+      LayrzBlePlatform.instance.stopNotify(
+        macAddress: macAddress,
+        serviceUuid: serviceUuid,
+        characteristicUuid: characteristicUuid,
+      );
 
   /// [startAdvertise] starts advertising a BLE device.
   ///
@@ -192,14 +199,15 @@ class LayrzBle {
     /// [name] will be the name of the device on advertisement.
     /// If you don't provide a name, the device will not be advertised with a name.
     String? name,
-  }) => LayrzBlePlatform.instance.startAdvertise(
-    manufacturerData: manufacturerData,
-    serviceData: serviceData,
-    canConnect: canConnect,
-    servicesSpecs: servicesSpecs,
-    allowBluetooth5: allowBluetooth5,
-    name: name,
-  );
+  }) =>
+      LayrzBlePlatform.instance.startAdvertise(
+        manufacturerData: manufacturerData,
+        serviceData: serviceData,
+        canConnect: canConnect,
+        servicesSpecs: servicesSpecs,
+        allowBluetooth5: allowBluetooth5,
+        name: name,
+      );
 
   /// [stopAdvertise] stops advertising a BLE device.
   Future<bool> stopAdvertise() => LayrzBlePlatform.instance.stopAdvertise();
@@ -225,14 +233,15 @@ class LayrzBle {
 
     /// [data] is the data to be sent in response to the request.
     Uint8List? data,
-  }) => LayrzBlePlatform.instance.respondReadRequest(
-    requestId: requestId,
-    macAddress: macAddress,
-    offset: offset,
-    serviceUuid: serviceUuid,
-    characteristicUuid: characteristicUuid,
-    data: data,
-  );
+  }) =>
+      LayrzBlePlatform.instance.respondReadRequest(
+        requestId: requestId,
+        macAddress: macAddress,
+        offset: offset,
+        serviceUuid: serviceUuid,
+        characteristicUuid: characteristicUuid,
+        data: data,
+      );
 
   /// [respondWriteRequest] responds to a GATT request.
   /// This method is designed to be a response from an event from [onGattUpdate] stream. Whhen the
@@ -255,14 +264,15 @@ class LayrzBle {
 
     /// [success] is a flag to indicate if the request was successful.
     required bool success,
-  }) => LayrzBlePlatform.instance.respondWriteRequest(
-    requestId: requestId,
-    macAddress: macAddress,
-    offset: offset,
-    serviceUuid: serviceUuid,
-    characteristicUuid: characteristicUuid,
-    success: success,
-  );
+  }) =>
+      LayrzBlePlatform.instance.respondWriteRequest(
+        requestId: requestId,
+        macAddress: macAddress,
+        offset: offset,
+        serviceUuid: serviceUuid,
+        characteristicUuid: characteristicUuid,
+        success: success,
+      );
 
   /// [sendNotification] sends a notification to a BLE characteristic.
   /// You can use this method to send information to an specific characteristic, but requires a GATT server
@@ -279,10 +289,11 @@ class LayrzBle {
 
     /// [requestConfirmation] is a flag to indicate if the notification should be sent with confirmation.
     bool requestConfirmation = false,
-  }) => LayrzBlePlatform.instance.sendNotification(
-    serviceUuid: serviceUuid,
-    characteristicUuid: characteristicUuid,
-    payload: payload,
-    requestConfirmation: requestConfirmation,
-  );
+  }) =>
+      LayrzBlePlatform.instance.sendNotification(
+        serviceUuid: serviceUuid,
+        characteristicUuid: characteristicUuid,
+        payload: payload,
+        requestConfirmation: requestConfirmation,
+      );
 }

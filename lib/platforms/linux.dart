@@ -63,7 +63,7 @@ class LayrzBlePluginLinux extends LayrzBlePlatform {
   Future<bool> checkAdvertisePermissions() => Future.value(false);
 
   @override
-  Future<bool?> startScan({String? macAddress, List<String>? servicesUuids}) async {
+  Future<bool> startScan({String? macAddress, List<String>? servicesUuids}) async {
     if (_client == null) {
       log("Error initializing BlueZClient");
       return false;
@@ -90,7 +90,7 @@ class LayrzBlePluginLinux extends LayrzBlePlatform {
   }
 
   @override
-  Future<bool?> stopScan() async {
+  Future<bool> stopScan() async {
     if (!_isScanning) return true;
 
     _eventController.add(BleScanStopped());
@@ -128,7 +128,7 @@ class LayrzBlePluginLinux extends LayrzBlePlatform {
   }
 
   @override
-  Future<bool?> connect({required String macAddress}) async {
+  Future<bool> connect({required String macAddress}) async {
     if (_client == null) {
       log("Error initializing BlueZClient");
       return false;
@@ -275,7 +275,7 @@ class LayrzBlePluginLinux extends LayrzBlePlatform {
   }
 
   @override
-  Future<bool?> startNotify({
+  Future<bool> startNotify({
     required String macAddress,
     required String serviceUuid,
     required String characteristicUuid,
@@ -327,7 +327,7 @@ class LayrzBlePluginLinux extends LayrzBlePlatform {
   }
 
   @override
-  Future<bool?> stopNotify({
+  Future<bool> stopNotify({
     required String macAddress,
     required String serviceUuid,
     required String characteristicUuid,

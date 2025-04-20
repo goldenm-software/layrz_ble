@@ -252,10 +252,10 @@ packages:
     dependency: transitive
     description:
       name: freezed_annotation
-      sha256: c2e2d632dd9b8a2b7751117abcfc2b4888ecfe181bd9fca7170d9ef02e595fe2
+      sha256: c87ff004c8aa6af2d531668b46a4ea379f7191dc6dfa066acd53d506da6e044b
       url: "https://pub.dev"
     source: hosted
-    version: "2.4.4"
+    version: "3.0.0"
   google_fonts:
     dependency: transitive
     description:
@@ -347,10 +347,10 @@ packages:
     dependency: "direct main"
     description:
       name: layrz_models
-      sha256: e6ad5574bf773313b903b27d872dfd03ca5de897f64f57bde2ab6b2baf9ff70e
+      sha256: bab9811a1f9410d244ebb4d74ee89372148b79ddbf5691082893b615acb2f4f0
       url: "https://pub.dev"
     source: hosted
-    version: "3.3.38"
+    version: "3.4.0-beta.1"
   layrz_theme:
     dependency: "direct main"
     description:
@@ -965,5 +965,5 @@ packages:
     source: hosted
     version: "6.5.0"
 sdks:
-  dart: ">=3.7.0 <4.0.0"
+  dart: ">=3.7.0-0 <4.0.0"
   flutter: ">=3.27.0"

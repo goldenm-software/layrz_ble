@@ -19,6 +19,18 @@ abstract class LayrzBlePlatform extends PlatformInterface {
     _instance = instance;
   }
 
+  /// [isAdvertising] is a getter that returns `true` if the device is advertising.
+  /// This property is updated based on the functions `startAdvertise` and `stopAdvertise`.
+  ///
+  /// Also, can be updated automatically when you call `getStatuses` method.
+  bool get isAdvertising => throw UnimplementedError('isAdvertising has not been implemented.');
+
+  /// [isScanning] is a getter that returns `true` if the device is scanning.
+  /// This property is updated based on the functions `startScan` and `stopScan`.
+  ///
+  /// Also, can be updated automatically when you call `getStatuses` method.
+  bool get isScanning => throw UnimplementedError('isScanning has not been implemented.');
+
   /// [onScan] is a stream of BLE devices detected during a scan.
   Stream<BleDevice> get onScan => throw UnimplementedError('onScan has not been implemented.');
 
@@ -35,10 +47,13 @@ abstract class LayrzBlePlatform extends PlatformInterface {
   /// start a GATT server.
   Stream<BleGattEvent> get onGattUpdate => throw UnimplementedError('onGattUpdate has not been implemented.');
 
+  /// [getStatuses] is a getter function that returns the status of the BLE components statuses.
+  Future<BleStatus> getStatuses() => throw UnimplementedError('getStatuses has not been implemented.');
+
   /// [startScan] starts scanning for BLE devices.
   ///
   /// To get the results, you need to set a callback function using [onScanResult].
-  Future<bool?> startScan({
+  Future<bool> startScan({
     /// [macAddress] is the MAC address or UUID of the device to scan.
     /// If this value is not provided, the scan will search for all devices.
     ///
@@ -53,7 +68,7 @@ abstract class LayrzBlePlatform extends PlatformInterface {
   /// [stopScan] stops scanning for BLE devices.
   ///
   /// This method will stop the streaming of BLE devices.
-  Future<bool?> stopScan() => throw UnimplementedError('stopScan() has not been implemented.');
+  Future<bool> stopScan() => throw UnimplementedError('stopScan() has not been implemented.');
 
   /// [checkCapabilities] checks if the device supports BLE.
   Future<bool> checkCapabilities() => throw UnimplementedError('checkCapabilities() has not been implemented.');
@@ -74,13 +89,13 @@ abstract class LayrzBlePlatform extends PlatformInterface {
       throw UnimplementedError('setMtu() has not been implemented.');
 
   /// [connect] connects to a BLE device.
-  Future<bool?> connect({
+  Future<bool> connect({
     /// [macAddress] is the MAC address or UUID of the device to connect.
     required String macAddress,
   }) => throw UnimplementedError('connect() has not been implemented.');
 
   /// [disconnect] disconnects from any connected BLE device.
-  Future<bool?> disconnect({
+  Future<bool> disconnect({
     /// [macAddress] is the MAC address that you want to disconnect.
     ///
     /// In case of that value is `null`, the disconnect will be from all connected devices.
@@ -139,7 +154,7 @@ abstract class LayrzBlePlatform extends PlatformInterface {
 
   /// [startNotify] starts listening to notifications from a BLE characteristic.
   /// To stop listening, use [stopNotify] method and to get the notifications, use [onNotify] stream.
-  Future<bool?> startNotify({
+  Future<bool> startNotify({
     /// [macAddress] is the MAC address of the device.
     required String macAddress,
 
@@ -151,7 +166,7 @@ abstract class LayrzBlePlatform extends PlatformInterface {
   }) => throw UnimplementedError('startNotify() has not been implemented.');
 
   /// [stopNotify] stops listening to notifications from a BLE characteristic.
-  Future<bool?> stopNotify({
+  Future<bool> stopNotify({
     /// [macAddress] is the MAC address of the device.
     required String macAddress,
 

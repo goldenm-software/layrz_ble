@@ -44,7 +44,7 @@ class LayrzBlePluginWeb extends LayrzBlePlatform {
   Future<bool> checkAdvertisePermissions() => Future.value(false);
 
   @override
-  Future<bool?> startScan({String? macAddress, List<String>? servicesUuids}) async {
+  Future<bool> startScan({String? macAddress, List<String>? servicesUuids}) async {
     _devices.clear();
     final requestOptions = RequestOptionsBuilder.acceptAllDevices(optionalServices: servicesUuids);
     try {
@@ -62,7 +62,7 @@ class LayrzBlePluginWeb extends LayrzBlePlatform {
   }
 
   @override
-  Future<bool?> stopScan() {
+  Future<bool> stopScan() {
     _eventController.add(BleScanStopped());
     return Future.value(true);
   }
@@ -74,7 +74,7 @@ class LayrzBlePluginWeb extends LayrzBlePlatform {
   }
 
   @override
-  Future<bool?> connect({required String macAddress}) async {
+  Future<bool> connect({required String macAddress}) async {
     if (!_devices.containsKey(macAddress)) {
       log("Device not found: $macAddress");
       return false;
@@ -120,7 +120,7 @@ class LayrzBlePluginWeb extends LayrzBlePlatform {
   }
 
   @override
-  Future<bool?> disconnect({String? macAddress}) async {
+  Future<bool> disconnect({String? macAddress}) async {
     if (_currentConnected == null) {
       log("No device connected");
       return true;
@@ -223,7 +223,7 @@ class LayrzBlePluginWeb extends LayrzBlePlatform {
   }
 
   @override
-  Future<bool?> startNotify({
+  Future<bool> startNotify({
     required String macAddress,
     required String serviceUuid,
     required String characteristicUuid,
@@ -265,7 +265,7 @@ class LayrzBlePluginWeb extends LayrzBlePlatform {
   }
 
   @override
-  Future<bool?> stopNotify({
+  Future<bool> stopNotify({
     required String macAddress,
     required String serviceUuid,
     required String characteristicUuid,

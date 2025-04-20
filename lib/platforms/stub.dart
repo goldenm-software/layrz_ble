@@ -23,11 +23,11 @@ class LayrzBlePluginStub extends LayrzBlePlatform {
       throw UnimplementedError('_notifySubscription has not been implemented.');
 
   @override
-  Future<bool?> startScan({String? macAddress, List<String>? servicesUuids}) =>
+  Future<bool> startScan({String? macAddress, List<String>? servicesUuids}) =>
       throw UnimplementedError('startScan() has not been implemented.');
 
   @override
-  Future<bool?> stopScan() => throw UnimplementedError('stopScan() has not been implemented.');
+  Future<bool> stopScan() => throw UnimplementedError('stopScan() has not been implemented.');
 
   @override
   Future<bool> checkCapabilities() => throw UnimplementedError('checkCapabilities() has not been implemented.');
@@ -44,11 +44,10 @@ class LayrzBlePluginStub extends LayrzBlePlatform {
       throw UnimplementedError('setMtu() has not been implemented.');
 
   @override
-  Future<bool?> connect({required String macAddress}) =>
-      throw UnimplementedError('connect() has not been implemented.');
+  Future<bool> connect({required String macAddress}) => throw UnimplementedError('connect() has not been implemented.');
 
   @override
-  Future<bool?> disconnect({String? macAddress}) => throw UnimplementedError('disconnect() has not been implemented.');
+  Future<bool> disconnect({String? macAddress}) => throw UnimplementedError('disconnect() has not been implemented.');
 
   @override
   Future<List<BleService>?> discoverServices({
@@ -75,14 +74,14 @@ class LayrzBlePluginStub extends LayrzBlePlatform {
   }) => throw UnimplementedError('readCharacteristic() has not been implemented.');
 
   @override
-  Future<bool?> startNotify({
+  Future<bool> startNotify({
     required String macAddress,
     required String serviceUuid,
     required String characteristicUuid,
   }) => throw UnimplementedError('startNotify() has not been implemented.');
 
   @override
-  Future<bool?> stopNotify({
+  Future<bool> stopNotify({
     required String macAddress,
     required String serviceUuid,
     required String characteristicUuid,
