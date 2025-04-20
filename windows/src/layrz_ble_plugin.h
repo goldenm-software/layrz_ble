@@ -58,6 +58,8 @@ namespace layrz_ble
       static std::unique_ptr<flutter::MethodChannel<flutter::EncodableValue>> checkCapabilitiesChannel;
       static std::unique_ptr<flutter::MethodChannel<flutter::EncodableValue>> checkScanPermissionsChannel;
       static std::unique_ptr<flutter::MethodChannel<flutter::EncodableValue>> checkAdvertisePermissionsChannel;
+      static std::unique_ptr<flutter::MethodChannel<flutter::EncodableValue>> getStatusesChannel;
+
       static std::unique_ptr<flutter::MethodChannel<flutter::EncodableValue>> startScanChannel;
       static std::unique_ptr<flutter::MethodChannel<flutter::EncodableValue>> stopScanChannel;
       static std::unique_ptr<flutter::MethodChannel<flutter::EncodableValue>> connectChannel;
@@ -145,35 +147,10 @@ namespace layrz_ble
         std::unique_ptr<flutter::MethodResult<flutter::EncodableValue>> result
       );
 
-      winrt::fire_and_forget startAdvertise(
-        const flutter::MethodCall<flutter::EncodableValue> &method_call,
-        std::unique_ptr<flutter::MethodResult<flutter::EncodableValue>> result
-      );
-
-      winrt::fire_and_forget stopAdvertise(
-        const flutter::MethodCall<flutter::EncodableValue> &method_call,
-        std::unique_ptr<flutter::MethodResult<flutter::EncodableValue>> result
-      );
-
-      winrt::fire_and_forget respondWriteRequest(
-        const flutter::MethodCall<flutter::EncodableValue> &method_call,
-        std::unique_ptr<flutter::MethodResult<flutter::EncodableValue>> result
-      );
-
-      winrt::fire_and_forget respondReadRequest(
-        const flutter::MethodCall<flutter::EncodableValue> &method_call,
-        std::unique_ptr<flutter::MethodResult<flutter::EncodableValue>> result
-      );
-
-      winrt::fire_and_forget sendNotification(
-        const flutter::MethodCall<flutter::EncodableValue> &method_call,
-        std::unique_ptr<flutter::MethodResult<flutter::EncodableValue>> result
-      );
-
-
       void onCharacteristicValueChanged(GattCharacteristic sender, GattValueChangedEventArgs args);
       void onConnectionStatusChanged(BluetoothLEDevice device, IInspectable args);
-
+      std::string castBtScannerStatus(DeviceWatcherStatus status);
+      std::string castLeScannerStatus(BluetoothLEAdvertisementWatcherStatus status);
       std::string standarizeServiceUuid(std::string uuid);
   }; // class LayrzBlePlugin
 } // namespace layrz_ble

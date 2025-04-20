@@ -195,13 +195,13 @@ class LayrzBleNative extends LayrzBlePlatform {
 
   @override
   Future<BleStatus> getStatuses() async {
-    final result = await getStatusesChannel.invokeMethod<Map<String, bool>>('getStatuses');
+    final result = await getStatusesChannel.invokeMethod<Map>('getStatuses');
     if (result == null) {
       log('Error getting statuses from native side');
       return const BleStatus(advertising: false, scanning: false);
     }
 
-    final output = BleStatus.fromJson(result);
+    final output = BleStatus.fromJson(Map<String, bool>.from(result));
     _isAdvertising = output.advertising;
     _isScanning = output.scanning;
     return output;

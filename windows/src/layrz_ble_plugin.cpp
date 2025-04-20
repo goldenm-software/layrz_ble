@@ -3,6 +3,8 @@ namespace layrz_ble {
   std::unique_ptr<flutter::MethodChannel<flutter::EncodableValue>> LayrzBlePlugin::checkCapabilitiesChannel = nullptr;
   std::unique_ptr<flutter::MethodChannel<flutter::EncodableValue>> LayrzBlePlugin::checkScanPermissionsChannel = nullptr;
   std::unique_ptr<flutter::MethodChannel<flutter::EncodableValue>> LayrzBlePlugin::checkAdvertisePermissionsChannel = nullptr;
+  std::unique_ptr<flutter::MethodChannel<flutter::EncodableValue>> LayrzBlePlugin::getStatusesChannel = nullptr;
+
   std::unique_ptr<flutter::MethodChannel<flutter::EncodableValue>> LayrzBlePlugin::startScanChannel = nullptr;
   std::unique_ptr<flutter::MethodChannel<flutter::EncodableValue>> LayrzBlePlugin::stopScanChannel = nullptr;
   std::unique_ptr<flutter::MethodChannel<flutter::EncodableValue>> LayrzBlePlugin::connectChannel = nullptr;
@@ -47,6 +49,15 @@ namespace layrz_ble {
       &flutter::StandardMethodCodec::GetInstance()
     );
     checkAdvertisePermissionsChannel->SetMethodCallHandler([plugin_pointer = plugin.get()](const auto &call, auto result) {
+      plugin_pointer->HandleMethodCall(call, std::move(result));
+    });
+
+    getStatusesChannel = std::make_unique<flutter::MethodChannel<flutter::EncodableValue>>(
+      registrar->messenger(),
+      "com.layrz.ble.getStatuses",
+      &flutter::StandardMethodCodec::GetInstance()
+    );
+    getStatusesChannel->SetMethodCallHandler([plugin_pointer = plugin.get()](const auto &call, auto result) {
       plugin_pointer->HandleMethodCall(call, std::move(result));
     });
 
@@ -149,51 +160,6 @@ namespace layrz_ble {
       plugin_pointer->HandleMethodCall(call, std::move(result));
     });
 
-    startAdvertiseChannel = std::make_unique<flutter::MethodChannel<flutter::EncodableValue>>(
-      registrar->messenger(),
-      "com.layrz.ble.startAdvertise",
-      &flutter::StandardMethodCodec::GetInstance()
-    );
-    startAdvertiseChannel->SetMethodCallHandler([plugin_pointer = plugin.get()](const auto &call, auto result) {
-      plugin_pointer->HandleMethodCall(call, std::move(result));
-    });
-
-    stopAdvertiseChannel = std::make_unique<flutter::MethodChannel<flutter::EncodableValue>>(
-      registrar->messenger(),
-      "com.layrz.ble.stopAdvertise",
-      &flutter::StandardMethodCodec::GetInstance()
-    );
-    stopAdvertiseChannel->SetMethodCallHandler([plugin_pointer = plugin.get()](const auto &call, auto result) {
-      plugin_pointer->HandleMethodCall(call, std::move(result));
-    });
-
-    respondWriteRequestChannel = std::make_unique<flutter::MethodChannel<flutter::EncodableValue>>(
-      registrar->messenger(),
-      "com.layrz.ble.respondWriteRequest",
-      &flutter::StandardMethodCodec::GetInstance()
-    );
-    respondWriteRequestChannel->SetMethodCallHandler([plugin_pointer = plugin.get()](const auto &call, auto result) {
-      plugin_pointer->HandleMethodCall(call, std::move(result));
-    });
-
-    respondReadRequestChannel = std::make_unique<flutter::MethodChannel<flutter::EncodableValue>>(
-      registrar->messenger(),
-      "com.layrz.ble.respondReadRequest",
-      &flutter::StandardMethodCodec::GetInstance()
-    );
-    respondReadRequestChannel->SetMethodCallHandler([plugin_pointer = plugin.get()](const auto &call, auto result) {
-      plugin_pointer->HandleMethodCall(call, std::move(result));
-    });
-
-    sendNotificationChannel = std::make_unique<flutter::MethodChannel<flutter::EncodableValue>>(
-      registrar->messenger(),
-      "com.layrz.ble.sendNotification",
-      &flutter::StandardMethodCodec::GetInstance()
-    );
-    sendNotificationChannel->SetMethodCallHandler([plugin_pointer = plugin.get()](const auto &call, auto result) {
-      plugin_pointer->HandleMethodCall(call, std::move(result));
-    });
-
     registrar->AddPlugin(std::move(plugin));
   } // RegisterWithRegistrar
 
@@ -228,6 +194,28 @@ namespace layrz_ble {
     }
     if (method.compare("checkAdvertisePermissions") == 0) {
       checkAdvertisePermissions(std::move(result));
+      return;
+    }
+    if (method.compare("getStatuses") == 0) {
+      flutter::EncodableMap response;
+      response[flutter::EncodableValue("advertising")] = flutter::EncodableValue(false);
+      if (btRadio != nullptr) {
+        bool btScannerOn = false;
+        if (btScanner != nullptr) {
+          Log("Bluetooth classic scanner current status: " + castBtScannerStatus(btScanner.Status()));
+          btScannerOn = btScanner.Status() == DeviceWatcherStatus::Started || btScanner.Status() == DeviceWatcherStatus::EnumerationCompleted;
+        }
+        
+        bool leScannerOn = false;
+        if (leScanner != nullptr) {
+          Log("Bluetooth LE scanner current status: " + castLeScannerStatus(leScanner.Status()));
+          leScannerOn = leScanner.Status() == BluetoothLEAdvertisementWatcherStatus::Started;
+        }
+        response[flutter::EncodableValue("scanning")] = flutter::EncodableValue(btScannerOn && leScannerOn);
+      } else {
+        response[flutter::EncodableValue("scanning")] = flutter::EncodableValue(false);
+      }
+      result->Success(response);
       return;
     }
 
@@ -270,28 +258,6 @@ namespace layrz_ble {
     }
     if (method.compare("stopNotify") == 0) {
       stopNotify(method_call, std::move(result));
-      return;
-    }
-
-    /* Methods for ADVERTISE */
-    if (method.compare("startAdvertise") == 0) {
-      startAdvertise(method_call, std::move(result));
-      return;
-    }
-    if (method.compare("stopAdvertise") == 0) {
-      stopAdvertise(method_call, std::move(result));
-      return;
-    }
-    if (method.compare("respondWriteRequest") == 0) {
-      respondWriteRequest(method_call, std::move(result));
-      return;
-    }
-    if (method.compare("respondReadRequest") == 0) {
-      respondReadRequest(method_call, std::move(result));
-      return;
-    }
-    if (method.compare("sendNotification") == 0) {
-      sendNotification(method_call, std::move(result));
       return;
     }
 
@@ -354,8 +320,7 @@ namespace layrz_ble {
     // Get macAddress from arguments
     auto arguments = std::get<flutter::EncodableMap>(*method_call.arguments());
     auto macAddressFind = arguments.find(flutter::EncodableValue("macAddress"));
-    if(macAddressFind != arguments.end())
-    {
+    if(macAddressFind != arguments.end()) {
       try {
         Log("Filtering by macAddress");
         auto macAddress = std::get<std::string>(macAddressFind->second);
@@ -369,31 +334,30 @@ namespace layrz_ble {
     }
 
     // Check if the radio is on
-    if(btRadio && btRadio.State() == RadioState::On)
-    {
+    if(btRadio && btRadio.State() == RadioState::On) {
       Log("Setting up the device watcher");
       setupWatcher();
       Log("Device watcher set up");
       // Start the scan
-      if(btScanner.Status() != DeviceWatcherStatus::Started)
-      {
+      if(btScanner.Status() != DeviceWatcherStatus::Started) {
         Log("Starting Bluetooth(Classic) watcher");
         btScanner.Start();
-      }
-      else
+      } else {
         Log("Bluetooth(Classic) watcher already started");
+      }
+      Log("Bluetooth(Classic) watcher status: " + castBtScannerStatus(btScanner.Status()));
+
       // Start the scan
-      if(leScanner.Status() != BluetoothLEAdvertisementWatcherStatus::Started)
-      {
+      if(leScanner.Status() != BluetoothLEAdvertisementWatcherStatus::Started) {
         Log("Starting Bluetooth LE watcher");
         leScanner.Start();
-      }
-      else
+      } else {
         Log("Bluetooth LE watcher already started");
+      }
+
+      Log("Bluetooth LE watcher status: " + castLeScannerStatus(leScanner.Status()));
       result->Success(true);
-    }
-    else
-    {
+    } else {
       Log("Bluetooth radio is off");
       result->Success(false);
     }
@@ -1406,7 +1370,52 @@ namespace layrz_ble {
     }
   } // onConnectionStatusChanged
 
+  /// @brief Convert the DeviceWatcherStatus to string
+  /// @param status 
+  /// @return std::string
+  std::string LayrzBlePlugin::castBtScannerStatus(DeviceWatcherStatus status) {
+    switch (status) {
+      case DeviceWatcherStatus::Created:
+        return "CREATED";
+      case DeviceWatcherStatus::Started:
+        return "STARTED";
+      case DeviceWatcherStatus::EnumerationCompleted:
+        return "ENUMERATION_COMPLETED";
+      case DeviceWatcherStatus::Stopping:
+        return "STOPPING";
+      case DeviceWatcherStatus::Stopped:
+        return "STOPPED";
+      case DeviceWatcherStatus::Aborted:
+        return "ABORTED";
+      default:
+        return "UNKNOWN";
+    }
+  } // castBtScannerStatus
+
+  /// @brief Convert the BluetoothLEAdvertisementWatcherStatus to string
+  /// @param status
+  /// @return std::string
+  std::string LayrzBlePlugin::castLeScannerStatus(BluetoothLEAdvertisementWatcherStatus status) {
+    switch (status) {
+      case BluetoothLEAdvertisementWatcherStatus::Created:
+        return "CREATED";
+      case BluetoothLEAdvertisementWatcherStatus::Started:
+        return "STARTED";
+      case BluetoothLEAdvertisementWatcherStatus::Stopping:
+        return "STOPPING";
+      case BluetoothLEAdvertisementWatcherStatus::Stopped:
+        return "STOPPED";
+      case BluetoothLEAdvertisementWatcherStatus::Aborted:
+        return "ABORTED";
+      default:
+        return "UNKNOWN";
+    }
+  } // castLeScannerStatus
+
+  /// @brief Convert the UUID to a standardized format
+  /// @param rawUuid
+  /// @return std::string
   std::string LayrzBlePlugin::standarizeServiceUuid(std::string rawUuid) {
     return rawUuid.substr(2,2) + rawUuid.substr(0,2);
-  }
+  } // standarizeServiceUuid
 } // namespace layrz_ble
