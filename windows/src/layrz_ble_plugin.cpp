@@ -635,10 +635,7 @@ namespace layrz_ble {
     
     if(eventsChannel != nullptr) {
       uiThreadHandler_.Post([this, response]() {
-        eventsChannel->InvokeMethod(
-          "onScan",
-          std::make_unique<flutter::EncodableValue>(response)
-        );
+        eventsChannel->InvokeMethod("onScan", std::make_unique<flutter::EncodableValue>(response));
       });
     }
   } // handleBleScanResult
@@ -651,8 +648,7 @@ namespace layrz_ble {
       const flutter::MethodCall<flutter::EncodableValue> &method_call,
       std::unique_ptr<flutter::MethodResult<flutter::EncodableValue> > result
   ) {
-    if (connectedDevice != nullptr) 
-    {
+    if (connectedDevice != nullptr) {
       Log("Already connected to a device");
       result->Success(flutter::EncodableValue(false));
       co_return;
@@ -680,10 +676,12 @@ namespace layrz_ble {
       leScanner = nullptr;
 
       if (eventsChannel != nullptr) {
-        eventsChannel->InvokeMethod(
-          "onEvent",
-          std::make_unique<flutter::EncodableValue>("SCAN_STOPPED")
-        );
+        uiThreadHandler_.Post([this]() {
+          Log("Stopping Bluetooth LE watcher");
+          // Notify the event channel that the scan has stopped
+
+          eventsChannel->InvokeMethod("onScanStopped", nullptr);
+        });
       }
     }
 
@@ -729,10 +727,16 @@ namespace layrz_ble {
 
     if (eventsChannel != nullptr) {
       uiThreadHandler_.Post([this]() {
-        eventsChannel->InvokeMethod(
-          "onEvent",
-          std::make_unique<flutter::EncodableValue>("CONNECTED")
-        ); 
+        flutter::EncodableMap payload = flutter::EncodableMap();
+        auto macAddress = connectedDevice->DeviceId();
+        payload[flutter::EncodableValue("macAddress")] = flutter::EncodableValue(macAddress);
+        auto deviceName = connectedDevice->Name();
+        if (deviceName != nullptr) {
+          payload[flutter::EncodableValue("name")] = flutter::EncodableValue(*deviceName);
+        } else {
+          payload[flutter::EncodableValue("name")] = flutter::EncodableValue("Unknown");
+        }
+        eventsChannel->InvokeMethod("onConnected", std::make_unique<flutter::EncodableValue>(payload)); 
       });
     }
     co_return;
@@ -746,8 +750,7 @@ namespace layrz_ble {
     const flutter::MethodCall<flutter::EncodableValue> &method_call,
     std::unique_ptr<flutter::MethodResult<flutter::EncodableValue> > result
   ) {
-    if (connectedDevice == nullptr) 
-    {
+    if (connectedDevice == nullptr) {
       Log("Not connected to a device");
       result->Success(flutter::EncodableValue(false));
       co_return;
@@ -761,16 +764,18 @@ namespace layrz_ble {
     }
 
     device->Close();
+    flutter::EncodableMap payload = flutter::EncodableMap();
+    auto macAddress = connectedDevice->DeviceId();
+    payload[flutter::EncodableValue("macAddress")] = flutter::EncodableValue(macAddress);
     connectedDevice = nullptr;
     servicesNotifying.clear();
     servicesAndCharacteristics.clear();
 
     result->Success(flutter::EncodableValue(true));
     if (eventsChannel != nullptr) {
-      eventsChannel->InvokeMethod(
-        "onEvent",
-        std::make_unique<flutter::EncodableValue>("DISCONNECTED")
-      ); 
+      uiThreadHandler_.Post([this, payload]() {
+        eventsChannel->InvokeMethod("onDisconnected", std::make_unique<flutter::EncodableValue>(payload)); 
+      });
     }
     co_return;
   } // disconnect
@@ -783,8 +788,7 @@ namespace layrz_ble {
     const flutter::MethodCall<flutter::EncodableValue> &method_call,
     std::unique_ptr<flutter::MethodResult<flutter::EncodableValue>> result
   ) {
-    if (connectedDevice == nullptr)
-    {
+    if (connectedDevice == nullptr) {
       Log("Not connected to a device");
       result->Success(flutter::EncodableValue());
       co_return;
@@ -1327,6 +1331,7 @@ namespace layrz_ble {
     Log("Data size: " + std::to_string(value.size()));
 
     flutter::EncodableMap response = {};
+    response[flutter::EncodableValue("macAddress")] = flutter::EncodableValue(connectedDevice->DeviceId());
     response[flutter::EncodableValue("serviceUuid")] = flutter::EncodableValue(serviceUuid);
     response[flutter::EncodableValue("characteristicUuid")] = flutter::EncodableValue(characteristicUuid);
     response[flutter::EncodableValue("value")] = flutter::EncodableValue(value);
@@ -1346,25 +1351,28 @@ namespace layrz_ble {
   /// @param args 
   void LayrzBlePlugin::onConnectionStatusChanged(BluetoothLEDevice device, IInspectable args) {
     auto status = device.ConnectionStatus();
+    flutter::EncodableMap payload = flutter::EncodableMap();
+    if (connectedDevice != nullptr) {
+      auto macAddress = connectedDevice->DeviceId();
+      payload[flutter::EncodableValue("macAddress")] = flutter::EncodableValue(macAddress);
+      payload[flutter::EncodableValue("name")] = flutter::EncodableValue(connectedDevice->Name() ? *connectedDevice->Name() : "Unknown");
+    } else {
+      payload[flutter::EncodableValue("macAddress")] = flutter::EncodableValue(HStringToString(device.DeviceId()));
+    }
+
     if (status == BluetoothConnectionStatus::Disconnected) {
       connectedDevice = nullptr;
       servicesNotifying.clear();
 
       if (eventsChannel != nullptr) {
-        uiThreadHandler_.Post([this]() {
-          eventsChannel->InvokeMethod(
-            "onEvent",
-            std::make_unique<flutter::EncodableValue>("DISCONNECTED")
-          );
+        uiThreadHandler_.Post([this, payload]() {
+          eventsChannel->InvokeMethod("onDisconnected", std::make_unique<flutter::EncodableValue>(payload));
         });
       }
     } else if (status == BluetoothConnectionStatus::Connected) {
       if (eventsChannel != nullptr) {
-        uiThreadHandler_.Post([this]() {
-          eventsChannel->InvokeMethod(
-            "onEvent",
-            std::make_unique<flutter::EncodableValue>("CONNECTED")
-          );
+        uiThreadHandler_.Post([this, payload]() {
+          eventsChannel->InvokeMethod("onConnected", std::make_unique<flutter::EncodableValue>(payload));
         });
       }
     }

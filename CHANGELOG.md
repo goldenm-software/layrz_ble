@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.3.0-beta.4
+
+- Some fixes on Windows implementations
+
 ## 1.3.0-beta.3
 
 - Downgraded sdk to preserve legacy formatting.

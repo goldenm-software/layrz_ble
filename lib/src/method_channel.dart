@@ -15,6 +15,7 @@ class LayrzBleNative extends LayrzBlePlatform {
 
   LayrzBleNative() {
     eventsChannel.setMethodCallHandler((call) async {
+      debugPrint('Method call: ${call.method} - ${call.arguments}');
       switch (call.method) {
         /* GATT Server (Advertising) */
         case 'onGattConnected':
