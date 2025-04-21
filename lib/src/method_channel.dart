@@ -15,7 +15,6 @@ class LayrzBleNative extends LayrzBlePlatform {
 
   LayrzBleNative() {
     eventsChannel.setMethodCallHandler((call) async {
-      debugPrint('Method call: ${call.method} - ${call.arguments}');
       switch (call.method) {
         /* GATT Server (Advertising) */
         case 'onGattConnected':
@@ -274,14 +273,8 @@ class LayrzBleNative extends LayrzBlePlatform {
   }
 
   @override
-  Future<List<BleService>?> discoverServices({
-    required String macAddress,
-    Duration timeout = const Duration(seconds: 30),
-  }) async {
-    final result = await discoverServicesChannel.invokeMethod<List>('discoverServices', {
-      'timeout': timeout.inSeconds,
-      'macAddress': macAddress,
-    });
+  Future<List<BleService>?> discoverServices({required String macAddress}) async {
+    final result = await discoverServicesChannel.invokeMethod<List>('discoverServices', {'macAddress': macAddress});
     if (result == null) {
       log('Error discovering services from native side');
       return null;
@@ -315,7 +308,6 @@ class LayrzBleNative extends LayrzBlePlatform {
     required String serviceUuid,
     required String characteristicUuid,
     required Uint8List payload,
-    Duration timeout = const Duration(seconds: 30),
     required bool withResponse,
   }) async {
     final result = await writeCharacteristicChannel.invokeMethod<bool>('writeCharacteristic', <String, dynamic>{
@@ -323,7 +315,6 @@ class LayrzBleNative extends LayrzBlePlatform {
       'serviceUuid': serviceUuid,
       'characteristicUuid': characteristicUuid,
       'payload': payload,
-      'timeout': timeout.inSeconds,
       'withResponse': withResponse,
     });
 
@@ -340,13 +331,11 @@ class LayrzBleNative extends LayrzBlePlatform {
     required String macAddress,
     required String serviceUuid,
     required String characteristicUuid,
-    Duration timeout = const Duration(seconds: 30),
   }) async {
     final result = await readCharacteristicChannel.invokeMethod<Uint8List>('readCharacteristic', <String, dynamic>{
       'macAddress': macAddress,
       'serviceUuid': serviceUuid,
       'characteristicUuid': characteristicUuid,
-      'timeout': timeout.inSeconds,
     });
 
     if (result == null) {

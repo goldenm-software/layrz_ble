@@ -45,11 +45,6 @@ import io.flutter.plugin.common.MethodChannel
 import io.flutter.plugin.common.MethodChannel.MethodCallHandler
 import io.flutter.plugin.common.MethodChannel.Result
 import io.flutter.plugin.common.PluginRegistry
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
 import java.util.UUID
 
 class LayrzBlePlugin : FlutterPlugin, MethodCallHandler, ActivityAware,
@@ -77,7 +72,7 @@ class LayrzBlePlugin : FlutterPlugin, MethodCallHandler, ActivityAware,
 	private lateinit var respondReadRequestChannel: MethodChannel
 	private lateinit var sendNotificationChannel: MethodChannel
 
-	private lateinit var context: android.content.Context
+	private lateinit var context: Context
 	private var bluetooth: BluetoothManager? = null
 
 	private var activity: Activity? = null
@@ -93,8 +88,6 @@ class LayrzBlePlugin : FlutterPlugin, MethodCallHandler, ActivityAware,
 	private var startNotifyResult: Result? = null
 	private var stopNotifyResult: Result? = null
 	private var startAdvertiseResult: Result? = null
-
-	private var coroutine: Job? = null
 
 	// Bluetooth device connection
 	private var filteredMacAddress: String? = null
@@ -221,8 +214,6 @@ class LayrzBlePlugin : FlutterPlugin, MethodCallHandler, ActivityAware,
 					Log.e(TAG, "Unknown state: $newState")
 				}
 			}
-			coroutine?.cancel()
-			coroutine = null
 		}
 
 		override fun onServicesDiscovered(gatt: BluetoothGatt?, status: Int) {
@@ -304,8 +295,6 @@ class LayrzBlePlugin : FlutterPlugin, MethodCallHandler, ActivityAware,
 				connectResult?.success(false)
 				connectResult = null
 			}
-			coroutine?.cancel()
-			coroutine = null
 		}
 
 		override fun onMtuChanged(gatt: BluetoothGatt?, mtu: Int, status: Int) {
@@ -321,7 +310,6 @@ class LayrzBlePlugin : FlutterPlugin, MethodCallHandler, ActivityAware,
 			}
 
 			setMtuResult = null
-			coroutine?.cancel()
 		}
 
 		override fun onCharacteristicWrite(
@@ -341,8 +329,6 @@ class LayrzBlePlugin : FlutterPlugin, MethodCallHandler, ActivityAware,
 				writeCharacteristicResult?.success(false)
 			}
 			writeCharacteristicResult = null
-			coroutine?.cancel()
-			coroutine = null
 		}
 
 		@Deprecated("Deprecated in Java")
@@ -363,8 +349,6 @@ class LayrzBlePlugin : FlutterPlugin, MethodCallHandler, ActivityAware,
 			}
 
 			readCharacteristicResult = null
-			coroutine?.cancel()
-			coroutine = null
 		}
 
 		@Deprecated("Deprecated in Java")
@@ -373,11 +357,6 @@ class LayrzBlePlugin : FlutterPlugin, MethodCallHandler, ActivityAware,
 			characteristic: BluetoothGattCharacteristic
 		) {
 			super.onCharacteristicChanged(gatt, characteristic)
-			Log.d(
-				TAG,
-				"onCharacteristicChanged ${characteristic.uuid} - ${characteristic.value.size}"
-			)
-
 			Handler(Looper.getMainLooper()).post {
 				eventsChannel.invokeMethod(
 					"onNotify",
@@ -923,7 +902,7 @@ class LayrzBlePlugin : FlutterPlugin, MethodCallHandler, ActivityAware,
 
 		if (bluetooth == null) {
 			Log.d(TAG, "Bluetooth is null, initializing")
-			bluetooth = context.getSystemService(android.content.Context.BLUETOOTH_SERVICE) as BluetoothManager
+			bluetooth = context.getSystemService(Context.BLUETOOTH_SERVICE) as BluetoothManager
 		}
 
 		val adapter = bluetooth!!.adapter
@@ -1191,7 +1170,7 @@ class LayrzBlePlugin : FlutterPlugin, MethodCallHandler, ActivityAware,
 	/* Checks if the device supports BLE */
 	private fun checkCapabilities(result: Result) {
 		bluetooth =
-			context.getSystemService(android.content.Context.BLUETOOTH_SERVICE) as BluetoothManager
+			context.getSystemService(Context.BLUETOOTH_SERVICE) as BluetoothManager
 
 		val packageManager = context.packageManager
 		val hasBle = packageManager.hasSystemFeature(PackageManager.FEATURE_BLUETOOTH_LE)
@@ -1292,7 +1271,7 @@ class LayrzBlePlugin : FlutterPlugin, MethodCallHandler, ActivityAware,
 
 		if (bluetooth == null) {
 			Log.d(TAG, "Bluetooth is null, initializing")
-			bluetooth = context.getSystemService(android.content.Context.BLUETOOTH_SERVICE) as BluetoothManager
+			bluetooth = context.getSystemService(Context.BLUETOOTH_SERVICE) as BluetoothManager
 		}
 
 		val adapter = bluetooth!!.adapter
@@ -1332,9 +1311,7 @@ class LayrzBlePlugin : FlutterPlugin, MethodCallHandler, ActivityAware,
 
 		if (bluetooth == null) {
 			Log.d(TAG, "Bluetooth is null, initializing")
-			bluetooth = context.getSystemService(
-				android.content.Context.BLUETOOTH_SERVICE
-			) as BluetoothManager
+			bluetooth = context.getSystemService(Context.BLUETOOTH_SERVICE) as BluetoothManager
 		}
 
 		val adapter = bluetooth!!.adapter
@@ -1489,11 +1466,6 @@ class LayrzBlePlugin : FlutterPlugin, MethodCallHandler, ActivityAware,
 		setMtuResult = result
 		lastOperation = LastOperation.SET_MTU
 		gatt!!.requestMtu(newMtu)
-
-		spawnTimeout(
-			operation = LastOperation.SET_MTU,
-			timeoutSeconds = 10,
-		)
 	}
 
 	/* Sends a payload to a BLE device */
@@ -1545,11 +1517,6 @@ class LayrzBlePlugin : FlutterPlugin, MethodCallHandler, ActivityAware,
 			return
 		}
 
-		var timeoutSeconds: Int = call.argument<Int>("timeout") ?: 30
-		if (timeoutSeconds < 1) {
-			timeoutSeconds = 1
-		}
-
 		val writeType = call.argument<Boolean>("withResponse") ?: true
 
 		Log.d(TAG, "Service: $serviceUuid")
@@ -1595,12 +1562,6 @@ class LayrzBlePlugin : FlutterPlugin, MethodCallHandler, ActivityAware,
 			characteristic.characteristic.writeType = type
 			gatt.writeCharacteristic(characteristic.characteristic)
 		}
-
-		// Timeout
-		spawnTimeout(
-			operation = LastOperation.WRITE_CHARACTERISTIC,
-			timeoutSeconds = timeoutSeconds,
-		)
 	}
 
 	/* Reads a payload from a BLE device */
@@ -1644,11 +1605,6 @@ class LayrzBlePlugin : FlutterPlugin, MethodCallHandler, ActivityAware,
 			return
 		}
 
-		var timeoutSeconds: Int = call.argument<Int>("timeout") ?: 30
-		if (timeoutSeconds < 1) {
-			timeoutSeconds = 1
-		}
-
 		val service = gatt.getService(UUID.fromString(serviceUuid))
 		if (service == null) {
 			Log.d(TAG, "Service not found")
@@ -1676,12 +1632,6 @@ class LayrzBlePlugin : FlutterPlugin, MethodCallHandler, ActivityAware,
 		readCharacteristicResult = result
 		lastOperation = LastOperation.READ_CHARACTERISTIC
 		gatt.readCharacteristic(characteristic)
-
-		// Timeout
-		spawnTimeout(
-			operation = LastOperation.READ_CHARACTERISTIC,
-			timeoutSeconds = timeoutSeconds,
-		)
 	}
 
 	/* Subscribe to a characteristic */
@@ -1884,46 +1834,6 @@ class LayrzBlePlugin : FlutterPlugin, MethodCallHandler, ActivityAware,
 		stopNotifyResult = null
 	}
 
-	private fun spawnTimeout(operation: LastOperation, timeoutSeconds: Int) {
-		coroutine = CoroutineScope(Dispatchers.IO + Job()).launch {
-			delay(timeoutSeconds * 1000L)
-			if (lastOperation == operation) {
-				Log.d(TAG, "$operation timed out")
-				when (operation) {
-					LastOperation.WRITE_CHARACTERISTIC -> {
-						writeCharacteristicResult?.success(false)
-						writeCharacteristicResult = null
-					}
-
-					LastOperation.READ_CHARACTERISTIC -> {
-						readCharacteristicResult?.success(null)
-						readCharacteristicResult = null
-					}
-
-					LastOperation.SCAN -> {
-						bluetooth!!.adapter.bluetoothLeScanner.stopScan(scanCallback)
-						isScanning = false
-						Handler(Looper.getMainLooper()).post {
-							eventsChannel.invokeMethod("onScanStopped", "SCAN_STOPPED")
-						}
-						startScanResult?.success(false)
-						startScanResult = null
-					}
-
-					LastOperation.CONNECT -> {
-						connectResult?.success(false)
-						connectResult = null
-					}
-
-					LastOperation.SET_MTU -> {
-						setMtuResult?.success(null)
-						setMtuResult = null
-					}
-				}
-			}
-		}
-	}
-
 	override fun onActivityResult(
 		requestCode: Int,
 		resultCode: Int,
@@ -1959,14 +1869,8 @@ class LayrzBlePlugin : FlutterPlugin, MethodCallHandler, ActivityAware,
 				startScanResult?.success(false)
 				startScanResult = null
 			}
-
-			coroutine?.cancel()
-			coroutine = null
 			return true
 		}
-
-		coroutine?.cancel()
-		coroutine = null
 		return false
 	}
 

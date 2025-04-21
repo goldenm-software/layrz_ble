@@ -63,7 +63,8 @@ abstract class LayrzBlePlatform extends PlatformInterface {
     /// [servicesUuids] is a list of service UUIDs to filter the services to be discovered.
     /// This property is only working on Web, other platforms will be ignored.
     List<String>? servicesUuids,
-  }) => throw UnimplementedError('startScan() has not been implemented.');
+  }) =>
+      throw UnimplementedError('startScan() has not been implemented.');
 
   /// [stopScan] stops scanning for BLE devices.
   ///
@@ -92,7 +93,8 @@ abstract class LayrzBlePlatform extends PlatformInterface {
   Future<bool> connect({
     /// [macAddress] is the MAC address or UUID of the device to connect.
     required String macAddress,
-  }) => throw UnimplementedError('connect() has not been implemented.');
+  }) =>
+      throw UnimplementedError('connect() has not been implemented.');
 
   /// [disconnect] disconnects from any connected BLE device.
   Future<bool> disconnect({
@@ -100,16 +102,15 @@ abstract class LayrzBlePlatform extends PlatformInterface {
     ///
     /// In case of that value is `null`, the disconnect will be from all connected devices.
     String? macAddress,
-  }) => throw UnimplementedError('disconnect() has not been implemented.');
+  }) =>
+      throw UnimplementedError('disconnect() has not been implemented.');
 
   /// [discoverServices] discovers the services of a BLE device.
   Future<List<BleService>?> discoverServices({
     /// [macAddress] is the MAC address of the device.
     required String macAddress,
-
-    /// [timeout] is the duration to wait for the services to be discovered.
-    Duration timeout = const Duration(seconds: 30),
-  }) => throw UnimplementedError('discoverServices() has not been implemented.');
+  }) =>
+      throw UnimplementedError('discoverServices() has not been implemented.');
 
   /// [writeCharacteristic] sends a payload to a BLE characteristic.
   ///
@@ -127,12 +128,10 @@ abstract class LayrzBlePlatform extends PlatformInterface {
     /// [payload] is the data to send to the characteristic.
     required Uint8List payload,
 
-    /// [timeout] is the duration to wait for the characteristic to be written.
-    Duration timeout = const Duration(seconds: 30),
-
     /// [withResponse] is a flag to indicate if the write should be with response or not.
     required bool withResponse,
-  }) => throw UnimplementedError('writeCharacteristic() has not been implemented.');
+  }) =>
+      throw UnimplementedError('writeCharacteristic() has not been implemented.');
 
   /// [readCharacteristic] reads the value of a BLE characteristic.
   /// The return value is the raw bytes of the characteristic.
@@ -147,10 +146,8 @@ abstract class LayrzBlePlatform extends PlatformInterface {
 
     /// [characteristicUuid] is the UUID of the characteristic.
     required String characteristicUuid,
-
-    /// [timeout] is the duration to wait for the characteristic to be read.
-    Duration timeout = const Duration(seconds: 30),
-  }) => throw UnimplementedError('readCharacteristic() has not been implemented.');
+  }) =>
+      throw UnimplementedError('readCharacteristic() has not been implemented.');
 
   /// [startNotify] starts listening to notifications from a BLE characteristic.
   /// To stop listening, use [stopNotify] method and to get the notifications, use [onNotify] stream.
@@ -163,7 +160,8 @@ abstract class LayrzBlePlatform extends PlatformInterface {
 
     /// [characteristicUuid] is the UUID of the characteristic.
     required String characteristicUuid,
-  }) => throw UnimplementedError('startNotify() has not been implemented.');
+  }) =>
+      throw UnimplementedError('startNotify() has not been implemented.');
 
   /// [stopNotify] stops listening to notifications from a BLE characteristic.
   Future<bool> stopNotify({
@@ -175,7 +173,8 @@ abstract class LayrzBlePlatform extends PlatformInterface {
 
     /// [characteristicUuid] is the UUID of the characteristic.
     required String characteristicUuid,
-  }) => throw UnimplementedError('stopNotify() has not been implemented.');
+  }) =>
+      throw UnimplementedError('stopNotify() has not been implemented.');
 
   /// [startAdvertise] starts advertising a BLE device.
   ///
@@ -203,7 +202,8 @@ abstract class LayrzBlePlatform extends PlatformInterface {
     /// [name] will be the name of the device on advertisement.
     /// If you don't provide a name, the device will not be advertised with a name.
     String? name,
-  }) => throw UnimplementedError('startAdvertise() has not been implemented.');
+  }) =>
+      throw UnimplementedError('startAdvertise() has not been implemented.');
 
   /// [stopAdvertise] stops advertising a BLE device.
   Future<bool> stopAdvertise() => throw UnimplementedError('stopAdvertise() has not been implemented.');
@@ -229,7 +229,8 @@ abstract class LayrzBlePlatform extends PlatformInterface {
 
     /// [data] is the data to be sent in response to the request.
     Uint8List? data,
-  }) => throw UnimplementedError('respondReadRequest() has not been implemented.');
+  }) =>
+      throw UnimplementedError('respondReadRequest() has not been implemented.');
 
   /// [respondWriteRequest] responds to a GATT request.
   /// This method is designed to be a response from an event from [onGattUpdate] stream. Whhen the
@@ -252,7 +253,8 @@ abstract class LayrzBlePlatform extends PlatformInterface {
 
     /// [success] is a flag to indicate if the request was successful.
     required bool success,
-  }) => throw UnimplementedError('respondWriteRequest() has not been implemented.');
+  }) =>
+      throw UnimplementedError('respondWriteRequest() has not been implemented.');
 
   /// [sendNotification] sends a notification to a BLE characteristic.
   /// You can use this method to send information to an specific characteristic, but requires a GATT server
@@ -269,5 +271,6 @@ abstract class LayrzBlePlatform extends PlatformInterface {
 
     /// [requestConfirmation] is a flag to indicate if the notification should be sent with confirmation.
     bool requestConfirmation = false,
-  }) => throw UnimplementedError('sendNotification() has not been implemented.');
+  }) =>
+      throw UnimplementedError('sendNotification() has not been implemented.');
 }

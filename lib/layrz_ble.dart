@@ -105,11 +105,8 @@ class LayrzBle {
   Future<List<BleService>?> discoverServices({
     /// [macAddress] is the MAC address of the device.
     required String macAddress,
-
-    /// [timeout] is the duration to wait for the services to be discovered.
-    Duration timeout = const Duration(seconds: 30),
   }) =>
-      LayrzBlePlatform.instance.discoverServices(macAddress: macAddress, timeout: timeout);
+      LayrzBlePlatform.instance.discoverServices(macAddress: macAddress);
 
   /// [writeCharacteristic] sends a payload to a BLE characteristic.
   ///
@@ -117,10 +114,17 @@ class LayrzBle {
   Future<bool> writeCharacteristic({
     /// [macAddress] is the MAC address of the device.
     required String macAddress,
+
+    /// [serviceUuid] is the UUID of the service.
     required String serviceUuid,
+
+    /// [characteristicUuid] is the UUID of the characteristic.
     required String characteristicUuid,
+
+    /// [payload] is the data to send to the characteristic.
     required Uint8List payload,
-    Duration timeout = const Duration(seconds: 30),
+
+    /// [withResponse] is a flag to indicate if the write should be with response or not.
     required bool withResponse,
   }) =>
       LayrzBlePlatform.instance.writeCharacteristic(
@@ -128,7 +132,6 @@ class LayrzBle {
         serviceUuid: serviceUuid,
         characteristicUuid: characteristicUuid,
         payload: payload,
-        timeout: timeout,
         withResponse: withResponse,
       );
 
