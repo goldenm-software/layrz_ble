@@ -1,4 +1,4 @@
-import 'dart:async';
+/* import 'dart:async';
 
 import 'package:flutter/foundation.dart';
 import 'package:layrz_ble/src/platform_interface.dart';
@@ -87,3 +87,4 @@ class LayrzBlePluginStub extends LayrzBlePlatform {
     required String characteristicUuid,
   }) => throw UnimplementedError('stopNotify() has not been implemented.');
 }
+ */

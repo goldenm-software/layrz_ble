@@ -1,4 +1,4 @@
-// ignore_for_file: use_build_context_synchronously
+/* // ignore_for_file: use_build_context_synchronously
 
 import 'dart:typed_data';
 
@@ -653,3 +653,4 @@ class _HomePageState extends State<HomePage> {
     return result.join('\n');
   }
 }
+ */
