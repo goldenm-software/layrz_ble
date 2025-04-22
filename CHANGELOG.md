@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.3.0-beta.6
+
+- Fixed issues with scan of Bluetooth Core 5.0 spec on Android.
+
 ## 1.3.0-beta.5
 
 - Removed timeout

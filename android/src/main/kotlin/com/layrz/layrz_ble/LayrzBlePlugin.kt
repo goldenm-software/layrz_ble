@@ -109,18 +109,15 @@ class LayrzBlePlugin : FlutterPlugin, MethodCallHandler, ActivityAware,
 	private val scanCallback = object : ScanCallback() {
 		override fun onScanResult(callbackType: Int, result: ScanResult?) {
 			super.onScanResult(callbackType, result)
-			val scanRecord = result?.scanRecord
-			if (result == null) {
-				Log.d(TAG, "No result")
-				return
-			}
+			val scanRecord = result?.scanRecord ?: return
 
 			val device = result.device
 			val macAddress = device.address.uppercase()
 
 			if (filteredMacAddress != null && macAddress != filteredMacAddress) return
 
-			val name = scanRecord?.deviceName ?: device.name ?: "Unknown"
+			val name = scanRecord.deviceName ?: device.name ?: "Unknown"
+
 			val rssi = result.rssi
 			val rec = result.scanRecord
 
@@ -152,7 +149,7 @@ class LayrzBlePlugin : FlutterPlugin, MethodCallHandler, ActivityAware,
 				)
 			}
 
-			var txPower: Int? = scanRecord?.txPowerLevel
+			var txPower: Int? = scanRecord.txPowerLevel
 			if (txPower == Int.MIN_VALUE) {
 				txPower = null
 			}
@@ -597,7 +594,6 @@ class LayrzBlePlugin : FlutterPlugin, MethodCallHandler, ActivityAware,
 		Log.d(TAG, "onReattachedToActivityForConfigChanges")
 		activity = binding.activity
 	}
-
 
 	companion object {
 		private const val TAG = "LayrzBlePlugin/Android"
@@ -1285,7 +1281,10 @@ class LayrzBlePlugin : FlutterPlugin, MethodCallHandler, ActivityAware,
 		Log.d(TAG, "Bluetooth is enabled, starting scan")
 		isScanning = true
 		lastOperation = LastOperation.SCAN
-		bluetooth!!.adapter.bluetoothLeScanner.startScan(scanCallback)
+
+		val settings = composeSettings(adapter = adapter)
+
+		bluetooth!!.adapter.bluetoothLeScanner.startScan(null, settings.build(), scanCallback)
 		result.success(true)
 		startScanResult = null
 		Handler(Looper.getMainLooper()).post {
@@ -1848,10 +1847,9 @@ class LayrzBlePlugin : FlutterPlugin, MethodCallHandler, ActivityAware,
 						Manifest.permission.BLUETOOTH_SCAN
 					) != PackageManager.PERMISSION_GRANTED
 				) {
-					val settings = ScanSettings.Builder()
-						.setScanMode(ScanSettings.SCAN_MODE_LOW_LATENCY)
-						.build()
-					bluetooth!!.adapter.bluetoothLeScanner.startScan(null, settings, scanCallback)
+					val adapter = bluetooth!!.adapter
+					val settings = composeSettings(adapter = adapter)
+					adapter.bluetoothLeScanner.startScan(null, settings.build(), scanCallback)
 					isScanning = true
 					lastOperation = LastOperation.SCAN
 					startScanResult?.success(true)
@@ -1915,5 +1913,19 @@ class LayrzBlePlugin : FlutterPlugin, MethodCallHandler, ActivityAware,
 		if (isScanning) {
 			bluetooth.adapter.bluetoothLeScanner.stopScan(scanCallback)
 		}
+	}
+
+	private fun composeSettings(adapter: BluetoothAdapter): ScanSettings.Builder {
+		val settings = ScanSettings.Builder()
+		settings.setScanMode(ScanSettings.SCAN_MODE_LOW_LATENCY)
+		if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && adapter.isLeExtendedAdvertisingSupported) {
+			Log.d(TAG, "Bluetooth 5.0 supported, using extended advertising")
+			settings.setLegacy(false)
+			settings.setPhy(ScanSettings.PHY_LE_ALL_SUPPORTED)
+		} else {
+			Log.d(TAG, "Bluetooth 5.0 not supported, using legacy advertising")
+		}
+
+		return settings
 	}
 }
