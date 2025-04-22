@@ -48,7 +48,7 @@ import io.flutter.plugin.common.PluginRegistry
 import java.util.UUID
 
 class LayrzBlePlugin : FlutterPlugin, MethodCallHandler, ActivityAware,
-											 PluginRegistry.ActivityResultListener, BroadcastReceiver() {
+											 PluginRegistry.ActivityResultListener, BluetoothGattCallback() {
 	private lateinit var checkCapabilitiesChannel: MethodChannel
 	private lateinit var checkScanPermissionsChannel: MethodChannel
 	private lateinit var checkAdvertisePermissionsChannel: MethodChannel
@@ -71,6 +71,8 @@ class LayrzBlePlugin : FlutterPlugin, MethodCallHandler, ActivityAware,
 	private lateinit var respondWriteRequestChannel: MethodChannel
 	private lateinit var respondReadRequestChannel: MethodChannel
 	private lateinit var sendNotificationChannel: MethodChannel
+	
+	private var mainThread: Handler? = null
 
 	private lateinit var context: Context
 	private var bluetooth: BluetoothManager? = null
@@ -154,7 +156,7 @@ class LayrzBlePlugin : FlutterPlugin, MethodCallHandler, ActivityAware,
 				txPower = null
 			}
 
-			Handler(Looper.getMainLooper()).post {
+			mainThread?.post {
 				eventsChannel.invokeMethod(
 					"onScan",
 					mapOf(
@@ -169,202 +171,6 @@ class LayrzBlePlugin : FlutterPlugin, MethodCallHandler, ActivityAware,
 			}
 
 			devices[macAddress] = device
-		}
-	}
-
-	private val gattCallback = object : BluetoothGattCallback() {
-		override fun onConnectionStateChange(
-			gatt: BluetoothGatt?,
-			status: Int,
-			newState: Int
-		) {
-			super.onConnectionStateChange(gatt, status, newState)
-			Log.d(TAG, "onConnectionStateChange: $newState - $status")
-			if (gatt == null) return
-			val addr = gatt.device.address.uppercase()
-
-			when (newState) {
-				BluetoothProfile.STATE_CONNECTED -> {
-					connectedDevices[addr] = gatt
-					servicesAndCharacteristics.remove(addr)
-					Log.i(TAG, "Connected to ${gatt.device.address}, discovering services")
-					gatt.discoverServices()
-				}
-
-				BluetoothProfile.STATE_DISCONNECTED -> {
-					Log.w(TAG, "${gatt.device.address} disconnected")
-					gatt.disconnect()
-					connectedDevices.remove(addr)
-					servicesAndCharacteristics.remove(addr)
-					Handler(Looper.getMainLooper()).post {
-						eventsChannel.invokeMethod(
-							"onDisconnected",
-							mutableMapOf(
-								"macAddress" to addr,
-								"name" to gatt.device.name
-							)
-						)
-					}
-				}
-
-				else -> {
-					Log.e(TAG, "Unknown state: $newState")
-				}
-			}
-		}
-
-		override fun onServicesDiscovered(gatt: BluetoothGatt?, status: Int) {
-			super.onServicesDiscovered(gatt, status)
-			if (lastOperation != LastOperation.CONNECT) return
-			if (gatt == null) return
-			val addr = gatt.device.address.uppercase()
-
-			if (status == BluetoothGatt.GATT_SUCCESS) {
-				for (service in gatt.services) {
-					val characteristics = mutableListOf<BleCharacteristic>()
-					for (characteristic in service.characteristics) {
-						val properties = characteristic.properties
-						val propertyList: MutableList<String> = mutableListOf()
-
-						if (properties and BluetoothGattCharacteristic.PROPERTY_READ != 0) {
-							propertyList.add("READ")
-						}
-						if (properties and BluetoothGattCharacteristic.PROPERTY_WRITE != 0) {
-							propertyList.add("WRITE")
-						}
-						if (properties and BluetoothGattCharacteristic.PROPERTY_WRITE_NO_RESPONSE != 0) {
-							propertyList.add("WRITE_WO_RSP")
-						}
-						if (properties and BluetoothGattCharacteristic.PROPERTY_NOTIFY != 0) {
-							propertyList.add("NOTIFY")
-						}
-						if (properties and BluetoothGattCharacteristic.PROPERTY_INDICATE != 0) {
-							propertyList.add("INDICATE")
-						}
-						if (properties and BluetoothGattCharacteristic.PROPERTY_SIGNED_WRITE != 0) {
-							propertyList.add("AUTH_SIGN_WRITES")
-						}
-						if (properties and BluetoothGattCharacteristic.PROPERTY_BROADCAST != 0) {
-							propertyList.add("BROADCAST")
-						}
-						if (properties and BluetoothGattCharacteristic.PROPERTY_EXTENDED_PROPS != 0) {
-							propertyList.add("EXTENDED_PROP")
-						}
-
-						characteristics.add(
-							BleCharacteristic(
-								characteristic = characteristic,
-								uuid = standarizeUuid(characteristic.uuid),
-								properties = propertyList
-							)
-						)
-					}
-
-					if (servicesAndCharacteristics[addr] == null) {
-						servicesAndCharacteristics[addr] = mutableListOf()
-					}
-
-					Log.d(TAG, "Service discovered: ${standarizeUuid(service.uuid)} for $addr")
-					servicesAndCharacteristics[addr] = servicesAndCharacteristics[addr]!!.plus(
-						BleService(
-							service = service,
-							uuid = standarizeUuid(service.uuid),
-							characteristics = characteristics
-						)
-					)
-				}
-
-				Log.d(TAG, "Services discovered")
-				connectResult?.success(true)
-				connectResult = null
-
-				Handler(Looper.getMainLooper()).post {
-					eventsChannel.invokeMethod(
-						"onConnected",
-						mutableMapOf(
-							"macAddress" to addr,
-							"name" to gatt.device.name
-						)
-					)
-				}
-			} else {
-				Log.d(TAG, "Discover services failed")
-				connectResult?.success(false)
-				connectResult = null
-			}
-		}
-
-		override fun onMtuChanged(gatt: BluetoothGatt?, mtu: Int, status: Int) {
-			super.onMtuChanged(gatt, mtu, status)
-
-			if (lastOperation != LastOperation.SET_MTU) return
-
-			if (status == BluetoothGatt.GATT_SUCCESS) {
-				setMtuResult?.success(mtu)
-			} else {
-				Log.d(TAG, "MTU change failed")
-				setMtuResult?.success(null)
-			}
-
-			setMtuResult = null
-		}
-
-		override fun onCharacteristicWrite(
-			gatt: BluetoothGatt?,
-			characteristic: BluetoothGattCharacteristic?,
-			status: Int
-		) {
-			super.onCharacteristicWrite(gatt, characteristic, status)
-
-			if (lastOperation != LastOperation.WRITE_CHARACTERISTIC) return
-
-			if (status == BluetoothGatt.GATT_SUCCESS) {
-				Log.d(TAG, "Write successful")
-				writeCharacteristicResult?.success(true)
-			} else {
-				Log.d(TAG, "Characteristic write failed")
-				writeCharacteristicResult?.success(false)
-			}
-			writeCharacteristicResult = null
-		}
-
-		@Deprecated("Deprecated in Java")
-		override fun onCharacteristicRead(
-			gatt: BluetoothGatt,
-			characteristic: BluetoothGattCharacteristic,
-			status: Int
-		) {
-			super.onCharacteristicRead(gatt, characteristic, status)
-
-			if (lastOperation != LastOperation.READ_CHARACTERISTIC) return
-
-			if (status == BluetoothGatt.GATT_SUCCESS) {
-				readCharacteristicResult?.success(characteristic.value)
-			} else {
-				Log.d(TAG, "Characteristic read failed")
-				readCharacteristicResult?.success(null)
-			}
-
-			readCharacteristicResult = null
-		}
-
-		@Deprecated("Deprecated in Java")
-		override fun onCharacteristicChanged(
-			gatt: BluetoothGatt,
-			characteristic: BluetoothGattCharacteristic
-		) {
-			super.onCharacteristicChanged(gatt, characteristic)
-			Handler(Looper.getMainLooper()).post {
-				eventsChannel.invokeMethod(
-					"onNotify",
-					mapOf(
-						"macAddress" to gatt.device.address,
-						"serviceUuid" to characteristic.service.uuid.toString().uppercase().trim(),
-						"characteristicUuid" to characteristic.uuid.toString().uppercase().trim(),
-						"value" to characteristic.value
-					)
-				)
-			}
 		}
 	}
 
@@ -387,7 +193,7 @@ class LayrzBlePlugin : FlutterPlugin, MethodCallHandler, ActivityAware,
 						gattDevices[device.address] = device
 					}
 
-					Handler(Looper.getMainLooper()).post {
+					mainThread?.post {
 						eventsChannel.invokeMethod(
 							"onGattConnected",
 							mapOf(
@@ -403,7 +209,7 @@ class LayrzBlePlugin : FlutterPlugin, MethodCallHandler, ActivityAware,
 						gattDevices.remove(device.address)
 					}
 
-					Handler(Looper.getMainLooper()).post {
+					mainThread?.post {
 						eventsChannel.invokeMethod("onGattDisconnected", device.address)
 					}
 				}
@@ -435,7 +241,7 @@ class LayrzBlePlugin : FlutterPlugin, MethodCallHandler, ActivityAware,
 
 			if (device == null || characteristic == null) return
 
-			Handler(Looper.getMainLooper()).post {
+			mainThread?.post {
 				eventsChannel.invokeMethod(
 					"onGattWriteRequest",
 					mapOf(
@@ -462,7 +268,7 @@ class LayrzBlePlugin : FlutterPlugin, MethodCallHandler, ActivityAware,
 
 			if (device == null || characteristic == null) return
 
-			Handler(Looper.getMainLooper()).post {
+			mainThread?.post {
 				eventsChannel.invokeMethod(
 					"onGattReadRequest",
 					mapOf(
@@ -481,7 +287,7 @@ class LayrzBlePlugin : FlutterPlugin, MethodCallHandler, ActivityAware,
 
 			if (device == null) return
 
-			Handler(Looper.getMainLooper()).post {
+			mainThread?.post {
 				eventsChannel.invokeMethod(
 					"onGattMtuChanged",
 					mapOf(
@@ -570,6 +376,20 @@ class LayrzBlePlugin : FlutterPlugin, MethodCallHandler, ActivityAware,
 						descriptor.characteristic,
 						false
 					)
+				}
+			}
+		}
+	}
+
+	private var broadcastCallback = object : BroadcastReceiver() {
+		override fun onReceive(context: Context?, intent: Intent?) {
+			Log.d(TAG, "onReceive $intent")
+			if (intent?.action == BluetoothAdapter.ACTION_STATE_CHANGED) {
+				when (intent.getIntExtra(BluetoothAdapter.EXTRA_STATE, BluetoothAdapter.ERROR)) {
+					BluetoothAdapter.STATE_OFF -> notifyOff()
+					BluetoothAdapter.STATE_TURNING_OFF -> forceStopAll()
+					BluetoothAdapter.STATE_ON -> notifyOn()
+					else -> Log.i(TAG, "Bluetooth state changed")
 				}
 			}
 		}
@@ -670,9 +490,11 @@ class LayrzBlePlugin : FlutterPlugin, MethodCallHandler, ActivityAware,
 		context = flutterPluginBinding.applicationContext
 
 		context.registerReceiver(
-			this,
+			broadcastCallback,
 			android.content.IntentFilter(BluetoothAdapter.ACTION_STATE_CHANGED)
 		)
+
+		mainThread = Handler(Looper.getMainLooper())
 	}
 
 	override fun onDetachedFromEngine(binding: FlutterPlugin.FlutterPluginBinding) {
@@ -699,7 +521,9 @@ class LayrzBlePlugin : FlutterPlugin, MethodCallHandler, ActivityAware,
 		respondReadRequestChannel.setMethodCallHandler(null)
 		sendNotificationChannel.setMethodCallHandler(null)
 
-		context.unregisterReceiver(this)
+		context.unregisterReceiver(broadcastCallback)
+		
+		mainThread = null
 	}
 
 	override fun onMethodCall(call: MethodCall, result: Result) {
@@ -1287,7 +1111,7 @@ class LayrzBlePlugin : FlutterPlugin, MethodCallHandler, ActivityAware,
 		bluetooth!!.adapter.bluetoothLeScanner.startScan(null, settings.build(), scanCallback)
 		result.success(true)
 		startScanResult = null
-		Handler(Looper.getMainLooper()).post {
+		mainThread?.post {
 			eventsChannel.invokeMethod("onScanStarted", null)
 		}
 	}
@@ -1319,7 +1143,7 @@ class LayrzBlePlugin : FlutterPlugin, MethodCallHandler, ActivityAware,
 		result.success(true)
 		stopScanResult = null
 		filteredMacAddress = null
-		Handler(Looper.getMainLooper()).post {
+		mainThread?.post {
 			eventsChannel.invokeMethod("onScanStopped", null)
 		}
 	}
@@ -1361,7 +1185,7 @@ class LayrzBlePlugin : FlutterPlugin, MethodCallHandler, ActivityAware,
 		val device = devices[macAddress]!!
 		connectResult = result
 		lastOperation = LastOperation.CONNECT
-		val gatt = device.connectGatt(context, false, gattCallback)
+		val gatt = device.connectGatt(context, false, this)
 		gatt!!.connect()
 	}
 
@@ -1854,7 +1678,7 @@ class LayrzBlePlugin : FlutterPlugin, MethodCallHandler, ActivityAware,
 					lastOperation = LastOperation.SCAN
 					startScanResult?.success(true)
 					startScanResult = null
-					Handler(Looper.getMainLooper()).post {
+					mainThread?.post {
 						eventsChannel.invokeMethod("onScanStarted", null)
 					}
 				} else {
@@ -1872,28 +1696,16 @@ class LayrzBlePlugin : FlutterPlugin, MethodCallHandler, ActivityAware,
 		return false
 	}
 
-	override fun onReceive(context: Context?, intent: Intent?) {
-		Log.d(TAG, "onReceive $intent")
-		if (intent?.action == BluetoothAdapter.ACTION_STATE_CHANGED) {
-			when (intent.getIntExtra(BluetoothAdapter.EXTRA_STATE, BluetoothAdapter.ERROR)) {
-				BluetoothAdapter.STATE_OFF -> notifyOff()
-				BluetoothAdapter.STATE_TURNING_OFF -> forceStopAll()
-				BluetoothAdapter.STATE_ON -> notifyOn()
-				else -> Log.i(TAG, "Bluetooth state changed")
-			}
-		}
-	}
-
 	private fun notifyOff() {
 		Log.i(TAG, "Bluetooth is turned off")
-		Handler(Looper.getMainLooper()).post {
+		mainThread?.post {
 			eventsChannel.invokeMethod("onBluetoothOff", "BLUETOOTH_OFF")
 		}
 	}
 
 	private fun notifyOn() {
 		Log.i(TAG, "Bluetooth is turned on")
-		Handler(Looper.getMainLooper()).post {
+		mainThread?.post {
 			eventsChannel.invokeMethod("onBluetoothOn", "BLUETOOTH_ON")
 		}
 	}
@@ -1917,7 +1729,7 @@ class LayrzBlePlugin : FlutterPlugin, MethodCallHandler, ActivityAware,
 
 	private fun composeSettings(adapter: BluetoothAdapter): ScanSettings.Builder {
 		val settings = ScanSettings.Builder()
-		settings.setScanMode(ScanSettings.SCAN_MODE_LOW_LATENCY)
+		// settings.setScanMode(ScanSettings.SCAN_MODE_LOW_LATENCY)
 		if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && adapter.isLeExtendedAdvertisingSupported) {
 			Log.d(TAG, "Bluetooth 5.0 supported, using extended advertising")
 			settings.setLegacy(false)
@@ -1927,5 +1739,196 @@ class LayrzBlePlugin : FlutterPlugin, MethodCallHandler, ActivityAware,
 		}
 
 		return settings
+	}
+
+	override fun onConnectionStateChange(
+		gatt: BluetoothGatt?,
+		status: Int,
+		newState: Int
+	) {
+		super.onConnectionStateChange(gatt, status, newState)
+		Log.d(TAG, "onConnectionStateChange: $newState - $status")
+		if (gatt == null) return
+		val addr = gatt.device.address.uppercase()
+
+		when (newState) {
+			BluetoothProfile.STATE_CONNECTED -> {
+				connectedDevices[addr] = gatt
+				servicesAndCharacteristics.remove(addr)
+				Log.i(TAG, "Connected to ${gatt.device.address}, discovering services")
+				gatt.discoverServices()
+			}
+
+			BluetoothProfile.STATE_DISCONNECTED -> {
+				Log.w(TAG, "${gatt.device.address} disconnected")
+				gatt.disconnect()
+				connectedDevices.remove(addr)
+				servicesAndCharacteristics.remove(addr)
+				mainThread?.post {
+					eventsChannel.invokeMethod(
+						"onDisconnected",
+						mutableMapOf(
+							"macAddress" to addr,
+							"name" to gatt.device.name
+						)
+					)
+				}
+			}
+
+			else -> {
+				Log.e(TAG, "Unknown state: $newState")
+			}
+		}
+	}
+
+	override fun onServicesDiscovered(gatt: BluetoothGatt?, status: Int) {
+		super.onServicesDiscovered(gatt, status)
+		if (lastOperation != LastOperation.CONNECT) return
+		if (gatt == null) return
+		val addr = gatt.device.address.uppercase()
+
+		if (status == BluetoothGatt.GATT_SUCCESS) {
+			for (service in gatt.services) {
+				val characteristics = mutableListOf<BleCharacteristic>()
+				for (characteristic in service.characteristics) {
+					val properties = characteristic.properties
+					val propertyList: MutableList<String> = mutableListOf()
+
+					if (properties and BluetoothGattCharacteristic.PROPERTY_READ != 0) {
+						propertyList.add("READ")
+					}
+					if (properties and BluetoothGattCharacteristic.PROPERTY_WRITE != 0) {
+						propertyList.add("WRITE")
+					}
+					if (properties and BluetoothGattCharacteristic.PROPERTY_WRITE_NO_RESPONSE != 0) {
+						propertyList.add("WRITE_WO_RSP")
+					}
+					if (properties and BluetoothGattCharacteristic.PROPERTY_NOTIFY != 0) {
+						propertyList.add("NOTIFY")
+					}
+					if (properties and BluetoothGattCharacteristic.PROPERTY_INDICATE != 0) {
+						propertyList.add("INDICATE")
+					}
+					if (properties and BluetoothGattCharacteristic.PROPERTY_SIGNED_WRITE != 0) {
+						propertyList.add("AUTH_SIGN_WRITES")
+					}
+					if (properties and BluetoothGattCharacteristic.PROPERTY_BROADCAST != 0) {
+						propertyList.add("BROADCAST")
+					}
+					if (properties and BluetoothGattCharacteristic.PROPERTY_EXTENDED_PROPS != 0) {
+						propertyList.add("EXTENDED_PROP")
+					}
+
+					characteristics.add(
+						BleCharacteristic(
+							characteristic = characteristic,
+							uuid = standarizeUuid(characteristic.uuid),
+							properties = propertyList
+						)
+					)
+				}
+
+				if (servicesAndCharacteristics[addr] == null) {
+					servicesAndCharacteristics[addr] = mutableListOf()
+				}
+
+				Log.d(TAG, "Service discovered: ${standarizeUuid(service.uuid)} for $addr")
+				servicesAndCharacteristics[addr] = servicesAndCharacteristics[addr]!!.plus(
+					BleService(
+						service = service,
+						uuid = standarizeUuid(service.uuid),
+						characteristics = characteristics
+					)
+				)
+			}
+
+			Log.d(TAG, "Services discovered")
+			connectResult?.success(true)
+			connectResult = null
+
+			mainThread?.post {
+				eventsChannel.invokeMethod(
+					"onConnected",
+					mutableMapOf(
+						"macAddress" to addr,
+						"name" to gatt.device.name
+					)
+				)
+			}
+		} else {
+			Log.d(TAG, "Discover services failed")
+			connectResult?.success(false)
+			connectResult = null
+		}
+	}
+
+	override fun onMtuChanged(gatt: BluetoothGatt?, mtu: Int, status: Int) {
+		super.onMtuChanged(gatt, mtu, status)
+
+		if (lastOperation != LastOperation.SET_MTU) return
+
+		if (status == BluetoothGatt.GATT_SUCCESS) {
+			setMtuResult?.success(mtu)
+		} else {
+			Log.d(TAG, "MTU change failed")
+			setMtuResult?.success(null)
+		}
+
+		setMtuResult = null
+	}
+
+	override fun onCharacteristicWrite(
+		gatt: BluetoothGatt?,
+		characteristic: BluetoothGattCharacteristic?,
+		status: Int
+	) {
+		if (status == BluetoothGatt.GATT_SUCCESS) {
+			Log.d(TAG, "Write successful")
+			writeCharacteristicResult?.success(true)
+		} else {
+			Log.d(TAG, "Characteristic write failed")
+			writeCharacteristicResult?.success(false)
+		}
+		writeCharacteristicResult = null
+
+		super.onCharacteristicWrite(gatt, characteristic, status)
+	}
+
+	@Deprecated("Deprecated in Java")
+	override fun onCharacteristicRead(
+		gatt: BluetoothGatt,
+		characteristic: BluetoothGattCharacteristic,
+		status: Int
+	) {
+		super.onCharacteristicRead(gatt, characteristic, status)
+
+		if (lastOperation != LastOperation.READ_CHARACTERISTIC) return
+
+		if (status == BluetoothGatt.GATT_SUCCESS) {
+			readCharacteristicResult?.success(characteristic.value)
+		} else {
+			Log.d(TAG, "Characteristic read failed")
+			readCharacteristicResult?.success(null)
+		}
+
+		readCharacteristicResult = null
+	}
+
+	@Deprecated("Deprecated in Java")
+	override fun onCharacteristicChanged(
+		gatt: BluetoothGatt,
+		characteristic: BluetoothGattCharacteristic
+	) {
+		super.onCharacteristicChanged(gatt, characteristic)
+		Log.d(TAG, "onCharacteristicChanged - ${characteristic.uuid} - ${characteristic.value?.contentToString()}")
+		eventsChannel.invokeMethod(
+			"onNotify",
+			mapOf(
+				"macAddress" to gatt.device.address.uppercase(),
+				"serviceUuid" to standarizeUuid(characteristic.service.uuid),
+				"characteristicUuid" to standarizeUuid(characteristic.uuid),
+				"value" to characteristic.value
+			)
+		)
 	}
 }
