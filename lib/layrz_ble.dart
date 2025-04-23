@@ -58,7 +58,9 @@ class LayrzBle {
   Stream<BleGattEvent> get onGattUpdate => throw UnimplementedError('onGattUpdate has not been implemented.');
 
   /// [getStatuses] is a getter function that returns the status of the BLE components statuses.
-  Future<BleStatus> getStatuses() => throw UnimplementedError('getStatuses has not been implemented.');
+  Future<BleStatus> getStatuses() {
+    return _platform.getStatuses();
+  }
 
   /// [checkCapabilities] checks if the device supports BLE.
   Future<bool> checkCapabilities() {

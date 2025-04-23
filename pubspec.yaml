@@ -53,17 +53,17 @@ flutter:
       android:
         package: com.layrz.layrz_ble
         pluginClass: LayrzBlePlugin
-      ios:
-        pluginClass: LayrzBlePlugin
-        sharedDarwinSource: true
-      macos:
-        pluginClass: LayrzBlePlugin
-        sharedDarwinSource: true
-      windows:
-        pluginClass: LayrzBlePluginCApi
-      web:
-        pluginClass: LayrzBlePluginWeb
-        fileName: platforms/web.dart
-      linux:
-        dartPluginClass: LayrzBlePluginLinux
-        fileName: platforms/linux.dart
+      # ios:
+      #   pluginClass: LayrzBlePlugin
+      #   sharedDarwinSource: true
+      # macos:
+      #   pluginClass: LayrzBlePlugin
+      #   sharedDarwinSource: true
+      # windows:
+      #   pluginClass: LayrzBlePluginCApi
+      # web:
+      #   pluginClass: LayrzBlePluginWeb
+      #   fileName: platforms/web.dart
+      # linux:
+      #   dartPluginClass: LayrzBlePluginLinux
+      #   fileName: platforms/linux.dart

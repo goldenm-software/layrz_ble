@@ -436,7 +436,7 @@ protocol LayrzBlePlatformChannel {
   func stopScan(macAddress: String?, completion: @escaping (Result<Bool, Error>) -> Void)
   func connect(macAddress: String, completion: @escaping (Result<Bool, Error>) -> Void)
   func disconnect(macAddress: String?, completion: @escaping (Result<Bool, Error>) -> Void)
-  func setMtu(macAddress: String, mtu: Int64, completion: @escaping (Result<Int64?, Error>) -> Void)
+  func setMtu(macAddress: String, newMtu: Int64, completion: @escaping (Result<Int64?, Error>) -> Void)
   func discoverServices(macAddress: String, completion: @escaping (Result<[BtService], Error>) -> Void)
   func readCharacteristic(macAddress: String, serviceUuid: String, characteristicUuid: String, completion: @escaping (Result<FlutterStandardTypedData, Error>) -> Void)
   func writeCharacteristic(macAddress: String, serviceUuid: String, characteristicUuid: String, payload: FlutterStandardTypedData, withResponse: Bool, completion: @escaping (Result<Bool, Error>) -> Void)
@@ -584,8 +584,8 @@ class LayrzBlePlatformChannelSetup {
       setMtuChannel.setMessageHandler { message, reply in
         let args = message as! [Any?]
         let macAddressArg = args[0] as! String
-        let mtuArg = args[1] as! Int64
-        api.setMtu(macAddress: macAddressArg, mtu: mtuArg) { result in
+        let newMtuArg = args[1] as! Int64
+        api.setMtu(macAddress: macAddressArg, newMtu: newMtuArg) { result in
           switch result {
           case .success(let res):
             reply(wrapResult(res))

@@ -685,14 +685,14 @@ class LayrzBlePlatformChannel {
     }
   }
 
-  Future<int?> setMtu({required String macAddress, required int mtu}) async {
+  Future<int?> setMtu({required String macAddress, required int newMtu}) async {
     final String pigeonVar_channelName = 'dev.flutter.pigeon.layrz_ble.LayrzBlePlatformChannel.setMtu$pigeonVar_messageChannelSuffix';
     final BasicMessageChannel<Object?> pigeonVar_channel = BasicMessageChannel<Object?>(
       pigeonVar_channelName,
       pigeonChannelCodec,
       binaryMessenger: pigeonVar_binaryMessenger,
     );
-    final Future<Object?> pigeonVar_sendFuture = pigeonVar_channel.send(<Object?>[macAddress, mtu]);
+    final Future<Object?> pigeonVar_sendFuture = pigeonVar_channel.send(<Object?>[macAddress, newMtu]);
     final List<Object?>? pigeonVar_replyList =
         await pigeonVar_sendFuture as List<Object?>?;
     if (pigeonVar_replyList == null) {

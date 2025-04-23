@@ -402,7 +402,7 @@ interface LayrzBlePlatformChannel {
   fun stopScan(macAddress: String?, callback: (Result<Boolean>) -> Unit)
   fun connect(macAddress: String, callback: (Result<Boolean>) -> Unit)
   fun disconnect(macAddress: String?, callback: (Result<Boolean>) -> Unit)
-  fun setMtu(macAddress: String, mtu: Long, callback: (Result<Long?>) -> Unit)
+  fun setMtu(macAddress: String, newMtu: Long, callback: (Result<Long?>) -> Unit)
   fun discoverServices(macAddress: String, callback: (Result<List<BtService>>) -> Unit)
   fun readCharacteristic(macAddress: String, serviceUuid: String, characteristicUuid: String, callback: (Result<ByteArray>) -> Unit)
   fun writeCharacteristic(macAddress: String, serviceUuid: String, characteristicUuid: String, payload: ByteArray, withResponse: Boolean, callback: (Result<Boolean>) -> Unit)
@@ -577,8 +577,8 @@ interface LayrzBlePlatformChannel {
           channel.setMessageHandler { message, reply ->
             val args = message as List<Any?>
             val macAddressArg = args[0] as String
-            val mtuArg = args[1] as Long
-            api.setMtu(macAddressArg, mtuArg) { result: Result<Long?> ->
+            val newMtuArg = args[1] as Long
+            api.setMtu(macAddressArg, newMtuArg) { result: Result<Long?> ->
               val error = result.exceptionOrNull()
               if (error != null) {
                 reply.reply(LayrzBlePigeonUtils.wrapError(error))

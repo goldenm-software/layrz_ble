@@ -6,7 +6,7 @@ import 'package:pigeon/pigeon.dart';
     dartOut: 'lib/src/layrz_ble_pigeon/layrz_ble.g.dart',
     dartOptions: DartOptions(),
     kotlinOut: 'android/src/main/kotlin/com/layrz/layrz_ble/LayrzBle.g.kt',
-    swiftOut: 'darwin/Classes/LayrzBle.g.swift',
+    swiftOut: 'darwin/layrz_ble/Sources/layrz_ble/LayrzBle.g.swift',
     kotlinOptions: KotlinOptions(package: 'com.layrz.layrz_ble'),
     swiftOptions: SwiftOptions(),
     cppOptions: CppOptions(namespace: 'layrz_ble'),
@@ -44,7 +44,7 @@ abstract class LayrzBlePlatformChannel {
   bool disconnect({String? macAddress});
 
   @async
-  int? setMtu({required String macAddress, required int mtu});
+  int? setMtu({required String macAddress, required int newMtu});
 
   @async
   List<BtService> discoverServices({required String macAddress});

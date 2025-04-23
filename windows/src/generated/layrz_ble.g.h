@@ -322,7 +322,7 @@ class LayrzBlePlatformChannel {
     std::function<void(ErrorOr<bool> reply)> result) = 0;
   virtual void SetMtu(
     const std::string& mac_address,
-    int64_t mtu,
+    int64_t new_mtu,
     std::function<void(ErrorOr<std::optional<int64_t>> reply)> result) = 0;
   virtual void DiscoverServices(
     const std::string& mac_address,

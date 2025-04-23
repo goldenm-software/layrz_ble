@@ -63,7 +63,7 @@ class LayrzBlePigeonChannel extends LayrzBlePlatform {
 
   @override
   Future<int?> setMtu({required String macAddress, required int newMtu}) =>
-      _channel.setMtu(macAddress: macAddress, mtu: newMtu);
+      _channel.setMtu(macAddress: macAddress, newMtu: newMtu);
 
   @override
   Future<List<BleService>> discoverServices({required String macAddress}) async {

@@ -741,13 +741,13 @@ void LayrzBlePlatformChannel::SetUp(
             return;
           }
           const auto& mac_address_arg = std::get<std::string>(encodable_mac_address_arg);
-          const auto& encodable_mtu_arg = args.at(1);
-          if (encodable_mtu_arg.IsNull()) {
-            reply(WrapError("mtu_arg unexpectedly null."));
+          const auto& encodable_new_mtu_arg = args.at(1);
+          if (encodable_new_mtu_arg.IsNull()) {
+            reply(WrapError("new_mtu_arg unexpectedly null."));
             return;
           }
-          const int64_t mtu_arg = encodable_mtu_arg.LongValue();
-          api->SetMtu(mac_address_arg, mtu_arg, [reply](ErrorOr<std::optional<int64_t>>&& output) {
+          const int64_t new_mtu_arg = encodable_new_mtu_arg.LongValue();
+          api->SetMtu(mac_address_arg, new_mtu_arg, [reply](ErrorOr<std::optional<int64_t>>&& output) {
             if (output.has_error()) {
               reply(WrapError(output.error()));
               return;
