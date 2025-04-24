@@ -53,12 +53,12 @@ flutter:
       android:
         package: com.layrz.layrz_ble
         pluginClass: LayrzBlePlugin
+      windows:
+        pluginClass: LayrzBlePluginCApi
       # ios:
       #   pluginClass: LayrzBlePlugin
       #   sharedDarwinSource: true
       # macos:
       #   pluginClass: LayrzBlePlugin
       #   sharedDarwinSource: true
-      # windows:
-      #   pluginClass: LayrzBlePluginCApi
 
