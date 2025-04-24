@@ -3,12 +3,12 @@ import 'package:pigeon/pigeon.dart';
 @ConfigurePigeon(
   PigeonOptions(
     dartPackageName: 'layrz_ble',
-    dartOut: 'lib/src/layrz_ble_pigeon/layrz_ble.g.dart',
     dartOptions: DartOptions(),
-    kotlinOut: 'android/src/main/kotlin/com/layrz/layrz_ble/LayrzBle.g.kt',
-    swiftOut: 'darwin/layrz_ble/Sources/layrz_ble/LayrzBle.g.swift',
+    dartOut: 'lib/src/layrz_ble_pigeon/layrz_ble.g.dart',
     kotlinOptions: KotlinOptions(package: 'com.layrz.layrz_ble'),
+    kotlinOut: 'android/src/main/kotlin/com/layrz/layrz_ble/LayrzBle.g.kt',
     swiftOptions: SwiftOptions(),
+    swiftOut: 'darwin/layrz_ble/Sources/layrz_ble/LayrzBle.g.swift',
     cppOptions: CppOptions(namespace: 'layrz_ble'),
     cppHeaderOut: 'windows/src/generated/layrz_ble.g.h',
     cppSourceOut: 'windows/src/generated/layrz_ble.g.cpp',
