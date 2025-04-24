@@ -280,6 +280,112 @@ class BtCharacteristicNotification {
 };
 
 
+// Generated class from Pigeon that represents data sent in messages.
+class BtGattReadRequest {
+ public:
+  // Constructs an object setting all fields.
+  explicit BtGattReadRequest(
+    const std::string& mac_address,
+    int64_t request_id,
+    int64_t offset,
+    const std::string& service_uuid,
+    const std::string& characteristic_uuid);
+
+  const std::string& mac_address() const;
+  void set_mac_address(std::string_view value_arg);
+
+  int64_t request_id() const;
+  void set_request_id(int64_t value_arg);
+
+  int64_t offset() const;
+  void set_offset(int64_t value_arg);
+
+  const std::string& service_uuid() const;
+  void set_service_uuid(std::string_view value_arg);
+
+  const std::string& characteristic_uuid() const;
+  void set_characteristic_uuid(std::string_view value_arg);
+
+ private:
+  static BtGattReadRequest FromEncodableList(const flutter::EncodableList& list);
+  flutter::EncodableList ToEncodableList() const;
+  friend class LayrzBlePlatformChannel;
+  friend class LayrzBleCallbackChannel;
+  friend class PigeonInternalCodecSerializer;
+  std::string mac_address_;
+  int64_t request_id_;
+  int64_t offset_;
+  std::string service_uuid_;
+  std::string characteristic_uuid_;
+};
+
+
+// Generated class from Pigeon that represents data sent in messages.
+class BtGattWriteRequest {
+ public:
+  // Constructs an object setting all non-nullable fields.
+  explicit BtGattWriteRequest(
+    const std::string& mac_address,
+    int64_t request_id,
+    int64_t offset,
+    const std::string& service_uuid,
+    const std::string& characteristic_uuid,
+    bool prepared_write,
+    bool response_needed);
+
+  // Constructs an object setting all fields.
+  explicit BtGattWriteRequest(
+    const std::string& mac_address,
+    int64_t request_id,
+    int64_t offset,
+    const std::string& service_uuid,
+    const std::string& characteristic_uuid,
+    const std::vector<uint8_t>* data,
+    bool prepared_write,
+    bool response_needed);
+
+  const std::string& mac_address() const;
+  void set_mac_address(std::string_view value_arg);
+
+  int64_t request_id() const;
+  void set_request_id(int64_t value_arg);
+
+  int64_t offset() const;
+  void set_offset(int64_t value_arg);
+
+  const std::string& service_uuid() const;
+  void set_service_uuid(std::string_view value_arg);
+
+  const std::string& characteristic_uuid() const;
+  void set_characteristic_uuid(std::string_view value_arg);
+
+  const std::vector<uint8_t>* data() const;
+  void set_data(const std::vector<uint8_t>* value_arg);
+  void set_data(const std::vector<uint8_t>& value_arg);
+
+  bool prepared_write() const;
+  void set_prepared_write(bool value_arg);
+
+  bool response_needed() const;
+  void set_response_needed(bool value_arg);
+
+ private:
+  static BtGattWriteRequest FromEncodableList(const flutter::EncodableList& list);
+  flutter::EncodableList ToEncodableList() const;
+  friend class LayrzBlePlatformChannel;
+  friend class LayrzBleCallbackChannel;
+  friend class PigeonInternalCodecSerializer;
+  std::string mac_address_;
+  int64_t request_id_;
+  int64_t offset_;
+  std::string service_uuid_;
+  std::string characteristic_uuid_;
+  std::optional<std::vector<uint8_t>> data_;
+  bool prepared_write_;
+  bool response_needed_;
+};
+
+
 class PigeonInternalCodecSerializer : public flutter::StandardCodecSerializer {
  public:
   PigeonInternalCodecSerializer();
@@ -349,6 +455,33 @@ class LayrzBlePlatformChannel {
     const std::string& service_uuid,
     const std::string& characteristic_uuid,
     std::function<void(ErrorOr<bool> reply)> result) = 0;
+  virtual void StartAdvertise(
+    const flutter::EncodableList& manufacturer_data,
+    const flutter::EncodableList& service_data,
+    bool can_connect,
+    const std::string* name,
+    const flutter::EncodableList& services_specs,
+    bool allow_bluetooth5,
+    std::function<void(ErrorOr<bool> reply)> result) = 0;
+  virtual void StopAdvertise(std::function<void(ErrorOr<bool> reply)> result) = 0;
+  virtual void RespondReadRequest(
+    int64_t request_id,
+    const std::string& mac_address,
+    int64_t offset,
+    const std::vector<uint8_t>* data,
+    std::function<void(ErrorOr<bool> reply)> result) = 0;
+  virtual void RespondWriteRequest(
+    int64_t request_id,
+    const std::string& mac_address,
+    int64_t offset,
+    bool success,
+    std::function<void(ErrorOr<bool> reply)> result) = 0;
+  virtual void SendNotification(
+    const std::string& service_uuid,
+    const std::string& characteristic_uuid,
+    const std::vector<uint8_t>& payload,
+    bool request_confirmation,
+    std::function<void(ErrorOr<bool> reply)> result) = 0;
 
   // The codec used by LayrzBlePlatformChannel.
   static const flutter::StandardMessageCodec& GetCodec();
@@ -399,6 +532,33 @@ class LayrzBleCallbackChannel {
     std::function<void(const FlutterError&)>&& on_error);
   void OnCharacteristicUpdate(
     const BtCharacteristicNotification& notification,
+    std::function<void(void)>&& on_success,
+    std::function<void(const FlutterError&)>&& on_error);
+  void OnAdvertiseStarted(
+    std::function<void(void)>&& on_success,
+    std::function<void(const FlutterError&)>&& on_error);
+  void OnAdvertiseStopped(
+    std::function<void(void)>&& on_success,
+    std::function<void(const FlutterError&)>&& on_error);
+  void OnGattConnected(
+    const BtDevice& device,
+    std::function<void(void)>&& on_success,
+    std::function<void(const FlutterError&)>&& on_error);
+  void OnGattDisconnected(
+    const BtDevice& device,
+    std::function<void(void)>&& on_success,
+    std::function<void(const FlutterError&)>&& on_error);
+  void OnGattReadRequest(
+    const BtGattReadRequest& request,
+    std::function<void(void)>&& on_success,
+    std::function<void(const FlutterError&)>&& on_error);
+  void OnGattWriteRequest(
+    const BtGattWriteRequest& request,
+    std::function<void(void)>&& on_success,
+    std::function<void(const FlutterError&)>&& on_error);
+  void OnGattMtuChanged(
+    const std::string& mac_address,
+    int64_t new_mtu,
     std::function<void(void)>&& on_success,
     std::function<void(const FlutterError&)>&& on_error);
  private:

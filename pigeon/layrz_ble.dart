@@ -78,6 +78,43 @@ abstract class LayrzBlePlatformChannel {
     required String serviceUuid,
     required String characteristicUuid,
   });
+
+  @async
+  bool startAdvertise({
+    List<BtManufacturerData> manufacturerData = const [],
+    List<BtServiceData> serviceData = const [],
+    bool canConnect = false,
+    String? name,
+    List<BtService> servicesSpecs = const [],
+    bool allowBluetooth5 = true,
+  });
+
+  @async
+  bool stopAdvertise();
+
+  @async
+  bool respondReadRequest({
+    required int requestId,
+    required String macAddress,
+    required int offset,
+    Uint8List? data,
+  });
+
+  @async
+  bool respondWriteRequest({
+    required int requestId,
+    required String macAddress,
+    required int offset,
+    required bool success,
+  });
+
+  @async
+  bool sendNotification({
+    required String serviceUuid,
+    required String characteristicUuid,
+    required Uint8List payload,
+    bool requestConfirmation = false,
+  });
 }
 
 // Flutter API from Native to Flutter
@@ -95,6 +132,14 @@ abstract class LayrzBleCallbackChannel {
   void onDisconnected(BtDevice device);
 
   void onCharacteristicUpdate(BtCharacteristicNotification notification);
+
+  void onAdvertiseStarted();
+  void onAdvertiseStopped();
+  void onGattConnected(BtDevice device);
+  void onGattDisconnected(BtDevice device);
+  void onGattReadRequest(BtGattReadRequest request);
+  void onGattWriteRequest(BtGattWriteRequest request);
+  void onGattMtuChanged(String macAddress, int newMtu);
 }
 
 class BtStatus {
@@ -176,5 +221,43 @@ class BtCharacteristicNotification {
     required this.serviceUuid,
     required this.characteristicUuid,
     required this.value,
+  });
+}
+
+class BtGattReadRequest {
+  final String macAddress;
+  final int requestId;
+  final int offset;
+  final String serviceUuid;
+  final String characteristicUuid;
+
+  const BtGattReadRequest({
+    required this.macAddress,
+    required this.requestId,
+    required this.offset,
+    required this.serviceUuid,
+    required this.characteristicUuid,
+  });
+}
+
+class BtGattWriteRequest {
+  final String macAddress;
+  final int requestId;
+  final int offset;
+  final String serviceUuid;
+  final String characteristicUuid;
+  final Uint8List? data;
+  final bool preparedWrite;
+  final bool responseNeeded;
+
+  const BtGattWriteRequest({
+    required this.macAddress,
+    required this.requestId,
+    required this.offset,
+    required this.serviceUuid,
+    required this.characteristicUuid,
+    this.data,
+    this.preparedWrite = false,
+    this.responseNeeded = false,
   });
 }

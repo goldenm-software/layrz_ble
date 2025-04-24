@@ -10,7 +10,17 @@ import android.bluetooth.BluetoothGatt
 import android.bluetooth.BluetoothGattCallback
 import android.bluetooth.BluetoothGattCharacteristic
 import android.bluetooth.BluetoothGattDescriptor
+import android.bluetooth.BluetoothGattServer
+import android.bluetooth.BluetoothGattServerCallback
+import android.bluetooth.BluetoothGattService
 import android.bluetooth.BluetoothManager
+import android.bluetooth.BluetoothProfile
+import android.bluetooth.le.AdvertiseCallback
+import android.bluetooth.le.AdvertiseData
+import android.bluetooth.le.AdvertiseSettings
+import android.bluetooth.le.AdvertisingSet
+import android.bluetooth.le.AdvertisingSetCallback
+import android.bluetooth.le.AdvertisingSetParameters
 import android.bluetooth.le.ScanCallback
 import android.bluetooth.le.ScanResult
 import android.bluetooth.le.ScanSettings
@@ -23,6 +33,7 @@ import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Handler
 import android.os.Looper
+import android.os.ParcelUuid
 import androidx.core.app.ActivityCompat
 import androidx.core.util.keyIterator
 import io.flutter.Log
@@ -41,22 +52,28 @@ class LayrzBlePlugin : LayrzBlePlatformChannel, FlutterPlugin, ActivityAware, Pl
 	private var activity: Activity? = null
 
 	private var isScanning = false
-	private var isAdverising = false
 
 	private val devices: MutableMap<String, BluetoothDevice> = mutableMapOf()
 	private var connectedDevices: MutableMap<String, BluetoothGatt> = mutableMapOf()
 	private var macFilter: String? = null
 
+	private var gattDevices: MutableMap<String, BluetoothDevice> = mutableMapOf()
+	private var gattServices: MutableList<BluetoothGattService> = mutableListOf()
+	private var gattServer: BluetoothGattServer? = null
+	private var originalName: String? = null
+	private var advertiseCallback: AdvertiseCallback? = null
+	private var advertiseSetCallback: AdvertisingSetCallback? = null
+
 	private var connectCallback: ((Result<Boolean>) -> Unit)? = null
 	private var mtuCallback: ((Result<Long?>) -> Unit)? = null
 	private var readCallback: ((Result<ByteArray>) -> Unit)? = null
 	private var writeCallback: ((Result<Boolean>) -> Unit)? = null
+	private var startADvertiseCallback: ((Result<Boolean>) -> Unit)? = null
 
 	private var servicesAndCharacteristics: MutableMap<String, List<BleService>> = mutableMapOf()
 
 	companion object {
 		private const val TAG = "LayrzBlePlugin/Android"
-		private const val REQUEST_ENABLE_BT = 20040831
 		val CCD_CHARACTERISTIC: UUID = UUID.fromString("00002902-0000-1000-8000-00805f9b34fb")
 	}
 
@@ -85,7 +102,7 @@ class LayrzBlePlugin : LayrzBlePlatformChannel, FlutterPlugin, ActivityAware, Pl
 	}
 
 	override fun getStatuses(callback: (Result<BtStatus>) -> Unit) {
-		callback(Result.success(BtStatus(advertising = isAdverising, scanning = isScanning)))
+		callback(Result.success(BtStatus(advertising = gattServer != null, scanning = isScanning)))
 	}
 
 	override fun checkCapabilities(callback: (Result<Boolean>) -> Unit) {
@@ -574,6 +591,405 @@ class LayrzBlePlugin : LayrzBlePlatformChannel, FlutterPlugin, ActivityAware, Pl
 		return
 	}
 
+	override fun startAdvertise(
+		manufacturerData: List<BtManufacturerData>,
+		serviceData: List<BtServiceData>,
+		canConnect: Boolean,
+		name: String?,
+		servicesSpecs: List<BtService>,
+		allowBluetooth5: Boolean,
+		callback: (Result<Boolean>) -> Unit
+	) {
+		if (!validateAdvertisePerm()) {
+			Log.d(TAG, "Permissions not granted")
+			callback(Result.success(false))
+			return
+		}
+
+		initalizeBluetoothIfRequired()
+
+		val adapter = bluetooth?.adapter ?: run {
+			Log.d(TAG, "Bluetooth not supported")
+			callback(Result.success(false))
+			return
+		}
+
+		if (!adapter.isEnabled) {
+			Log.d(TAG, "Bluetooth is not enabled")
+			callback(Result.success(false))
+			return
+		}
+
+		if (gattServer != null) {
+			Log.d(TAG, "Already advertising")
+			callback(Result.success(true))
+			return
+		}
+
+		val advertiser = adapter.bluetoothLeAdvertiser ?: run {
+			Log.d(TAG, "Bluetooth LE Advertiser not supported")
+			callback(Result.success(false))
+			return
+		}
+
+		for (service in gattServices) {
+			gattServer?.removeService(service)
+		}
+		gattServices.clear()
+		for (device in gattDevices.values) {
+			gattServer?.cancelConnection(device)
+		}
+		gattDevices.clear()
+
+		for (rawService in servicesSpecs) {
+			val service = BluetoothGattService(
+				UUID.fromString(rawService.uuid),
+				BluetoothGattService.SERVICE_TYPE_PRIMARY
+			)
+
+			for (rawCharacteristic in rawService.characteristics) {
+				val rawProperties = rawCharacteristic.properties
+				var properties = 0
+				var permissions = 0
+				if (rawProperties.contains("BROADCAST")) {
+					properties = properties or BluetoothGattCharacteristic.PROPERTY_BROADCAST
+					permissions = permissions or BluetoothGattCharacteristic.PERMISSION_WRITE
+				}
+				if (rawProperties.contains("READ")) {
+					properties = properties or BluetoothGattCharacteristic.PROPERTY_READ
+					permissions = permissions or BluetoothGattCharacteristic.PERMISSION_READ
+				}
+				if (rawProperties.contains("WRITE")) {
+					properties = properties or BluetoothGattCharacteristic.PROPERTY_WRITE
+					permissions = permissions or BluetoothGattCharacteristic.PERMISSION_WRITE
+				}
+				if (rawProperties.contains("WRITE_WO_RSP")) {
+					properties = properties or BluetoothGattCharacteristic.PROPERTY_WRITE_NO_RESPONSE
+					permissions = permissions or BluetoothGattCharacteristic.PERMISSION_WRITE
+				}
+				if (rawProperties.contains("NOTIFY")) {
+					properties = properties or BluetoothGattCharacteristic.PROPERTY_NOTIFY
+				}
+				if (rawProperties.contains("INDICATE")) {
+					properties = properties or BluetoothGattCharacteristic.PROPERTY_INDICATE
+				}
+				if (rawProperties.contains("AUTH_SIGN_WRITES")) {
+					properties = properties or BluetoothGattCharacteristic.PROPERTY_SIGNED_WRITE
+					permissions = permissions or BluetoothGattCharacteristic.PERMISSION_WRITE_SIGNED
+				}
+				if (rawProperties.contains("EXTENDED_PROP")) {
+					properties = properties or BluetoothGattCharacteristic.PROPERTY_EXTENDED_PROPS
+					permissions = permissions or BluetoothGattCharacteristic.PERMISSION_READ
+				}
+
+				val characteristic = BluetoothGattCharacteristic(
+					UUID.fromString(rawCharacteristic.uuid),
+					properties,
+					permissions
+				)
+
+				if (rawProperties.contains("NOTIFY") || rawProperties.contains("INDICATE")) {
+					val descriptor = BluetoothGattDescriptor(
+						CCD_CHARACTERISTIC,
+						BluetoothGattDescriptor.PERMISSION_READ or BluetoothGattDescriptor.PERMISSION_WRITE
+					)
+					characteristic.addDescriptor(descriptor)
+				}
+				service.addCharacteristic(characteristic)
+			}
+			gattServices.add(service)
+		}
+
+		val advData = AdvertiseData.Builder()
+		if (name != null) {
+			originalName = adapter.name
+			adapter.name = name
+			advData.setIncludeDeviceName(true)
+		} else {
+			advData.setIncludeDeviceName(false)
+		}
+
+		for (manufacturer in manufacturerData) {
+			advData.addManufacturerData(
+				manufacturer.companyId.toInt(),
+				manufacturer.data
+			)
+		}
+
+		for (service in serviceData) {
+			val uuid = String.format("%04X", service.uuid.toInt())
+			advData.addServiceData(
+				ParcelUuid.fromString("0000$uuid-0000-1000-8000-00805f9b34fb"),
+				service.data
+			)
+		}
+
+		startADvertiseCallback = callback
+
+		if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && adapter.isLeExtendedAdvertisingSupported && allowBluetooth5) {
+			Log.i(TAG, "Bluetooth 5.0 supported, using extended advertising")
+			val parameters = AdvertisingSetParameters.Builder()
+				.setConnectable(canConnect)
+				.setLegacyMode(false)
+				.setInterval(AdvertisingSetParameters.INTERVAL_HIGH)
+				.setTxPowerLevel(AdvertisingSetParameters.TX_POWER_HIGH)
+				.build()
+
+			advertiseSetCallback = object : AdvertisingSetCallback() {
+				override fun onAdvertisingSetStarted(advertisingSet: AdvertisingSet?, txPower: Int, status: Int) {
+					super.onAdvertisingSetStarted(advertisingSet, txPower, status)
+
+					if (status == ADVERTISE_SUCCESS) {
+						Log.i(TAG, "Advertise set started successfully")
+						startADvertiseCallback?.invoke(Result.success(true))
+						startADvertiseCallback = null
+
+						mainLooper?.post {
+							callbackChannel?.onAdvertiseStarted {}
+						}
+
+						if (bluetooth == null) return
+						if (gattServer != null) {
+							Log.w(TAG, "Gatt server already exists")
+							return
+						}
+
+						gattServer = bluetooth!!.openGattServer(context, gattServerCallback)
+						for (service in gattServices) {
+							Log.i(TAG, "Adding ${service.uuid} to gatt server (Bluetooth 5.0)")
+							gattServer!!.addService(service)
+						}
+						return
+					}
+
+					Log.w(TAG, "Advertise set failed with error code: $status")
+					startADvertiseCallback?.invoke(Result.success(false))
+					startADvertiseCallback = null
+
+					mainLooper?.post {
+						callbackChannel?.onAdvertiseStopped {}
+					}
+				}
+
+				override fun onAdvertisingSetStopped(advertisingSet: AdvertisingSet?) {
+					super.onAdvertisingSetStopped(advertisingSet)
+
+					Log.i(TAG, "Advertise set stopped")
+				}
+			}
+
+			advertiser.startAdvertisingSet(
+				parameters,
+				advData.build(),
+				null,
+				null,
+				null,
+				advertiseSetCallback
+			)
+			return
+		}
+
+		Log.i(TAG, "Bluetooth 4.0 supported, using legacy advertising")
+		val parameters = AdvertiseSettings.Builder()
+			.setConnectable(canConnect)
+			.setAdvertiseMode(AdvertiseSettings.ADVERTISE_MODE_BALANCED)
+			.setTxPowerLevel(AdvertiseSettings.ADVERTISE_TX_POWER_HIGH)
+			.build()
+
+		advertiseCallback = object : AdvertiseCallback() {
+			override fun onStartSuccess(settingsInEffect: AdvertiseSettings?) {
+				super.onStartSuccess(settingsInEffect)
+				Log.i(TAG, "Advertise started successfully")
+
+				startADvertiseCallback?.invoke(Result.success(true))
+				startADvertiseCallback = null
+
+				mainLooper?.post {
+					callbackChannel?.onAdvertiseStarted {}
+				}
+
+				if (bluetooth == null) return
+				if (gattServer != null) {
+					Log.w(TAG, "Gatt server already exists")
+					return
+				}
+
+				gattServer = bluetooth!!.openGattServer(context, gattServerCallback)
+				for (service in gattServices) {
+					Log.i(TAG, "Adding ${service.uuid} to gatt server (Bluetooth Legacy)")
+					gattServer!!.addService(service)
+				}
+			}
+
+			override fun onStartFailure(errorCode: Int) {
+				super.onStartFailure(errorCode)
+				Log.w(TAG, "Advertise failed with error code: $errorCode")
+				startADvertiseCallback?.invoke(Result.success(false))
+				startADvertiseCallback = null
+
+				mainLooper?.post {
+					callbackChannel?.onAdvertiseStopped {}
+				}
+			}
+		}
+		advertiser.startAdvertising(parameters, advData.build(), advertiseCallback)
+	}
+
+	override fun stopAdvertise(callback: (Result<Boolean>) -> Unit) {
+		if (gattServer == null) {
+			Log.d(TAG, "Not advertising")
+			callback(Result.success(false))
+			return
+		}
+
+		initalizeBluetoothIfRequired()
+
+		val adapter = bluetooth?.adapter ?: run {
+			Log.d(TAG, "Bluetooth not supported")
+			callback(Result.success(false))
+			return
+		}
+
+		if (!adapter.isEnabled) {
+			Log.d(TAG, "Bluetooth is not enabled")
+			callback(Result.success(false))
+			return
+		}
+
+		adapter.name = originalName
+		originalName = null
+
+		val advertiser = adapter.bluetoothLeAdvertiser ?: run {
+			Log.d(TAG, "Bluetooth LE Advertiser not supported")
+			callback(Result.success(false))
+			return
+		}
+
+		if (advertiseCallback != null) {
+			advertiser.stopAdvertising(advertiseCallback)
+			advertiseCallback = null
+		}
+		if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && advertiseSetCallback != null) {
+			advertiser.stopAdvertisingSet(advertiseSetCallback)
+			advertiseSetCallback = null
+		}
+
+		for (service in gattServices) {
+			gattServer?.removeService(service)
+		}
+		gattServices.clear()
+		for (device in gattDevices.values) {
+			gattServer?.cancelConnection(device)
+		}
+		gattDevices.clear()
+		gattServer?.close()
+		gattServer = null
+		Log.d(TAG, "Stopped advertising")
+		callback(Result.success(true))
+
+		mainLooper?.post {
+			callbackChannel?.onAdvertiseStopped {}
+		}
+		return
+	}
+
+	override fun respondReadRequest(
+		requestId: Long,
+		macAddress: String,
+		offset: Long,
+		data: ByteArray?,
+		callback: (Result<Boolean>) -> Unit
+	) {
+		if (gattServer == null) {
+			Log.d(TAG, "Not advertising")
+			callback(Result.success(false))
+			return
+		}
+
+		val gatt = gattDevices[macAddress.uppercase()] ?: run {
+			Log.d(TAG, "Device not found")
+			callback(Result.success(false))
+			return
+		}
+
+		gattServer!!.sendResponse(
+			gatt,
+			requestId.toInt(),
+			BluetoothGatt.GATT_SUCCESS,
+			offset.toInt(),
+			data
+		)
+
+		Log.d(TAG, "Responded to read request")
+	}
+
+	override fun respondWriteRequest(
+		requestId: Long,
+		macAddress: String,
+		offset: Long,
+		success: Boolean,
+		callback: (Result<Boolean>) -> Unit
+	) {
+		if (gattServer == null) {
+			Log.d(TAG, "Not advertising")
+			callback(Result.success(false))
+			return
+		}
+
+		val gatt = gattDevices[macAddress.uppercase()] ?: run {
+			Log.d(TAG, "Device not found")
+			callback(Result.success(false))
+			return
+		}
+
+		gattServer!!.sendResponse(
+			gatt,
+			requestId.toInt(),
+			if (success) BluetoothGatt.GATT_SUCCESS else BluetoothGatt.GATT_FAILURE,
+			offset.toInt(),
+			null
+		)
+	}
+
+	override fun sendNotification(
+		serviceUuid: String,
+		characteristicUuid: String,
+		payload: ByteArray,
+		requestConfirmation: Boolean,
+		callback: (Result<Boolean>) -> Unit
+	) {
+		if (gattServer == null) {
+			Log.d(TAG, "Not advertising")
+			callback(Result.success(false))
+			return
+		}
+
+		val service = gattServer?.getService(UUID.fromString(serviceUuid)) ?: run {
+			Log.d(TAG, "Service not found")
+			callback(Result.success(false))
+			return
+		}
+
+		val characteristic = service.getCharacteristic(UUID.fromString(characteristicUuid)) ?: run {
+			Log.d(TAG, "Characteristic not found")
+			callback(Result.success(false))
+			return
+		}
+
+		characteristic.value = payload
+		for (device in gattDevices.values) {
+			gattServer?.notifyCharacteristicChanged(
+				device,
+				characteristic,
+				requestConfirmation
+			)
+		}
+
+		Log.d(TAG, "Sent notification")
+		callback(Result.success(true))
+		return
+	}
+
 	override fun onAttachedToActivity(binding: ActivityPluginBinding) {
 		activity = binding.activity
 		binding.addActivityResultListener(this)
@@ -877,6 +1293,213 @@ class LayrzBlePlugin : LayrzBlePlatformChannel, FlutterPlugin, ActivityAware, Pl
 					BluetoothAdapter.STATE_TURNING_OFF -> forceStopAll()
 					BluetoothAdapter.STATE_ON -> notifyOn()
 					else -> Log.i(TAG, "Bluetooth state changed")
+				}
+			}
+		}
+	}
+
+	private var gattServerCallback = object : BluetoothGattServerCallback() {
+		override fun onConnectionStateChange(
+			device: BluetoothDevice?,
+			status: Int,
+			newState: Int
+		) {
+			super.onConnectionStateChange(device, status, newState)
+			Log.w(TAG, "onConnectionStateChange: $newState - $device - $status")
+			if (device == null) return
+
+			when (newState) {
+				BluetoothProfile.STATE_CONNECTED -> {
+					if (!gattDevices.containsKey(device.address)) {
+						gattDevices[device.address] = device
+					}
+
+					mainLooper?.post {
+						callbackChannel?.onGattConnected(
+							deviceArg = BtDevice(
+								macAddress = device.address,
+								name = device.name ?: "Unknown",
+								manufacturerData = emptyList(),
+								serviceData = emptyList(),
+							)
+						) {}
+					}
+				}
+
+				BluetoothProfile.STATE_DISCONNECTED -> {
+					if (gattDevices.containsKey(device.address)) {
+						gattDevices.remove(device.address)
+					}
+
+					mainLooper?.post {
+						callbackChannel?.onGattDisconnected(
+							deviceArg = BtDevice(
+								macAddress = device.address,
+								name = device.name ?: "Unknown",
+								manufacturerData = emptyList(),
+								serviceData = emptyList(),
+							)
+						) {}
+					}
+				}
+
+				else -> {
+					Log.i(TAG, "Device ${device.name} - ${device.address} state changed to $newState")
+				}
+			}
+		}
+
+		override fun onCharacteristicWriteRequest(
+			device: BluetoothDevice?,
+			requestId: Int,
+			characteristic: BluetoothGattCharacteristic?,
+			preparedWrite: Boolean,
+			responseNeeded: Boolean,
+			offset: Int,
+			value: ByteArray?
+		) {
+			super.onCharacteristicWriteRequest(
+				device,
+				requestId,
+				characteristic,
+				preparedWrite,
+				responseNeeded,
+				offset,
+				value
+			)
+
+			if (device == null || characteristic == null) return
+
+			mainLooper?.post {
+				callbackChannel?.onGattWriteRequest(
+					requestArg = BtGattWriteRequest(
+						macAddress = device.address,
+						requestId = requestId.toLong(),
+						offset = offset.toLong(),
+						serviceUuid = standarizeUuid(characteristic.service.uuid),
+						characteristicUuid = standarizeUuid(characteristic.uuid),
+						data = value ?: byteArrayOf(),
+						responseNeeded = responseNeeded,
+						preparedWrite = preparedWrite
+					)
+				) {}
+			}
+		}
+
+		override fun onCharacteristicReadRequest(
+			device: BluetoothDevice?,
+			requestId: Int,
+			offset: Int,
+			characteristic: BluetoothGattCharacteristic?
+		) {
+			super.onCharacteristicReadRequest(device, requestId, offset, characteristic)
+
+			if (device == null || characteristic == null) return
+
+			mainLooper?.post {
+				callbackChannel?.onGattReadRequest(
+					requestArg = BtGattReadRequest(
+						macAddress = device.address.uppercase(),
+						requestId = requestId.toLong(),
+						offset = offset.toLong(),
+						serviceUuid = standarizeUuid(characteristic.service.uuid),
+						characteristicUuid = standarizeUuid(characteristic.uuid),
+					)
+				) {}
+			}
+		}
+
+		override fun onMtuChanged(device: BluetoothDevice?, mtu: Int) {
+			super.onMtuChanged(device, mtu)
+
+			if (device == null) return
+
+			mainLooper?.post {
+				callbackChannel?.onGattMtuChanged(
+					macAddressArg = device.address.uppercase(),
+					newMtuArg = mtu.toLong()
+				) {}
+			}
+		}
+
+		override fun onDescriptorReadRequest(
+			device: BluetoothDevice?,
+			requestId: Int,
+			offset: Int,
+			descriptor: BluetoothGattDescriptor?
+		) {
+			super.onDescriptorReadRequest(device, requestId, offset, descriptor)
+			Log.d(TAG, "onDescriptorReadRequest")
+			if (device == null || descriptor == null) {
+				Log.d(TAG, "Device or descriptor is null")
+				gattServer!!.sendResponse(
+					device,
+					requestId,
+					BluetoothGatt.GATT_FAILURE,
+					offset,
+					null
+				)
+				return
+			}
+			if (descriptor.uuid == CCD_CHARACTERISTIC) {
+				if (descriptor.value == null) {
+					Log.d(TAG, "Descriptor value is null")
+					descriptor.value = BluetoothGattDescriptor.DISABLE_NOTIFICATION_VALUE
+				}
+			}
+
+			gattServer!!.sendResponse(
+				device,
+				requestId,
+				BluetoothGatt.GATT_SUCCESS,
+				offset,
+				descriptor.value
+			)
+		}
+
+		override fun onDescriptorWriteRequest(
+			device: BluetoothDevice?,
+			requestId: Int,
+			descriptor: BluetoothGattDescriptor?,
+			preparedWrite: Boolean,
+			responseNeeded: Boolean,
+			offset: Int,
+			value: ByteArray?
+		) {
+			super.onDescriptorWriteRequest(device, requestId, descriptor, preparedWrite, responseNeeded, offset, value)
+			Log.d(TAG, "onDescriptorWriteRequest - UUID: ${descriptor?.uuid} - value: ${value?.contentToString()}")
+
+			if (descriptor == null || device == null) {
+				Log.d(TAG, "Device or descriptor is null")
+				gattServer!!.sendResponse(
+					device,
+					requestId,
+					BluetoothGatt.GATT_FAILURE,
+					offset,
+					null
+				)
+				return
+			}
+
+			if (descriptor.uuid == CCD_CHARACTERISTIC) {
+				descriptor.value = value
+				if (responseNeeded) {
+					gattServer!!.sendResponse(
+						device,
+						requestId,
+						BluetoothGatt.GATT_SUCCESS,
+						offset,
+						value
+					)
+				}
+
+				if (value.contentEquals(BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE)) {
+					descriptor.characteristic.value = byteArrayOf()
+					gattServer!!.notifyCharacteristicChanged(
+						device,
+						descriptor.characteristic,
+						false
+					)
 				}
 			}
 		}

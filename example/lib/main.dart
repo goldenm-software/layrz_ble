@@ -1,7 +1,6 @@
 // ignore_for_file: use_build_context_synchronously
 
-import 'dart:async';
-import 'dart:convert';
+import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:layrz_ble/layrz_ble.dart';
@@ -43,15 +42,15 @@ class _HomePageState extends State<HomePage> {
   final _ble = LayrzBle();
   Map<String, BleDevice> _devices = {};
   List<BleDevice> get _deviceList => _devices.values.toList();
-  final List<String> _connectedDevices = [];
-  final Map<String, Timer> _timers = {};
+  List<BleService> _services = [];
 
   bool _isScanning = false;
   bool _isLoading = false;
+  bool _isAdvertising = false;
+  BleDevice? _selectedDevice;
 
-  String get serviceUuid => '6e400001-b5a3-f393-e0a9-e50e24dcca9e';
-  String get readCharacteristic => '6e400003-b5a3-f393-e0a9-e50e24dcca9e';
-  String get writeCharacteristic => '6e400002-b5a3-f393-e0a9-e50e24dcca9e';
+  String get serviceUuid => '00000000-0000-0000-0000-000000000001';
+  String get readCharacteristic => '00000000-0000-0000-0000-000000000002';
 
   AppThemedAsset get logo => const AppThemedAsset(
         normal: 'https://cdn.layrz.com/resources/layrz/logo/normal.png',
@@ -70,29 +69,47 @@ class _HomePageState extends State<HomePage> {
     super.initState();
 
     _ble.onScan.listen((BleDevice device) {
-      // if (device.manufacturerDataMap[0x0f17] == null) return;
       _devices[device.macAddress] = device;
       setState(() {});
     });
 
-    _ble.onNotify.listen((BleCharacteristicNotification notification) {
-      debugPrint('Received notification: ${notification.macAddress} - ${notification.value.length}');
-    });
+    if (ThemedPlatform.isAndroid) {
+      _ble.onGattUpdate.listen((BleGattEvent event) {
+        if (event is GattWriteRequest) {
+          debugPrint('Received GATT write request: ${event.characteristicUuid}');
 
-    _ble.onEvent.listen((event) {
-      if (event is BleConnected) {
-        debugPrint('Connected to device: ${event.macAddress}');
-        _connectedDevices.add(event.macAddress);
-        setState(() {});
-        return;
-      }
+          debugPrint('\tSending success');
+          _ble.respondWriteRequest(
+            requestId: event.requestId,
+            macAddress: event.macAddress,
+            offset: event.offset,
+            success: true,
+          );
+        } else if (event is GattReadRequest) {
+          debugPrint('Received GATT read request: ${event.characteristicUuid}');
 
+          _ble.respondReadRequest(
+            requestId: event.requestId,
+            macAddress: event.macAddress,
+            offset: event.offset,
+            data: Uint8List.fromList([0x01, 0x02, 0x03, 0x04]),
+          );
+        } else {
+          debugPrint('Received GATT event: $event');
+        }
+      });
+    }
+
+    _ble.onEvent.listen((BleEvent event) {
       if (event is BleDisconnected) {
         debugPrint('Disconnected from device: ${event.macAddress}');
-        _connectedDevices.remove(event.macAddress);
-        setState(() {});
-        return;
+        _selectedDevice = null;
+        _services = [];
       }
+    });
+
+    _ble.onNotify.listen((BleCharacteristicNotification notification) {
+      debugPrint('Received notification: $notification');
     });
   }
 
@@ -179,198 +196,456 @@ class _HomePageState extends State<HomePage> {
                       setState(() => _isLoading = false);
                     },
                   ),
-                  const SizedBox(width: 10),
-                  ThemedButton(
-                    isLoading: _isLoading,
-                    labelText: 'Get statuses',
-                    color: Colors.green,
-                    onTap: () async {
-                      setState(() => _isLoading = true);
-
-                      final output = await plugin.getStatuses();
-                      setState(() => _isLoading = false);
-
-                      ThemedSnackbarMessenger.of(context).showSnackbar(ThemedSnackbar(
-                        message: 'Statuses: $output',
-                        color: Colors.blue,
-                        icon: LayrzIcons.solarOutlineBluetoothSquare,
-                      ));
-                    },
-                  ),
-                  if (!_isScanning) ...[
+                  if (_selectedDevice != null) ...[
                     const SizedBox(width: 10),
                     ThemedButton(
                       isLoading: _isLoading,
-                      labelText: 'Start BLE scan',
-                      color: Colors.green,
-                      onTap: () async {
-                        setState(() => _isLoading = true);
-                        _devices = {};
-                        _isScanning = await plugin.startScan() ?? false;
-                        setState(() => _isLoading = false);
-
-                        ThemedSnackbarMessenger.of(context).showSnackbar(ThemedSnackbar(
-                          message: 'Scanning for BLE devices...',
-                          color: Colors.blue,
-                          icon: LayrzIcons.solarOutlineBluetoothSquare,
-                        ));
-                      },
-                    ),
-                  ] else ...[
-                    const SizedBox(width: 10),
-                    ThemedButton(
-                      isLoading: _isLoading,
-                      labelText: 'Stop BLE scan',
+                      labelText: 'Disconnect device',
                       color: Colors.red,
                       onTap: () async {
                         setState(() => _isLoading = true);
-                        final result = await plugin.stopScan();
-                        debugPrint('Stop scan result: $result');
+                        final result = await plugin.disconnect();
+
                         if (result == true) {
-                          _isScanning = false;
+                          _selectedDevice = null;
                         }
 
                         _isLoading = false;
                         setState(() {});
 
                         ThemedSnackbarMessenger.of(context).showSnackbar(ThemedSnackbar(
-                          message: 'Scan stopped',
+                          message: 'Disconnected from device',
                           color: Colors.red,
                           icon: LayrzIcons.solarOutlineBluetoothSquare,
                         ));
                       },
                     ),
+                  ] else ...[
+                    if (ThemedPlatform.isAndroid) ...[
+                      if (!_isAdvertising) ...[
+                        const SizedBox(width: 10),
+                        ThemedButton(
+                          isLoading: _isLoading,
+                          labelText: 'Start BLE Advertise',
+                          color: Colors.green,
+                          onTap: () async {
+                            setState(() => _isLoading = true);
+                            _devices = {};
+                            _isAdvertising = await plugin.startAdvertise(
+                              manufacturerData: [
+                                const BleManufacturerData(
+                                  companyId: 0x1234,
+                                  data: [0x00, 0x01, 0x02, 0x03],
+                                ),
+                              ],
+                              serviceData: [
+                                const BleServiceData(
+                                  uuid: 0x1234,
+                                  data: [0xff],
+                                ),
+                              ],
+                              canConnect: true,
+                              allowBluetooth5: true,
+                              servicesSpecs: [
+                                BleService(
+                                  uuid: serviceUuid,
+                                  characteristics: [
+                                    BleCharacteristic(
+                                      uuid: readCharacteristic,
+                                      properties: [
+                                        BleProperty.read,
+                                        BleProperty.notify,
+                                      ],
+                                    ),
+                                    const BleCharacteristic(
+                                      uuid: '00000000-0000-0000-0000-000000000003',
+                                      properties: [BleProperty.write],
+                                    ),
+                                  ],
+                                )
+                              ],
+                            );
+                            setState(() => _isLoading = false);
+
+                            ThemedSnackbarMessenger.of(context).showSnackbar(ThemedSnackbar(
+                              message: 'Scanning for BLE devices...',
+                              color: Colors.blue,
+                              icon: LayrzIcons.solarOutlineBluetoothSquare,
+                            ));
+                          },
+                        ),
+                      ] else ...[
+                        const SizedBox(width: 10),
+                        ThemedButton(
+                          isLoading: _isLoading,
+                          labelText: 'Stop BLE Advertise',
+                          color: Colors.red,
+                          onTap: () async {
+                            setState(() => _isLoading = true);
+                            final result = await plugin.stopAdvertise();
+                            debugPrint('Stop advertise result: $result');
+                            if (result == true) {
+                              _isAdvertising = false;
+                            }
+
+                            _isLoading = false;
+                            setState(() {});
+
+                            ThemedSnackbarMessenger.of(context).showSnackbar(ThemedSnackbar(
+                              message: 'Advertise stopped',
+                              color: Colors.red,
+                              icon: LayrzIcons.solarOutlineBluetoothSquare,
+                            ));
+                          },
+                        ),
+                        const SizedBox(width: 10),
+                        ThemedButton(
+                          isLoading: _isLoading,
+                          labelText: 'Send Service update',
+                          color: Colors.orange,
+                          onTap: () async {
+                            setState(() => _isLoading = true);
+                            final result = await plugin.sendNotification(
+                              serviceUuid: serviceUuid,
+                              characteristicUuid: readCharacteristic,
+                              payload: Uint8List.fromList([0x04, 0x03, 0x02, 0x01, 0x05]),
+                              requestConfirmation: false,
+                            );
+                            debugPrint('Send notification result: $result');
+                            setState(() => _isLoading = false);
+                          },
+                        ),
+                      ],
+                    ],
+                    if (!_isScanning) ...[
+                      const SizedBox(width: 10),
+                      ThemedButton(
+                        isLoading: _isLoading,
+                        labelText: 'Start BLE scan',
+                        color: Colors.green,
+                        onTap: () async {
+                          setState(() => _isLoading = true);
+                          _devices = {};
+                          _isScanning = await plugin.startScan();
+                          setState(() => _isLoading = false);
+
+                          ThemedSnackbarMessenger.of(context).showSnackbar(ThemedSnackbar(
+                            message: 'Scanning for BLE devices...',
+                            color: Colors.blue,
+                            icon: LayrzIcons.solarOutlineBluetoothSquare,
+                          ));
+                        },
+                      ),
+                    ] else ...[
+                      const SizedBox(width: 10),
+                      ThemedButton(
+                        isLoading: _isLoading,
+                        labelText: 'Stop BLE scan',
+                        color: Colors.red,
+                        onTap: () async {
+                          setState(() => _isLoading = true);
+                          final result = await plugin.stopScan();
+                          debugPrint('Stop scan result: $result');
+                          if (result == true) {
+                            _isScanning = false;
+                          }
+
+                          _isLoading = false;
+                          setState(() {});
+
+                          ThemedSnackbarMessenger.of(context).showSnackbar(ThemedSnackbar(
+                            message: 'Scan stopped',
+                            color: Colors.red,
+                            icon: LayrzIcons.solarOutlineBluetoothSquare,
+                          ));
+                        },
+                      ),
+                    ],
                   ],
                 ],
               ),
             ),
             const SizedBox(height: 10),
-            Expanded(
-              child: ListView.builder(
-                itemCount: _deviceList.length,
-                itemBuilder: (context, index) {
-                  final device = _deviceList[index];
-                  return InkWell(
-                    onTap: () async {
-                      debugPrint('Selected device: ${device.macAddress}');
-                      setState(() => _isLoading = true);
-                      if (_connectedDevices.contains(device.macAddress)) {
-                        await _ble.stopNotify(
-                          macAddress: device.macAddress,
-                          serviceUuid: serviceUuid,
-                          characteristicUuid: readCharacteristic,
-                        );
-                        await _ble.disconnect(macAddress: device.macAddress);
-                        _connectedDevices.remove(device.macAddress);
-                        _timers[device.macAddress]?.cancel();
-                        _timers.remove(device.macAddress);
-                      } else {
-                        await plugin.connect(macAddress: device.macAddress);
-                        _connectedDevices.add(device.macAddress);
-
-                        final sub = await _ble.startNotify(
-                          macAddress: device.macAddress,
-                          serviceUuid: serviceUuid,
-                          characteristicUuid: readCharacteristic,
-                        );
-                        debugPrint('Notification subscription: $sub');
-                        if (sub == true) {
-                          _timers[device.macAddress] = Timer.periodic(const Duration(seconds: 5), (timer) {
-                            _sendPing(device.macAddress);
-                          });
+            if (_selectedDevice == null) ...[
+              Expanded(
+                child: ListView.builder(
+                  itemCount: _deviceList.length,
+                  itemBuilder: (context, index) {
+                    final device = _deviceList[index];
+                    return InkWell(
+                      onTap: () async {
+                        debugPrint('Selected device: ${device.macAddress}');
+                        setState(() => _isLoading = true);
+                        final result = await plugin.connect(macAddress: device.macAddress);
+                        if (result == true) {
+                          _selectedDevice = device;
+                          _services = [];
                         }
-                      }
-                      setState(() => _isLoading = false);
+                        setState(() => _isLoading = false);
 
-                      ThemedSnackbarMessenger.of(context).showSnackbar(ThemedSnackbar(
-                        message: 'Connected to device: ${device.macAddress}',
-                        color: Colors.green,
-                        icon: LayrzIcons.solarOutlineBluetoothSquare,
-                      ));
-                    },
-                    child: Padding(
-                      padding: const EdgeInsets.all(8.0),
-                      child: Row(
-                        children: [
-                          ThemedAvatar(
-                            icon: LayrzIcons.solarOutlineIPhone,
-                            size: 40,
-                          ),
-                          const SizedBox(width: 10),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  device.name ?? 'Unknown device',
-                                  style: Theme.of(context).textTheme.titleSmall,
-                                ),
-                                Text(
-                                  device.macAddress,
-                                  style: Theme.of(context).textTheme.bodySmall,
-                                ),
-                              ],
+                        ThemedSnackbarMessenger.of(context).showSnackbar(ThemedSnackbar(
+                          message: 'Connected to device: ${device.macAddress}',
+                          color: Colors.green,
+                          icon: LayrzIcons.solarOutlineBluetoothSquare,
+                        ));
+                      },
+                      child: Padding(
+                        padding: const EdgeInsets.all(8.0),
+                        child: Row(
+                          children: [
+                            ThemedAvatar(
+                              icon: LayrzIcons.solarOutlineIPhone,
+                              size: 40,
                             ),
-                          ),
-                          if (_connectedDevices.contains(device.macAddress)) ...[
-                            const Icon(
-                              Icons.check_circle,
-                              color: Colors.green,
-                            ),
-                          ] else ...[
-                            const Icon(
-                              Icons.circle,
-                              color: Colors.red,
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    device.name ?? 'Unknown device',
+                                    style: Theme.of(context).textTheme.titleSmall,
+                                  ),
+                                  Text(
+                                    device.macAddress,
+                                    style: Theme.of(context).textTheme.bodySmall,
+                                  ),
+                                  Text(
+                                    'RSSI: ${device.rssi} - TX power: ${device.txPower}',
+                                    style: Theme.of(context).textTheme.bodySmall,
+                                  ),
+                                  Text(
+                                    "Manufacturer data: ${_castManufaturerData(device.manufacturerData)}",
+                                    style: Theme.of(context).textTheme.bodySmall,
+                                    maxLines: 10,
+                                  ),
+                                  Text(
+                                    "Service data: ${_castServiceData(device.serviceData)}",
+                                    style: Theme.of(context).textTheme.bodySmall,
+                                    maxLines: 10,
+                                  ),
+                                ],
+                              ),
                             ),
                           ],
-                        ],
+                        ),
                       ),
-                    ),
-                  );
-                },
+                    );
+                  },
+                ),
               ),
-            ),
+            ] else ...[
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  ThemedButton(
+                    color: Colors.blue,
+                    labelText: 'Discover services',
+                    isLoading: _isLoading,
+                    onTap: () async {
+                      // setState(() => _isLoading = true);
+                      // _services = await plugin.discoverServices() ?? [];
+                      // setState(() => _isLoading = false);
+
+                      // ThemedSnackbarMessenger.of(context).showSnackbar(ThemedSnackbar(
+                      //   message: 'Discovered ${_services.length} services',
+                      //   color: Colors.blue,
+                      //   icon: LayrzIcons.solarOutlineBluetoothSquare,
+                      // ));
+                    },
+                  ),
+                  const SizedBox(width: 10),
+                  ThemedButton(
+                    color: Colors.orange,
+                    labelText: 'Set MTU to 512',
+                    isLoading: _isLoading,
+                    onTap: () async {
+                      // setState(() => _isLoading = true);
+                      // final result = await plugin.setMtu(newMtu: 512);
+                      // debugPrint('Set MTU result: $result');
+                      // setState(() => _isLoading = false);
+
+                      // if (result != null) {
+                      //   mtu = result;
+                      //   setState(() {});
+                      // }
+
+                      // ThemedSnackbarMessenger.of(context).showSnackbar(ThemedSnackbar(
+                      //   message: 'Set MTU to $result after a negotiation',
+                      //   color: Colors.orange,
+                      //   icon: LayrzIcons.solarOutlineBluetoothSquare,
+                      // ));
+                    },
+                  ),
+                ],
+              ),
+              const SizedBox(height: 10),
+              // Row(
+              //   mainAxisAlignment: MainAxisAlignment.center,
+              //   children: [
+              //     ThemedButton(
+              //       color: Colors.orange,
+              //       labelText: 'Set notification listener',
+              //       isLoading: _isLoading,
+              //       onTap: () async {
+              //         setState(() => _isLoading = true);
+              //         final result = await plugin.startNotify(
+              //           serviceUuid: serviceId,
+              //           characteristicUuid: readCharacteristic,
+              //         );
+              //         debugPrint('Set notification listener result: $result');
+              //         setState(() => _isLoading = false);
+
+              //         ThemedSnackbarMessenger.of(context).showSnackbar(ThemedSnackbar(
+              //           message: 'Notification listener set: $result',
+              //           color: Colors.orange,
+              //           icon: LayrzIcons.solarOutlineBluetoothSquare,
+              //         ));
+              //       },
+              //     ),
+              //     const SizedBox(width: 10),
+              //     ThemedButton(
+              //       color: Colors.orange,
+              //       labelText: 'Set notification listener off',
+              //       isLoading: _isLoading,
+              //       onTap: () async {
+              //         setState(() => _isLoading = true);
+              //         final result = await plugin.stopNotify(
+              //           serviceUuid: serviceId,
+              //           characteristicUuid: readCharacteristic,
+              //         );
+              //         debugPrint('Set notification listener result: $result');
+              //         setState(() => _isLoading = false);
+
+              //         ThemedSnackbarMessenger.of(context).showSnackbar(ThemedSnackbar(
+              //           message: 'Notification listener set: $result',
+              //           color: Colors.orange,
+              //           icon: LayrzIcons.solarOutlineBluetoothSquare,
+              //         ));
+              //       },
+              //     ),
+              //     const SizedBox(width: 10),
+              //     ThemedButton(
+              //       color: Colors.blue,
+              //       labelText: 'Send a payload',
+              //       isLoading: _isLoading,
+              //       onTap: () async {
+              //         setState(() => _isLoading = true);
+
+              //         debugPrint("Sending header");
+              //         await plugin.writeCharacteristic(
+              //           serviceUuid: serviceId,
+              //           characteristicUuid: writeCharacteristic,
+              //           payload: Uint8List.fromList("##${payload.length};1".codeUnits),
+              //           withResponse: true,
+              //         );
+
+              //         debugPrint("Sending payload");
+              //         await plugin.writeCharacteristic(
+              //           serviceUuid: serviceId,
+              //           characteristicUuid: writeCharacteristic,
+              //           payload: Uint8List.fromList(payload.codeUnits),
+              //           withResponse: true,
+              //         );
+
+              //         setState(() => _isLoading = false);
+
+              //         ThemedSnackbarMessenger.of(context).showSnackbar(ThemedSnackbar(
+              //           message: 'Payload sent',
+              //           color: Colors.blue,
+              //           icon: LayrzIcons.solarOutlineBluetoothSquare,
+              //         ));
+
+              //         final result = await plugin.readCharacteristic(
+              //           serviceUuid: serviceId,
+              //           characteristicUuid: readCharacteristic,
+              //         );
+
+              //         debugPrint('Read characteristic result: ${ascii.decode(result?.toList() ?? [])}');
+              //       },
+              //     ),
+              //   ],
+              // ),
+              const SizedBox(height: 10),
+              Expanded(
+                child: SingleChildScrollView(
+                  child: Column(
+                    children: _services.map((service) {
+                      return Column(
+                        children: [
+                          Text(
+                            'Service: ${service.uuid}',
+                            style: Theme.of(context).textTheme.titleSmall,
+                          ),
+                          const SizedBox(height: 5),
+                          Text(
+                            'Characteristics:',
+                            style: Theme.of(context).textTheme.bodySmall,
+                          ),
+                          Padding(
+                            padding: const EdgeInsets.only(left: 10),
+                            child: Column(
+                              children: (service.characteristics ?? []).map((characteristic) {
+                                return Column(
+                                  children: [
+                                    Text(
+                                      'Characteristic: ${characteristic.uuid}',
+                                      style: Theme.of(context).textTheme.bodySmall,
+                                    ),
+                                    const SizedBox(height: 5),
+                                    Text(
+                                      'Properties: ${characteristic.properties}',
+                                      style: Theme.of(context).textTheme.bodySmall,
+                                    ),
+                                  ],
+                                );
+                              }).toList(),
+                            ),
+                          ),
+                        ],
+                      );
+                    }).toList(),
+                  ),
+                ),
+              ),
+            ],
           ],
         ),
       ),
     );
   }
 
-  void _sendPing(String macAddress) async {
-    String payload = '<Ac>1;ping;;19EE;5DAA</Ac>';
+  String _castUintToString(List<int>? data) {
+    if (data == null) return 'Not provided';
+    if (data.isEmpty) return 'Empty';
+    return data.map((e) => e.toRadixString(16).padLeft(2, '0')).join(' ');
+  }
 
-    final result = await plugin.setMtu(macAddress: macAddress, newMtu: 512);
-    debugPrint('Set MTU result: $result');
+  String _castManufaturerData(List<BleManufacturerData> data) {
+    if (data.isEmpty) return 'Empty';
 
-    int chunks = (payload.length / mtu).ceil();
-    debugPrint('Payload length: ${payload.length}, chunks: $chunks');
-
-    _ble.writeCharacteristic(
-      macAddress: macAddress,
-      serviceUuid: serviceUuid,
-      characteristicUuid: writeCharacteristic,
-      payload: ascii.encode("##${payload.length};$chunks"),
-      withResponse: true,
-    );
-
-    await Future.delayed(const Duration(milliseconds: 200));
-
-    for (int i = 0; i < chunks; i++) {
-      int start = i * mtu;
-      int end = (i + 1) * mtu;
-
-      if (end > payload.length) end = payload.length;
-
-      String chunk = payload.substring(start, end);
-
-      debugPrint('Sending chunk: $chunk');
-      _ble.writeCharacteristic(
-        macAddress: macAddress,
-        serviceUuid: serviceUuid,
-        characteristicUuid: writeCharacteristic,
-        payload: ascii.encode(chunk),
-        withResponse: true,
+    List<String> result = [];
+    for (final manufacturerData in data) {
+      result.add(
+        'Company ID: ${manufacturerData.companyId.toRadixString(16).padLeft(4, '0')} - '
+        'Data: ${_castUintToString(manufacturerData.data)}',
       );
     }
+
+    return result.join('\n');
+  }
+
+  String _castServiceData(List<BleServiceData>? data) {
+    if (data == null) return 'Not provided';
+    if (data.isEmpty) return 'Empty';
+    List<String> result = [];
+
+    for (final serviceData in data) {
+      result.add(
+        'Service: ${serviceData.uuid.toRadixString(16).padLeft(4, '0')} - '
+        'Data: ${_castUintToString(serviceData.data)}',
+      );
+    }
+    return result.join('\n');
   }
 }

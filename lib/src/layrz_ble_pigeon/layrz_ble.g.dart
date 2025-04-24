@@ -391,6 +391,143 @@ class BtCharacteristicNotification {
 ;
 }
 
+class BtGattReadRequest {
+  BtGattReadRequest({
+    required this.macAddress,
+    required this.requestId,
+    required this.offset,
+    required this.serviceUuid,
+    required this.characteristicUuid,
+  });
+
+  String macAddress;
+
+  int requestId;
+
+  int offset;
+
+  String serviceUuid;
+
+  String characteristicUuid;
+
+  List<Object?> _toList() {
+    return <Object?>[
+      macAddress,
+      requestId,
+      offset,
+      serviceUuid,
+      characteristicUuid,
+    ];
+  }
+
+  Object encode() {
+    return _toList();  }
+
+  static BtGattReadRequest decode(Object result) {
+    result as List<Object?>;
+    return BtGattReadRequest(
+      macAddress: result[0]! as String,
+      requestId: result[1]! as int,
+      offset: result[2]! as int,
+      serviceUuid: result[3]! as String,
+      characteristicUuid: result[4]! as String,
+    );
+  }
+
+  @override
+  // ignore: avoid_equals_and_hash_code_on_mutable_classes
+  bool operator ==(Object other) {
+    if (other is! BtGattReadRequest || other.runtimeType != runtimeType) {
+      return false;
+    }
+    if (identical(this, other)) {
+      return true;
+    }
+    return _deepEquals(encode(), other.encode());
+  }
+
+  @override
+  // ignore: avoid_equals_and_hash_code_on_mutable_classes
+  int get hashCode => Object.hashAll(_toList())
+;
+}
+
+class BtGattWriteRequest {
+  BtGattWriteRequest({
+    required this.macAddress,
+    required this.requestId,
+    required this.offset,
+    required this.serviceUuid,
+    required this.characteristicUuid,
+    this.data,
+    required this.preparedWrite,
+    required this.responseNeeded,
+  });
+
+  String macAddress;
+
+  int requestId;
+
+  int offset;
+
+  String serviceUuid;
+
+  String characteristicUuid;
+
+  Uint8List? data;
+
+  bool preparedWrite;
+
+  bool responseNeeded;
+
+  List<Object?> _toList() {
+    return <Object?>[
+      macAddress,
+      requestId,
+      offset,
+      serviceUuid,
+      characteristicUuid,
+      data,
+      preparedWrite,
+      responseNeeded,
+    ];
+  }
+
+  Object encode() {
+    return _toList();  }
+
+  static BtGattWriteRequest decode(Object result) {
+    result as List<Object?>;
+    return BtGattWriteRequest(
+      macAddress: result[0]! as String,
+      requestId: result[1]! as int,
+      offset: result[2]! as int,
+      serviceUuid: result[3]! as String,
+      characteristicUuid: result[4]! as String,
+      data: result[5] as Uint8List?,
+      preparedWrite: result[6]! as bool,
+      responseNeeded: result[7]! as bool,
+    );
+  }
+
+  @override
+  // ignore: avoid_equals_and_hash_code_on_mutable_classes
+  bool operator ==(Object other) {
+    if (other is! BtGattWriteRequest || other.runtimeType != runtimeType) {
+      return false;
+    }
+    if (identical(this, other)) {
+      return true;
+    }
+    return _deepEquals(encode(), other.encode());
+  }
+
+  @override
+  // ignore: avoid_equals_and_hash_code_on_mutable_classes
+  int get hashCode => Object.hashAll(_toList())
+;
+}
+
 
 class _PigeonCodec extends StandardMessageCodec {
   const _PigeonCodec();
@@ -420,6 +557,12 @@ class _PigeonCodec extends StandardMessageCodec {
     }    else if (value is BtCharacteristicNotification) {
       buffer.putUint8(135);
       writeValue(buffer, value.encode());
+    }    else if (value is BtGattReadRequest) {
+      buffer.putUint8(136);
+      writeValue(buffer, value.encode());
+    }    else if (value is BtGattWriteRequest) {
+      buffer.putUint8(137);
+      writeValue(buffer, value.encode());
     } else {
       super.writeValue(buffer, value);
     }
@@ -442,6 +585,10 @@ class _PigeonCodec extends StandardMessageCodec {
         return BtCharacteristic.decode(readValue(buffer)!);
       case 135: 
         return BtCharacteristicNotification.decode(readValue(buffer)!);
+      case 136: 
+        return BtGattReadRequest.decode(readValue(buffer)!);
+      case 137: 
+        return BtGattWriteRequest.decode(readValue(buffer)!);
       default:
         return super.readValueOfType(type, buffer);
     }
@@ -847,6 +994,146 @@ class LayrzBlePlatformChannel {
       return (pigeonVar_replyList[0] as bool?)!;
     }
   }
+
+  Future<bool> startAdvertise({List<BtManufacturerData> manufacturerData = const [], List<BtServiceData> serviceData = const [], bool canConnect = false, String? name, List<BtService> servicesSpecs = const [], bool allowBluetooth5 = true, }) async {
+    final String pigeonVar_channelName = 'dev.flutter.pigeon.layrz_ble.LayrzBlePlatformChannel.startAdvertise$pigeonVar_messageChannelSuffix';
+    final BasicMessageChannel<Object?> pigeonVar_channel = BasicMessageChannel<Object?>(
+      pigeonVar_channelName,
+      pigeonChannelCodec,
+      binaryMessenger: pigeonVar_binaryMessenger,
+    );
+    final Future<Object?> pigeonVar_sendFuture = pigeonVar_channel.send(<Object?>[manufacturerData, serviceData, canConnect, name, servicesSpecs, allowBluetooth5]);
+    final List<Object?>? pigeonVar_replyList =
+        await pigeonVar_sendFuture as List<Object?>?;
+    if (pigeonVar_replyList == null) {
+      throw _createConnectionError(pigeonVar_channelName);
+    } else if (pigeonVar_replyList.length > 1) {
+      throw PlatformException(
+        code: pigeonVar_replyList[0]! as String,
+        message: pigeonVar_replyList[1] as String?,
+        details: pigeonVar_replyList[2],
+      );
+    } else if (pigeonVar_replyList[0] == null) {
+      throw PlatformException(
+        code: 'null-error',
+        message: 'Host platform returned null value for non-null return value.',
+      );
+    } else {
+      return (pigeonVar_replyList[0] as bool?)!;
+    }
+  }
+
+  Future<bool> stopAdvertise() async {
+    final String pigeonVar_channelName = 'dev.flutter.pigeon.layrz_ble.LayrzBlePlatformChannel.stopAdvertise$pigeonVar_messageChannelSuffix';
+    final BasicMessageChannel<Object?> pigeonVar_channel = BasicMessageChannel<Object?>(
+      pigeonVar_channelName,
+      pigeonChannelCodec,
+      binaryMessenger: pigeonVar_binaryMessenger,
+    );
+    final Future<Object?> pigeonVar_sendFuture = pigeonVar_channel.send(null);
+    final List<Object?>? pigeonVar_replyList =
+        await pigeonVar_sendFuture as List<Object?>?;
+    if (pigeonVar_replyList == null) {
+      throw _createConnectionError(pigeonVar_channelName);
+    } else if (pigeonVar_replyList.length > 1) {
+      throw PlatformException(
+        code: pigeonVar_replyList[0]! as String,
+        message: pigeonVar_replyList[1] as String?,
+        details: pigeonVar_replyList[2],
+      );
+    } else if (pigeonVar_replyList[0] == null) {
+      throw PlatformException(
+        code: 'null-error',
+        message: 'Host platform returned null value for non-null return value.',
+      );
+    } else {
+      return (pigeonVar_replyList[0] as bool?)!;
+    }
+  }
+
+  Future<bool> respondReadRequest({required int requestId, required String macAddress, required int offset, Uint8List? data, }) async {
+    final String pigeonVar_channelName = 'dev.flutter.pigeon.layrz_ble.LayrzBlePlatformChannel.respondReadRequest$pigeonVar_messageChannelSuffix';
+    final BasicMessageChannel<Object?> pigeonVar_channel = BasicMessageChannel<Object?>(
+      pigeonVar_channelName,
+      pigeonChannelCodec,
+      binaryMessenger: pigeonVar_binaryMessenger,
+    );
+    final Future<Object?> pigeonVar_sendFuture = pigeonVar_channel.send(<Object?>[requestId, macAddress, offset, data]);
+    final List<Object?>? pigeonVar_replyList =
+        await pigeonVar_sendFuture as List<Object?>?;
+    if (pigeonVar_replyList == null) {
+      throw _createConnectionError(pigeonVar_channelName);
+    } else if (pigeonVar_replyList.length > 1) {
+      throw PlatformException(
+        code: pigeonVar_replyList[0]! as String,
+        message: pigeonVar_replyList[1] as String?,
+        details: pigeonVar_replyList[2],
+      );
+    } else if (pigeonVar_replyList[0] == null) {
+      throw PlatformException(
+        code: 'null-error',
+        message: 'Host platform returned null value for non-null return value.',
+      );
+    } else {
+      return (pigeonVar_replyList[0] as bool?)!;
+    }
+  }
+
+  Future<bool> respondWriteRequest({required int requestId, required String macAddress, required int offset, required bool success, }) async {
+    final String pigeonVar_channelName = 'dev.flutter.pigeon.layrz_ble.LayrzBlePlatformChannel.respondWriteRequest$pigeonVar_messageChannelSuffix';
+    final BasicMessageChannel<Object?> pigeonVar_channel = BasicMessageChannel<Object?>(
+      pigeonVar_channelName,
+      pigeonChannelCodec,
+      binaryMessenger: pigeonVar_binaryMessenger,
+    );
+    final Future<Object?> pigeonVar_sendFuture = pigeonVar_channel.send(<Object?>[requestId, macAddress, offset, success]);
+    final List<Object?>? pigeonVar_replyList =
+        await pigeonVar_sendFuture as List<Object?>?;
+    if (pigeonVar_replyList == null) {
+      throw _createConnectionError(pigeonVar_channelName);
+    } else if (pigeonVar_replyList.length > 1) {
+      throw PlatformException(
+        code: pigeonVar_replyList[0]! as String,
+        message: pigeonVar_replyList[1] as String?,
+        details: pigeonVar_replyList[2],
+      );
+    } else if (pigeonVar_replyList[0] == null) {
+      throw PlatformException(
+        code: 'null-error',
+        message: 'Host platform returned null value for non-null return value.',
+      );
+    } else {
+      return (pigeonVar_replyList[0] as bool?)!;
+    }
+  }
+
+  Future<bool> sendNotification({required String serviceUuid, required String characteristicUuid, required Uint8List payload, bool requestConfirmation = false, }) async {
+    final String pigeonVar_channelName = 'dev.flutter.pigeon.layrz_ble.LayrzBlePlatformChannel.sendNotification$pigeonVar_messageChannelSuffix';
+    final BasicMessageChannel<Object?> pigeonVar_channel = BasicMessageChannel<Object?>(
+      pigeonVar_channelName,
+      pigeonChannelCodec,
+      binaryMessenger: pigeonVar_binaryMessenger,
+    );
+    final Future<Object?> pigeonVar_sendFuture = pigeonVar_channel.send(<Object?>[serviceUuid, characteristicUuid, payload, requestConfirmation]);
+    final List<Object?>? pigeonVar_replyList =
+        await pigeonVar_sendFuture as List<Object?>?;
+    if (pigeonVar_replyList == null) {
+      throw _createConnectionError(pigeonVar_channelName);
+    } else if (pigeonVar_replyList.length > 1) {
+      throw PlatformException(
+        code: pigeonVar_replyList[0]! as String,
+        message: pigeonVar_replyList[1] as String?,
+        details: pigeonVar_replyList[2],
+      );
+    } else if (pigeonVar_replyList[0] == null) {
+      throw PlatformException(
+        code: 'null-error',
+        message: 'Host platform returned null value for non-null return value.',
+      );
+    } else {
+      return (pigeonVar_replyList[0] as bool?)!;
+    }
+  }
 }
 
 abstract class LayrzBleCallbackChannel {
@@ -867,6 +1154,20 @@ abstract class LayrzBleCallbackChannel {
   void onDisconnected(BtDevice device);
 
   void onCharacteristicUpdate(BtCharacteristicNotification notification);
+
+  void onAdvertiseStarted();
+
+  void onAdvertiseStopped();
+
+  void onGattConnected(BtDevice device);
+
+  void onGattDisconnected(BtDevice device);
+
+  void onGattReadRequest(BtGattReadRequest request);
+
+  void onGattWriteRequest(BtGattWriteRequest request);
+
+  void onGattMtuChanged(String macAddress, int newMtu);
 
   static void setUp(LayrzBleCallbackChannel? api, {BinaryMessenger? binaryMessenger, String messageChannelSuffix = '',}) {
     messageChannelSuffix = messageChannelSuffix.isNotEmpty ? '.$messageChannelSuffix' : '';
@@ -1037,6 +1338,172 @@ abstract class LayrzBleCallbackChannel {
               'Argument for dev.flutter.pigeon.layrz_ble.LayrzBleCallbackChannel.onCharacteristicUpdate was null, expected non-null BtCharacteristicNotification.');
           try {
             api.onCharacteristicUpdate(arg_notification!);
+            return wrapResponse(empty: true);
+          } on PlatformException catch (e) {
+            return wrapResponse(error: e);
+          }          catch (e) {
+            return wrapResponse(error: PlatformException(code: 'error', message: e.toString()));
+          }
+        });
+      }
+    }
+    {
+      final BasicMessageChannel<Object?> pigeonVar_channel = BasicMessageChannel<Object?>(
+          'dev.flutter.pigeon.layrz_ble.LayrzBleCallbackChannel.onAdvertiseStarted$messageChannelSuffix', pigeonChannelCodec,
+          binaryMessenger: binaryMessenger);
+      if (api == null) {
+        pigeonVar_channel.setMessageHandler(null);
+      } else {
+        pigeonVar_channel.setMessageHandler((Object? message) async {
+          try {
+            api.onAdvertiseStarted();
+            return wrapResponse(empty: true);
+          } on PlatformException catch (e) {
+            return wrapResponse(error: e);
+          }          catch (e) {
+            return wrapResponse(error: PlatformException(code: 'error', message: e.toString()));
+          }
+        });
+      }
+    }
+    {
+      final BasicMessageChannel<Object?> pigeonVar_channel = BasicMessageChannel<Object?>(
+          'dev.flutter.pigeon.layrz_ble.LayrzBleCallbackChannel.onAdvertiseStopped$messageChannelSuffix', pigeonChannelCodec,
+          binaryMessenger: binaryMessenger);
+      if (api == null) {
+        pigeonVar_channel.setMessageHandler(null);
+      } else {
+        pigeonVar_channel.setMessageHandler((Object? message) async {
+          try {
+            api.onAdvertiseStopped();
+            return wrapResponse(empty: true);
+          } on PlatformException catch (e) {
+            return wrapResponse(error: e);
+          }          catch (e) {
+            return wrapResponse(error: PlatformException(code: 'error', message: e.toString()));
+          }
+        });
+      }
+    }
+    {
+      final BasicMessageChannel<Object?> pigeonVar_channel = BasicMessageChannel<Object?>(
+          'dev.flutter.pigeon.layrz_ble.LayrzBleCallbackChannel.onGattConnected$messageChannelSuffix', pigeonChannelCodec,
+          binaryMessenger: binaryMessenger);
+      if (api == null) {
+        pigeonVar_channel.setMessageHandler(null);
+      } else {
+        pigeonVar_channel.setMessageHandler((Object? message) async {
+          assert(message != null,
+          'Argument for dev.flutter.pigeon.layrz_ble.LayrzBleCallbackChannel.onGattConnected was null.');
+          final List<Object?> args = (message as List<Object?>?)!;
+          final BtDevice? arg_device = (args[0] as BtDevice?);
+          assert(arg_device != null,
+              'Argument for dev.flutter.pigeon.layrz_ble.LayrzBleCallbackChannel.onGattConnected was null, expected non-null BtDevice.');
+          try {
+            api.onGattConnected(arg_device!);
+            return wrapResponse(empty: true);
+          } on PlatformException catch (e) {
+            return wrapResponse(error: e);
+          }          catch (e) {
+            return wrapResponse(error: PlatformException(code: 'error', message: e.toString()));
+          }
+        });
+      }
+    }
+    {
+      final BasicMessageChannel<Object?> pigeonVar_channel = BasicMessageChannel<Object?>(
+          'dev.flutter.pigeon.layrz_ble.LayrzBleCallbackChannel.onGattDisconnected$messageChannelSuffix', pigeonChannelCodec,
+          binaryMessenger: binaryMessenger);
+      if (api == null) {
+        pigeonVar_channel.setMessageHandler(null);
+      } else {
+        pigeonVar_channel.setMessageHandler((Object? message) async {
+          assert(message != null,
+          'Argument for dev.flutter.pigeon.layrz_ble.LayrzBleCallbackChannel.onGattDisconnected was null.');
+          final List<Object?> args = (message as List<Object?>?)!;
+          final BtDevice? arg_device = (args[0] as BtDevice?);
+          assert(arg_device != null,
+              'Argument for dev.flutter.pigeon.layrz_ble.LayrzBleCallbackChannel.onGattDisconnected was null, expected non-null BtDevice.');
+          try {
+            api.onGattDisconnected(arg_device!);
+            return wrapResponse(empty: true);
+          } on PlatformException catch (e) {
+            return wrapResponse(error: e);
+          }          catch (e) {
+            return wrapResponse(error: PlatformException(code: 'error', message: e.toString()));
+          }
+        });
+      }
+    }
+    {
+      final BasicMessageChannel<Object?> pigeonVar_channel = BasicMessageChannel<Object?>(
+          'dev.flutter.pigeon.layrz_ble.LayrzBleCallbackChannel.onGattReadRequest$messageChannelSuffix', pigeonChannelCodec,
+          binaryMessenger: binaryMessenger);
+      if (api == null) {
+        pigeonVar_channel.setMessageHandler(null);
+      } else {
+        pigeonVar_channel.setMessageHandler((Object? message) async {
+          assert(message != null,
+          'Argument for dev.flutter.pigeon.layrz_ble.LayrzBleCallbackChannel.onGattReadRequest was null.');
+          final List<Object?> args = (message as List<Object?>?)!;
+          final BtGattReadRequest? arg_request = (args[0] as BtGattReadRequest?);
+          assert(arg_request != null,
+              'Argument for dev.flutter.pigeon.layrz_ble.LayrzBleCallbackChannel.onGattReadRequest was null, expected non-null BtGattReadRequest.');
+          try {
+            api.onGattReadRequest(arg_request!);
+            return wrapResponse(empty: true);
+          } on PlatformException catch (e) {
+            return wrapResponse(error: e);
+          }          catch (e) {
+            return wrapResponse(error: PlatformException(code: 'error', message: e.toString()));
+          }
+        });
+      }
+    }
+    {
+      final BasicMessageChannel<Object?> pigeonVar_channel = BasicMessageChannel<Object?>(
+          'dev.flutter.pigeon.layrz_ble.LayrzBleCallbackChannel.onGattWriteRequest$messageChannelSuffix', pigeonChannelCodec,
+          binaryMessenger: binaryMessenger);
+      if (api == null) {
+        pigeonVar_channel.setMessageHandler(null);
+      } else {
+        pigeonVar_channel.setMessageHandler((Object? message) async {
+          assert(message != null,
+          'Argument for dev.flutter.pigeon.layrz_ble.LayrzBleCallbackChannel.onGattWriteRequest was null.');
+          final List<Object?> args = (message as List<Object?>?)!;
+          final BtGattWriteRequest? arg_request = (args[0] as BtGattWriteRequest?);
+          assert(arg_request != null,
+              'Argument for dev.flutter.pigeon.layrz_ble.LayrzBleCallbackChannel.onGattWriteRequest was null, expected non-null BtGattWriteRequest.');
+          try {
+            api.onGattWriteRequest(arg_request!);
+            return wrapResponse(empty: true);
+          } on PlatformException catch (e) {
+            return wrapResponse(error: e);
+          }          catch (e) {
+            return wrapResponse(error: PlatformException(code: 'error', message: e.toString()));
+          }
+        });
+      }
+    }
+    {
+      final BasicMessageChannel<Object?> pigeonVar_channel = BasicMessageChannel<Object?>(
+          'dev.flutter.pigeon.layrz_ble.LayrzBleCallbackChannel.onGattMtuChanged$messageChannelSuffix', pigeonChannelCodec,
+          binaryMessenger: binaryMessenger);
+      if (api == null) {
+        pigeonVar_channel.setMessageHandler(null);
+      } else {
+        pigeonVar_channel.setMessageHandler((Object? message) async {
+          assert(message != null,
+          'Argument for dev.flutter.pigeon.layrz_ble.LayrzBleCallbackChannel.onGattMtuChanged was null.');
+          final List<Object?> args = (message as List<Object?>?)!;
+          final String? arg_macAddress = (args[0] as String?);
+          assert(arg_macAddress != null,
+              'Argument for dev.flutter.pigeon.layrz_ble.LayrzBleCallbackChannel.onGattMtuChanged was null, expected non-null String.');
+          final int? arg_newMtu = (args[1] as int?);
+          assert(arg_newMtu != null,
+              'Argument for dev.flutter.pigeon.layrz_ble.LayrzBleCallbackChannel.onGattMtuChanged was null, expected non-null int.');
+          try {
+            api.onGattMtuChanged(arg_macAddress!, arg_newMtu!);
             return wrapResponse(empty: true);
           } on PlatformException catch (e) {
             return wrapResponse(error: e);

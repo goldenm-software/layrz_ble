@@ -33,13 +33,13 @@ class LayrzBle {
   /// This property is updated based on the functions `startAdvertise` and `stopAdvertise`.
   ///
   /// Also, can be updated automatically when you call `getStatuses` method.
-  bool get isAdvertising => throw UnimplementedError('isAdvertising has not been implemented.');
+  bool get isAdvertising => _platform.isAdvertising;
 
   /// [isScanning] is a getter that returns `true` if the device is scanning.
   /// This property is updated based on the functions `startScan` and `stopScan`.
   ///
   /// Also, can be updated automatically when you call `getStatuses` method.
-  bool get isScanning => throw UnimplementedError('isScanning has not been implemented.');
+  bool get isScanning => _platform.isScanning;
 
   /// [onScan] is a stream of BLE devices detected during a scan.
   Stream<BleDevice> get onScan => _platform.onScan;
@@ -55,7 +55,7 @@ class LayrzBle {
   /// [onGattUpdate] is the stream of BLE GATT server updates.
   /// You can listen it, but you need to use [startAdvertise] with [canConnect] set to `true` to really
   /// start a GATT server.
-  Stream<BleGattEvent> get onGattUpdate => throw UnimplementedError('onGattUpdate has not been implemented.');
+  Stream<BleGattEvent> get onGattUpdate => _platform.onGattUpdate;
 
   /// [getStatuses] is a getter function that returns the status of the BLE components statuses.
   Future<BleStatus> getStatuses() {
@@ -222,6 +222,120 @@ class LayrzBle {
       macAddress: macAddress,
       serviceUuid: serviceUuid,
       characteristicUuid: characteristicUuid,
+    );
+  }
+
+  /// [startAdvertise] starts advertising a BLE device.
+  ///
+  /// The advertisement packet will contain the [manufacturerData] and [serviceData] provided, and the advertisement
+  /// will include the name of the device. So, be careful with the len of the contents, you need to consider
+  /// the restrictions of the Bluetooth Low Energy specification.
+  Future<bool> startAdvertise({
+    /// [manufacturerData] is the data to be sent in the advertisement packet.
+    List<BleManufacturerData> manufacturerData = const [],
+
+    /// [serviceData] is the data to be sent in the advertisement packet.
+    List<BleServiceData> serviceData = const [],
+
+    /// [canConnect] is a flag to indicate if the device can be connected to.
+    /// This property enables the GATT Server to be started and the device to be connected to.
+    bool canConnect = false,
+
+    /// [servicesSpecs] defines the list of services to be available in the GATT Server.
+    /// This property is only used if [canConnect] is set to `true`.
+    List<BleService> servicesSpecs = const [],
+
+    /// [forceBluetooth5] is a flag to indicate if the advertisement can be using the Bluetooth 5.0 specification.
+    bool allowBluetooth5 = true,
+
+    /// [name] will be the name of the device on advertisement.
+    /// If you don't provide a name, the device will not be advertised with a name.
+    String? name,
+  }) {
+    return _platform.startAdvertise(
+      manufacturerData: manufacturerData,
+      serviceData: serviceData,
+      canConnect: canConnect,
+      servicesSpecs: servicesSpecs,
+      allowBluetooth5: allowBluetooth5,
+      name: name,
+    );
+  }
+
+  /// [stopAdvertise] stops advertising a BLE device.
+  Future<bool> stopAdvertise() {
+    return _platform.stopAdvertise();
+  }
+
+  /// [respondReadRequest] responds to a GATT request.
+  /// This method is designed to be a response from an event from [onGattUpdate] stream. Whhen the
+  /// [GattReadRequest] is received, you can use this method to respond to the request.
+  Future<bool> respondReadRequest({
+    /// [requestId] is the ID of the request.
+    required int requestId,
+
+    /// [macAddress] is the MAC address of the device.
+    required String macAddress,
+
+    /// [offset] is the offset of the data to be read.
+    required int offset,
+
+    /// [data] is the data to be sent in response to the request.
+    Uint8List? data,
+  }) {
+    return _platform.respondReadRequest(
+      requestId: requestId,
+      macAddress: macAddress,
+      offset: offset,
+      data: data,
+    );
+  }
+
+  /// [respondWriteRequest] responds to a GATT request.
+  /// This method is designed to be a response from an event from [onGattUpdate] stream. Whhen the
+  /// [GattWriteRequest] is received, you can use this method to respond to the request.
+  Future<bool> respondWriteRequest({
+    /// [requestId] is the ID of the request.
+    required int requestId,
+
+    /// [macAddress] is the MAC address of the device.
+    required String macAddress,
+
+    /// [offset] is the offset of the data to be read.
+    required int offset,
+
+    /// [success] is a flag to indicate if the request was successful.
+    required bool success,
+  }) {
+    return _platform.respondWriteRequest(
+      requestId: requestId,
+      macAddress: macAddress,
+      offset: offset,
+      success: success,
+    );
+  }
+
+  /// [sendNotification] sends a notification to a BLE characteristic.
+  /// You can use this method to send information to an specific characteristic, but requires a GATT server
+  /// enabled, so, you need to use [startAdvertise] with [canConnect] set to `true`.
+  Future<bool> sendNotification({
+    /// [serviceUuid] is the UUID of the service.
+    required String serviceUuid,
+
+    /// [characteristicUuid] is the UUID of the characteristic.
+    required String characteristicUuid,
+
+    /// [payload] is the data to send to the characteristic.
+    required Uint8List payload,
+
+    /// [requestConfirmation] is a flag to indicate if the notification should be sent with confirmation.
+    bool requestConfirmation = false,
+  }) {
+    return _platform.sendNotification(
+      serviceUuid: serviceUuid,
+      characteristicUuid: characteristicUuid,
+      payload: payload,
+      requestConfirmation: requestConfirmation,
     );
   }
 }

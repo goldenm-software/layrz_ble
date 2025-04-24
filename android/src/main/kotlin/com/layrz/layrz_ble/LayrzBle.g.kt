@@ -315,6 +315,95 @@ data class BtCharacteristicNotification (
 
   override fun hashCode(): Int = toList().hashCode()
 }
+
+/** Generated class from Pigeon that represents data sent in messages. */
+data class BtGattReadRequest (
+  val macAddress: String,
+  val requestId: Long,
+  val offset: Long,
+  val serviceUuid: String,
+  val characteristicUuid: String
+)
+ {
+  companion object {
+    fun fromList(pigeonVar_list: List<Any?>): BtGattReadRequest {
+      val macAddress = pigeonVar_list[0] as String
+      val requestId = pigeonVar_list[1] as Long
+      val offset = pigeonVar_list[2] as Long
+      val serviceUuid = pigeonVar_list[3] as String
+      val characteristicUuid = pigeonVar_list[4] as String
+      return BtGattReadRequest(macAddress, requestId, offset, serviceUuid, characteristicUuid)
+    }
+  }
+  fun toList(): List<Any?> {
+    return listOf(
+      macAddress,
+      requestId,
+      offset,
+      serviceUuid,
+      characteristicUuid,
+    )
+  }
+  override fun equals(other: Any?): Boolean {
+    if (other !is BtGattReadRequest) {
+      return false
+    }
+    if (this === other) {
+      return true
+    }
+    return LayrzBlePigeonUtils.deepEquals(toList(), other.toList())  }
+
+  override fun hashCode(): Int = toList().hashCode()
+}
+
+/** Generated class from Pigeon that represents data sent in messages. */
+data class BtGattWriteRequest (
+  val macAddress: String,
+  val requestId: Long,
+  val offset: Long,
+  val serviceUuid: String,
+  val characteristicUuid: String,
+  val data: ByteArray? = null,
+  val preparedWrite: Boolean,
+  val responseNeeded: Boolean
+)
+ {
+  companion object {
+    fun fromList(pigeonVar_list: List<Any?>): BtGattWriteRequest {
+      val macAddress = pigeonVar_list[0] as String
+      val requestId = pigeonVar_list[1] as Long
+      val offset = pigeonVar_list[2] as Long
+      val serviceUuid = pigeonVar_list[3] as String
+      val characteristicUuid = pigeonVar_list[4] as String
+      val data = pigeonVar_list[5] as ByteArray?
+      val preparedWrite = pigeonVar_list[6] as Boolean
+      val responseNeeded = pigeonVar_list[7] as Boolean
+      return BtGattWriteRequest(macAddress, requestId, offset, serviceUuid, characteristicUuid, data, preparedWrite, responseNeeded)
+    }
+  }
+  fun toList(): List<Any?> {
+    return listOf(
+      macAddress,
+      requestId,
+      offset,
+      serviceUuid,
+      characteristicUuid,
+      data,
+      preparedWrite,
+      responseNeeded,
+    )
+  }
+  override fun equals(other: Any?): Boolean {
+    if (other !is BtGattWriteRequest) {
+      return false
+    }
+    if (this === other) {
+      return true
+    }
+    return LayrzBlePigeonUtils.deepEquals(toList(), other.toList())  }
+
+  override fun hashCode(): Int = toList().hashCode()
+}
 private open class LayrzBlePigeonCodec : StandardMessageCodec() {
   override fun readValueOfType(type: Byte, buffer: ByteBuffer): Any? {
     return when (type) {
@@ -353,6 +442,16 @@ private open class LayrzBlePigeonCodec : StandardMessageCodec() {
           BtCharacteristicNotification.fromList(it)
         }
       }
+      136.toByte() -> {
+        return (readValue(buffer) as? List<Any?>)?.let {
+          BtGattReadRequest.fromList(it)
+        }
+      }
+      137.toByte() -> {
+        return (readValue(buffer) as? List<Any?>)?.let {
+          BtGattWriteRequest.fromList(it)
+        }
+      }
       else -> super.readValueOfType(type, buffer)
     }
   }
@@ -386,6 +485,14 @@ private open class LayrzBlePigeonCodec : StandardMessageCodec() {
         stream.write(135)
         writeValue(stream, value.toList())
       }
+      is BtGattReadRequest -> {
+        stream.write(136)
+        writeValue(stream, value.toList())
+      }
+      is BtGattWriteRequest -> {
+        stream.write(137)
+        writeValue(stream, value.toList())
+      }
       else -> super.writeValue(stream, value)
     }
   }
@@ -408,6 +515,11 @@ interface LayrzBlePlatformChannel {
   fun writeCharacteristic(macAddress: String, serviceUuid: String, characteristicUuid: String, payload: ByteArray, withResponse: Boolean, callback: (Result<Boolean>) -> Unit)
   fun startNotify(macAddress: String, serviceUuid: String, characteristicUuid: String, callback: (Result<Boolean>) -> Unit)
   fun stopNotify(macAddress: String, serviceUuid: String, characteristicUuid: String, callback: (Result<Boolean>) -> Unit)
+  fun startAdvertise(manufacturerData: List<BtManufacturerData>, serviceData: List<BtServiceData>, canConnect: Boolean, name: String?, servicesSpecs: List<BtService>, allowBluetooth5: Boolean, callback: (Result<Boolean>) -> Unit)
+  fun stopAdvertise(callback: (Result<Boolean>) -> Unit)
+  fun respondReadRequest(requestId: Long, macAddress: String, offset: Long, data: ByteArray?, callback: (Result<Boolean>) -> Unit)
+  fun respondWriteRequest(requestId: Long, macAddress: String, offset: Long, success: Boolean, callback: (Result<Boolean>) -> Unit)
+  fun sendNotification(serviceUuid: String, characteristicUuid: String, payload: ByteArray, requestConfirmation: Boolean, callback: (Result<Boolean>) -> Unit)
 
   companion object {
     /** The codec used by LayrzBlePlatformChannel. */
@@ -702,6 +814,118 @@ interface LayrzBlePlatformChannel {
           channel.setMessageHandler(null)
         }
       }
+      run {
+        val channel = BasicMessageChannel<Any?>(binaryMessenger, "dev.flutter.pigeon.layrz_ble.LayrzBlePlatformChannel.startAdvertise$separatedMessageChannelSuffix", codec)
+        if (api != null) {
+          channel.setMessageHandler { message, reply ->
+            val args = message as List<Any?>
+            val manufacturerDataArg = args[0] as List<BtManufacturerData>
+            val serviceDataArg = args[1] as List<BtServiceData>
+            val canConnectArg = args[2] as Boolean
+            val nameArg = args[3] as String?
+            val servicesSpecsArg = args[4] as List<BtService>
+            val allowBluetooth5Arg = args[5] as Boolean
+            api.startAdvertise(manufacturerDataArg, serviceDataArg, canConnectArg, nameArg, servicesSpecsArg, allowBluetooth5Arg) { result: Result<Boolean> ->
+              val error = result.exceptionOrNull()
+              if (error != null) {
+                reply.reply(LayrzBlePigeonUtils.wrapError(error))
+              } else {
+                val data = result.getOrNull()
+                reply.reply(LayrzBlePigeonUtils.wrapResult(data))
+              }
+            }
+          }
+        } else {
+          channel.setMessageHandler(null)
+        }
+      }
+      run {
+        val channel = BasicMessageChannel<Any?>(binaryMessenger, "dev.flutter.pigeon.layrz_ble.LayrzBlePlatformChannel.stopAdvertise$separatedMessageChannelSuffix", codec)
+        if (api != null) {
+          channel.setMessageHandler { _, reply ->
+            api.stopAdvertise{ result: Result<Boolean> ->
+              val error = result.exceptionOrNull()
+              if (error != null) {
+                reply.reply(LayrzBlePigeonUtils.wrapError(error))
+              } else {
+                val data = result.getOrNull()
+                reply.reply(LayrzBlePigeonUtils.wrapResult(data))
+              }
+            }
+          }
+        } else {
+          channel.setMessageHandler(null)
+        }
+      }
+      run {
+        val channel = BasicMessageChannel<Any?>(binaryMessenger, "dev.flutter.pigeon.layrz_ble.LayrzBlePlatformChannel.respondReadRequest$separatedMessageChannelSuffix", codec)
+        if (api != null) {
+          channel.setMessageHandler { message, reply ->
+            val args = message as List<Any?>
+            val requestIdArg = args[0] as Long
+            val macAddressArg = args[1] as String
+            val offsetArg = args[2] as Long
+            val dataArg = args[3] as ByteArray?
+            api.respondReadRequest(requestIdArg, macAddressArg, offsetArg, dataArg) { result: Result<Boolean> ->
+              val error = result.exceptionOrNull()
+              if (error != null) {
+                reply.reply(LayrzBlePigeonUtils.wrapError(error))
+              } else {
+                val data = result.getOrNull()
+                reply.reply(LayrzBlePigeonUtils.wrapResult(data))
+              }
+            }
+          }
+        } else {
+          channel.setMessageHandler(null)
+        }
+      }
+      run {
+        val channel = BasicMessageChannel<Any?>(binaryMessenger, "dev.flutter.pigeon.layrz_ble.LayrzBlePlatformChannel.respondWriteRequest$separatedMessageChannelSuffix", codec)
+        if (api != null) {
+          channel.setMessageHandler { message, reply ->
+            val args = message as List<Any?>
+            val requestIdArg = args[0] as Long
+            val macAddressArg = args[1] as String
+            val offsetArg = args[2] as Long
+            val successArg = args[3] as Boolean
+            api.respondWriteRequest(requestIdArg, macAddressArg, offsetArg, successArg) { result: Result<Boolean> ->
+              val error = result.exceptionOrNull()
+              if (error != null) {
+                reply.reply(LayrzBlePigeonUtils.wrapError(error))
+              } else {
+                val data = result.getOrNull()
+                reply.reply(LayrzBlePigeonUtils.wrapResult(data))
+              }
+            }
+          }
+        } else {
+          channel.setMessageHandler(null)
+        }
+      }
+      run {
+        val channel = BasicMessageChannel<Any?>(binaryMessenger, "dev.flutter.pigeon.layrz_ble.LayrzBlePlatformChannel.sendNotification$separatedMessageChannelSuffix", codec)
+        if (api != null) {
+          channel.setMessageHandler { message, reply ->
+            val args = message as List<Any?>
+            val serviceUuidArg = args[0] as String
+            val characteristicUuidArg = args[1] as String
+            val payloadArg = args[2] as ByteArray
+            val requestConfirmationArg = args[3] as Boolean
+            api.sendNotification(serviceUuidArg, characteristicUuidArg, payloadArg, requestConfirmationArg) { result: Result<Boolean> ->
+              val error = result.exceptionOrNull()
+              if (error != null) {
+                reply.reply(LayrzBlePigeonUtils.wrapError(error))
+              } else {
+                val data = result.getOrNull()
+                reply.reply(LayrzBlePigeonUtils.wrapResult(data))
+              }
+            }
+          }
+        } else {
+          channel.setMessageHandler(null)
+        }
+      }
     }
   }
 }
@@ -838,6 +1062,125 @@ class LayrzBleCallbackChannel(private val binaryMessenger: BinaryMessenger, priv
     val channelName = "dev.flutter.pigeon.layrz_ble.LayrzBleCallbackChannel.onCharacteristicUpdate$separatedMessageChannelSuffix"
     val channel = BasicMessageChannel<Any?>(binaryMessenger, channelName, codec)
     channel.send(listOf(notificationArg)) {
+      if (it is List<*>) {
+        if (it.size > 1) {
+          callback(Result.failure(FlutterError(it[0] as String, it[1] as String, it[2] as String?)))
+        } else {
+          callback(Result.success(Unit))
+        }
+      } else {
+        callback(Result.failure(LayrzBlePigeonUtils.createConnectionError(channelName)))
+      } 
+    }
+  }
+  fun onAdvertiseStarted(callback: (Result<Unit>) -> Unit)
+{
+    val separatedMessageChannelSuffix = if (messageChannelSuffix.isNotEmpty()) ".$messageChannelSuffix" else ""
+    val channelName = "dev.flutter.pigeon.layrz_ble.LayrzBleCallbackChannel.onAdvertiseStarted$separatedMessageChannelSuffix"
+    val channel = BasicMessageChannel<Any?>(binaryMessenger, channelName, codec)
+    channel.send(null) {
+      if (it is List<*>) {
+        if (it.size > 1) {
+          callback(Result.failure(FlutterError(it[0] as String, it[1] as String, it[2] as String?)))
+        } else {
+          callback(Result.success(Unit))
+        }
+      } else {
+        callback(Result.failure(LayrzBlePigeonUtils.createConnectionError(channelName)))
+      } 
+    }
+  }
+  fun onAdvertiseStopped(callback: (Result<Unit>) -> Unit)
+{
+    val separatedMessageChannelSuffix = if (messageChannelSuffix.isNotEmpty()) ".$messageChannelSuffix" else ""
+    val channelName = "dev.flutter.pigeon.layrz_ble.LayrzBleCallbackChannel.onAdvertiseStopped$separatedMessageChannelSuffix"
+    val channel = BasicMessageChannel<Any?>(binaryMessenger, channelName, codec)
+    channel.send(null) {
+      if (it is List<*>) {
+        if (it.size > 1) {
+          callback(Result.failure(FlutterError(it[0] as String, it[1] as String, it[2] as String?)))
+        } else {
+          callback(Result.success(Unit))
+        }
+      } else {
+        callback(Result.failure(LayrzBlePigeonUtils.createConnectionError(channelName)))
+      } 
+    }
+  }
+  fun onGattConnected(deviceArg: BtDevice, callback: (Result<Unit>) -> Unit)
+{
+    val separatedMessageChannelSuffix = if (messageChannelSuffix.isNotEmpty()) ".$messageChannelSuffix" else ""
+    val channelName = "dev.flutter.pigeon.layrz_ble.LayrzBleCallbackChannel.onGattConnected$separatedMessageChannelSuffix"
+    val channel = BasicMessageChannel<Any?>(binaryMessenger, channelName, codec)
+    channel.send(listOf(deviceArg)) {
+      if (it is List<*>) {
+        if (it.size > 1) {
+          callback(Result.failure(FlutterError(it[0] as String, it[1] as String, it[2] as String?)))
+        } else {
+          callback(Result.success(Unit))
+        }
+      } else {
+        callback(Result.failure(LayrzBlePigeonUtils.createConnectionError(channelName)))
+      } 
+    }
+  }
+  fun onGattDisconnected(deviceArg: BtDevice, callback: (Result<Unit>) -> Unit)
+{
+    val separatedMessageChannelSuffix = if (messageChannelSuffix.isNotEmpty()) ".$messageChannelSuffix" else ""
+    val channelName = "dev.flutter.pigeon.layrz_ble.LayrzBleCallbackChannel.onGattDisconnected$separatedMessageChannelSuffix"
+    val channel = BasicMessageChannel<Any?>(binaryMessenger, channelName, codec)
+    channel.send(listOf(deviceArg)) {
+      if (it is List<*>) {
+        if (it.size > 1) {
+          callback(Result.failure(FlutterError(it[0] as String, it[1] as String, it[2] as String?)))
+        } else {
+          callback(Result.success(Unit))
+        }
+      } else {
+        callback(Result.failure(LayrzBlePigeonUtils.createConnectionError(channelName)))
+      } 
+    }
+  }
+  fun onGattReadRequest(requestArg: BtGattReadRequest, callback: (Result<Unit>) -> Unit)
+{
+    val separatedMessageChannelSuffix = if (messageChannelSuffix.isNotEmpty()) ".$messageChannelSuffix" else ""
+    val channelName = "dev.flutter.pigeon.layrz_ble.LayrzBleCallbackChannel.onGattReadRequest$separatedMessageChannelSuffix"
+    val channel = BasicMessageChannel<Any?>(binaryMessenger, channelName, codec)
+    channel.send(listOf(requestArg)) {
+      if (it is List<*>) {
+        if (it.size > 1) {
+          callback(Result.failure(FlutterError(it[0] as String, it[1] as String, it[2] as String?)))
+        } else {
+          callback(Result.success(Unit))
+        }
+      } else {
+        callback(Result.failure(LayrzBlePigeonUtils.createConnectionError(channelName)))
+      } 
+    }
+  }
+  fun onGattWriteRequest(requestArg: BtGattWriteRequest, callback: (Result<Unit>) -> Unit)
+{
+    val separatedMessageChannelSuffix = if (messageChannelSuffix.isNotEmpty()) ".$messageChannelSuffix" else ""
+    val channelName = "dev.flutter.pigeon.layrz_ble.LayrzBleCallbackChannel.onGattWriteRequest$separatedMessageChannelSuffix"
+    val channel = BasicMessageChannel<Any?>(binaryMessenger, channelName, codec)
+    channel.send(listOf(requestArg)) {
+      if (it is List<*>) {
+        if (it.size > 1) {
+          callback(Result.failure(FlutterError(it[0] as String, it[1] as String, it[2] as String?)))
+        } else {
+          callback(Result.success(Unit))
+        }
+      } else {
+        callback(Result.failure(LayrzBlePigeonUtils.createConnectionError(channelName)))
+      } 
+    }
+  }
+  fun onGattMtuChanged(macAddressArg: String, newMtuArg: Long, callback: (Result<Unit>) -> Unit)
+{
+    val separatedMessageChannelSuffix = if (messageChannelSuffix.isNotEmpty()) ".$messageChannelSuffix" else ""
+    val channelName = "dev.flutter.pigeon.layrz_ble.LayrzBleCallbackChannel.onGattMtuChanged$separatedMessageChannelSuffix"
+    val channel = BasicMessageChannel<Any?>(binaryMessenger, channelName, codec)
+    channel.send(listOf(macAddressArg, newMtuArg)) {
       if (it is List<*>) {
         if (it.size > 1) {
           callback(Result.failure(FlutterError(it[0] as String, it[1] as String, it[2] as String?)))

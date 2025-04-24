@@ -359,6 +359,100 @@ struct BtCharacteristicNotification: Hashable {
   }
 }
 
+/// Generated class from Pigeon that represents data sent in messages.
+struct BtGattReadRequest: Hashable {
+  var macAddress: String
+  var requestId: Int64
+  var offset: Int64
+  var serviceUuid: String
+  var characteristicUuid: String
+
+
+  // swift-format-ignore: AlwaysUseLowerCamelCase
+  static func fromList(_ pigeonVar_list: [Any?]) -> BtGattReadRequest? {
+    let macAddress = pigeonVar_list[0] as! String
+    let requestId = pigeonVar_list[1] as! Int64
+    let offset = pigeonVar_list[2] as! Int64
+    let serviceUuid = pigeonVar_list[3] as! String
+    let characteristicUuid = pigeonVar_list[4] as! String
+
+    return BtGattReadRequest(
+      macAddress: macAddress,
+      requestId: requestId,
+      offset: offset,
+      serviceUuid: serviceUuid,
+      characteristicUuid: characteristicUuid
+    )
+  }
+  func toList() -> [Any?] {
+    return [
+      macAddress,
+      requestId,
+      offset,
+      serviceUuid,
+      characteristicUuid,
+    ]
+  }
+  static func == (lhs: BtGattReadRequest, rhs: BtGattReadRequest) -> Bool {
+    return deepEqualsLayrzBle(lhs.toList(), rhs.toList())  }
+  func hash(into hasher: inout Hasher) {
+    deepHashLayrzBle(value: toList(), hasher: &hasher)
+  }
+}
+
+/// Generated class from Pigeon that represents data sent in messages.
+struct BtGattWriteRequest: Hashable {
+  var macAddress: String
+  var requestId: Int64
+  var offset: Int64
+  var serviceUuid: String
+  var characteristicUuid: String
+  var data: FlutterStandardTypedData? = nil
+  var preparedWrite: Bool
+  var responseNeeded: Bool
+
+
+  // swift-format-ignore: AlwaysUseLowerCamelCase
+  static func fromList(_ pigeonVar_list: [Any?]) -> BtGattWriteRequest? {
+    let macAddress = pigeonVar_list[0] as! String
+    let requestId = pigeonVar_list[1] as! Int64
+    let offset = pigeonVar_list[2] as! Int64
+    let serviceUuid = pigeonVar_list[3] as! String
+    let characteristicUuid = pigeonVar_list[4] as! String
+    let data: FlutterStandardTypedData? = nilOrValue(pigeonVar_list[5])
+    let preparedWrite = pigeonVar_list[6] as! Bool
+    let responseNeeded = pigeonVar_list[7] as! Bool
+
+    return BtGattWriteRequest(
+      macAddress: macAddress,
+      requestId: requestId,
+      offset: offset,
+      serviceUuid: serviceUuid,
+      characteristicUuid: characteristicUuid,
+      data: data,
+      preparedWrite: preparedWrite,
+      responseNeeded: responseNeeded
+    )
+  }
+  func toList() -> [Any?] {
+    return [
+      macAddress,
+      requestId,
+      offset,
+      serviceUuid,
+      characteristicUuid,
+      data,
+      preparedWrite,
+      responseNeeded,
+    ]
+  }
+  static func == (lhs: BtGattWriteRequest, rhs: BtGattWriteRequest) -> Bool {
+    return deepEqualsLayrzBle(lhs.toList(), rhs.toList())  }
+  func hash(into hasher: inout Hasher) {
+    deepHashLayrzBle(value: toList(), hasher: &hasher)
+  }
+}
+
 private class LayrzBlePigeonCodecReader: FlutterStandardReader {
   override func readValue(ofType type: UInt8) -> Any? {
     switch type {
@@ -376,6 +470,10 @@ private class LayrzBlePigeonCodecReader: FlutterStandardReader {
       return BtCharacteristic.fromList(self.readValue() as! [Any?])
     case 135:
       return BtCharacteristicNotification.fromList(self.readValue() as! [Any?])
+    case 136:
+      return BtGattReadRequest.fromList(self.readValue() as! [Any?])
+    case 137:
+      return BtGattWriteRequest.fromList(self.readValue() as! [Any?])
     default:
       return super.readValue(ofType: type)
     }
@@ -404,6 +502,12 @@ private class LayrzBlePigeonCodecWriter: FlutterStandardWriter {
       super.writeValue(value.toList())
     } else if let value = value as? BtCharacteristicNotification {
       super.writeByte(135)
+      super.writeValue(value.toList())
+    } else if let value = value as? BtGattReadRequest {
+      super.writeByte(136)
+      super.writeValue(value.toList())
+    } else if let value = value as? BtGattWriteRequest {
+      super.writeByte(137)
       super.writeValue(value.toList())
     } else {
       super.writeValue(value)
@@ -442,6 +546,11 @@ protocol LayrzBlePlatformChannel {
   func writeCharacteristic(macAddress: String, serviceUuid: String, characteristicUuid: String, payload: FlutterStandardTypedData, withResponse: Bool, completion: @escaping (Result<Bool, Error>) -> Void)
   func startNotify(macAddress: String, serviceUuid: String, characteristicUuid: String, completion: @escaping (Result<Bool, Error>) -> Void)
   func stopNotify(macAddress: String, serviceUuid: String, characteristicUuid: String, completion: @escaping (Result<Bool, Error>) -> Void)
+  func startAdvertise(manufacturerData: [BtManufacturerData], serviceData: [BtServiceData], canConnect: Bool, name: String?, servicesSpecs: [BtService], allowBluetooth5: Bool, completion: @escaping (Result<Bool, Error>) -> Void)
+  func stopAdvertise(completion: @escaping (Result<Bool, Error>) -> Void)
+  func respondReadRequest(requestId: Int64, macAddress: String, offset: Int64, data: FlutterStandardTypedData?, completion: @escaping (Result<Bool, Error>) -> Void)
+  func respondWriteRequest(requestId: Int64, macAddress: String, offset: Int64, success: Bool, completion: @escaping (Result<Bool, Error>) -> Void)
+  func sendNotification(serviceUuid: String, characteristicUuid: String, payload: FlutterStandardTypedData, requestConfirmation: Bool, completion: @escaping (Result<Bool, Error>) -> Void)
 }
 
 /// Generated setup class from Pigeon to handle messages through the `binaryMessenger`.
@@ -692,6 +801,103 @@ class LayrzBlePlatformChannelSetup {
     } else {
       stopNotifyChannel.setMessageHandler(nil)
     }
+    let startAdvertiseChannel = FlutterBasicMessageChannel(name: "dev.flutter.pigeon.layrz_ble.LayrzBlePlatformChannel.startAdvertise\(channelSuffix)", binaryMessenger: binaryMessenger, codec: codec)
+    if let api = api {
+      startAdvertiseChannel.setMessageHandler { message, reply in
+        let args = message as! [Any?]
+        let manufacturerDataArg = args[0] as! [BtManufacturerData]
+        let serviceDataArg = args[1] as! [BtServiceData]
+        let canConnectArg = args[2] as! Bool
+        let nameArg: String? = nilOrValue(args[3])
+        let servicesSpecsArg = args[4] as! [BtService]
+        let allowBluetooth5Arg = args[5] as! Bool
+        api.startAdvertise(manufacturerData: manufacturerDataArg, serviceData: serviceDataArg, canConnect: canConnectArg, name: nameArg, servicesSpecs: servicesSpecsArg, allowBluetooth5: allowBluetooth5Arg) { result in
+          switch result {
+          case .success(let res):
+            reply(wrapResult(res))
+          case .failure(let error):
+            reply(wrapError(error))
+          }
+        }
+      }
+    } else {
+      startAdvertiseChannel.setMessageHandler(nil)
+    }
+    let stopAdvertiseChannel = FlutterBasicMessageChannel(name: "dev.flutter.pigeon.layrz_ble.LayrzBlePlatformChannel.stopAdvertise\(channelSuffix)", binaryMessenger: binaryMessenger, codec: codec)
+    if let api = api {
+      stopAdvertiseChannel.setMessageHandler { _, reply in
+        api.stopAdvertise { result in
+          switch result {
+          case .success(let res):
+            reply(wrapResult(res))
+          case .failure(let error):
+            reply(wrapError(error))
+          }
+        }
+      }
+    } else {
+      stopAdvertiseChannel.setMessageHandler(nil)
+    }
+    let respondReadRequestChannel = FlutterBasicMessageChannel(name: "dev.flutter.pigeon.layrz_ble.LayrzBlePlatformChannel.respondReadRequest\(channelSuffix)", binaryMessenger: binaryMessenger, codec: codec)
+    if let api = api {
+      respondReadRequestChannel.setMessageHandler { message, reply in
+        let args = message as! [Any?]
+        let requestIdArg = args[0] as! Int64
+        let macAddressArg = args[1] as! String
+        let offsetArg = args[2] as! Int64
+        let dataArg: FlutterStandardTypedData? = nilOrValue(args[3])
+        api.respondReadRequest(requestId: requestIdArg, macAddress: macAddressArg, offset: offsetArg, data: dataArg) { result in
+          switch result {
+          case .success(let res):
+            reply(wrapResult(res))
+          case .failure(let error):
+            reply(wrapError(error))
+          }
+        }
+      }
+    } else {
+      respondReadRequestChannel.setMessageHandler(nil)
+    }
+    let respondWriteRequestChannel = FlutterBasicMessageChannel(name: "dev.flutter.pigeon.layrz_ble.LayrzBlePlatformChannel.respondWriteRequest\(channelSuffix)", binaryMessenger: binaryMessenger, codec: codec)
+    if let api = api {
+      respondWriteRequestChannel.setMessageHandler { message, reply in
+        let args = message as! [Any?]
+        let requestIdArg = args[0] as! Int64
+        let macAddressArg = args[1] as! String
+        let offsetArg = args[2] as! Int64
+        let successArg = args[3] as! Bool
+        api.respondWriteRequest(requestId: requestIdArg, macAddress: macAddressArg, offset: offsetArg, success: successArg) { result in
+          switch result {
+          case .success(let res):
+            reply(wrapResult(res))
+          case .failure(let error):
+            reply(wrapError(error))
+          }
+        }
+      }
+    } else {
+      respondWriteRequestChannel.setMessageHandler(nil)
+    }
+    let sendNotificationChannel = FlutterBasicMessageChannel(name: "dev.flutter.pigeon.layrz_ble.LayrzBlePlatformChannel.sendNotification\(channelSuffix)", binaryMessenger: binaryMessenger, codec: codec)
+    if let api = api {
+      sendNotificationChannel.setMessageHandler { message, reply in
+        let args = message as! [Any?]
+        let serviceUuidArg = args[0] as! String
+        let characteristicUuidArg = args[1] as! String
+        let payloadArg = args[2] as! FlutterStandardTypedData
+        let requestConfirmationArg = args[3] as! Bool
+        api.sendNotification(serviceUuid: serviceUuidArg, characteristicUuid: characteristicUuidArg, payload: payloadArg, requestConfirmation: requestConfirmationArg) { result in
+          switch result {
+          case .success(let res):
+            reply(wrapResult(res))
+          case .failure(let error):
+            reply(wrapError(error))
+          }
+        }
+      }
+    } else {
+      sendNotificationChannel.setMessageHandler(nil)
+    }
   }
 }
 /// Generated protocol from Pigeon that represents Flutter messages that can be called from Swift.
@@ -704,6 +910,13 @@ protocol LayrzBleCallbackChannelProtocol {
   func onConnected(device deviceArg: BtDevice, completion: @escaping (Result<Void, PigeonError>) -> Void)
   func onDisconnected(device deviceArg: BtDevice, completion: @escaping (Result<Void, PigeonError>) -> Void)
   func onCharacteristicUpdate(notification notificationArg: BtCharacteristicNotification, completion: @escaping (Result<Void, PigeonError>) -> Void)
+  func onAdvertiseStarted(completion: @escaping (Result<Void, PigeonError>) -> Void)
+  func onAdvertiseStopped(completion: @escaping (Result<Void, PigeonError>) -> Void)
+  func onGattConnected(device deviceArg: BtDevice, completion: @escaping (Result<Void, PigeonError>) -> Void)
+  func onGattDisconnected(device deviceArg: BtDevice, completion: @escaping (Result<Void, PigeonError>) -> Void)
+  func onGattReadRequest(request requestArg: BtGattReadRequest, completion: @escaping (Result<Void, PigeonError>) -> Void)
+  func onGattWriteRequest(request requestArg: BtGattWriteRequest, completion: @escaping (Result<Void, PigeonError>) -> Void)
+  func onGattMtuChanged(macAddress macAddressArg: String, newMtu newMtuArg: Int64, completion: @escaping (Result<Void, PigeonError>) -> Void)
 }
 class LayrzBleCallbackChannel: LayrzBleCallbackChannelProtocol {
   private let binaryMessenger: FlutterBinaryMessenger
@@ -845,6 +1058,132 @@ class LayrzBleCallbackChannel: LayrzBleCallbackChannelProtocol {
     let channelName: String = "dev.flutter.pigeon.layrz_ble.LayrzBleCallbackChannel.onCharacteristicUpdate\(messageChannelSuffix)"
     let channel = FlutterBasicMessageChannel(name: channelName, binaryMessenger: binaryMessenger, codec: codec)
     channel.sendMessage([notificationArg] as [Any?]) { response in
+      guard let listResponse = response as? [Any?] else {
+        completion(.failure(createConnectionError(withChannelName: channelName)))
+        return
+      }
+      if listResponse.count > 1 {
+        let code: String = listResponse[0] as! String
+        let message: String? = nilOrValue(listResponse[1])
+        let details: String? = nilOrValue(listResponse[2])
+        completion(.failure(PigeonError(code: code, message: message, details: details)))
+      } else {
+        completion(.success(()))
+      }
+    }
+  }
+  func onAdvertiseStarted(completion: @escaping (Result<Void, PigeonError>) -> Void) {
+    let channelName: String = "dev.flutter.pigeon.layrz_ble.LayrzBleCallbackChannel.onAdvertiseStarted\(messageChannelSuffix)"
+    let channel = FlutterBasicMessageChannel(name: channelName, binaryMessenger: binaryMessenger, codec: codec)
+    channel.sendMessage(nil) { response in
+      guard let listResponse = response as? [Any?] else {
+        completion(.failure(createConnectionError(withChannelName: channelName)))
+        return
+      }
+      if listResponse.count > 1 {
+        let code: String = listResponse[0] as! String
+        let message: String? = nilOrValue(listResponse[1])
+        let details: String? = nilOrValue(listResponse[2])
+        completion(.failure(PigeonError(code: code, message: message, details: details)))
+      } else {
+        completion(.success(()))
+      }
+    }
+  }
+  func onAdvertiseStopped(completion: @escaping (Result<Void, PigeonError>) -> Void) {
+    let channelName: String = "dev.flutter.pigeon.layrz_ble.LayrzBleCallbackChannel.onAdvertiseStopped\(messageChannelSuffix)"
+    let channel = FlutterBasicMessageChannel(name: channelName, binaryMessenger: binaryMessenger, codec: codec)
+    channel.sendMessage(nil) { response in
+      guard let listResponse = response as? [Any?] else {
+        completion(.failure(createConnectionError(withChannelName: channelName)))
+        return
+      }
+      if listResponse.count > 1 {
+        let code: String = listResponse[0] as! String
+        let message: String? = nilOrValue(listResponse[1])
+        let details: String? = nilOrValue(listResponse[2])
+        completion(.failure(PigeonError(code: code, message: message, details: details)))
+      } else {
+        completion(.success(()))
+      }
+    }
+  }
+  func onGattConnected(device deviceArg: BtDevice, completion: @escaping (Result<Void, PigeonError>) -> Void) {
+    let channelName: String = "dev.flutter.pigeon.layrz_ble.LayrzBleCallbackChannel.onGattConnected\(messageChannelSuffix)"
+    let channel = FlutterBasicMessageChannel(name: channelName, binaryMessenger: binaryMessenger, codec: codec)
+    channel.sendMessage([deviceArg] as [Any?]) { response in
+      guard let listResponse = response as? [Any?] else {
+        completion(.failure(createConnectionError(withChannelName: channelName)))
+        return
+      }
+      if listResponse.count > 1 {
+        let code: String = listResponse[0] as! String
+        let message: String? = nilOrValue(listResponse[1])
+        let details: String? = nilOrValue(listResponse[2])
+        completion(.failure(PigeonError(code: code, message: message, details: details)))
+      } else {
+        completion(.success(()))
+      }
+    }
+  }
+  func onGattDisconnected(device deviceArg: BtDevice, completion: @escaping (Result<Void, PigeonError>) -> Void) {
+    let channelName: String = "dev.flutter.pigeon.layrz_ble.LayrzBleCallbackChannel.onGattDisconnected\(messageChannelSuffix)"
+    let channel = FlutterBasicMessageChannel(name: channelName, binaryMessenger: binaryMessenger, codec: codec)
+    channel.sendMessage([deviceArg] as [Any?]) { response in
+      guard let listResponse = response as? [Any?] else {
+        completion(.failure(createConnectionError(withChannelName: channelName)))
+        return
+      }
+      if listResponse.count > 1 {
+        let code: String = listResponse[0] as! String
+        let message: String? = nilOrValue(listResponse[1])
+        let details: String? = nilOrValue(listResponse[2])
+        completion(.failure(PigeonError(code: code, message: message, details: details)))
+      } else {
+        completion(.success(()))
+      }
+    }
+  }
+  func onGattReadRequest(request requestArg: BtGattReadRequest, completion: @escaping (Result<Void, PigeonError>) -> Void) {
+    let channelName: String = "dev.flutter.pigeon.layrz_ble.LayrzBleCallbackChannel.onGattReadRequest\(messageChannelSuffix)"
+    let channel = FlutterBasicMessageChannel(name: channelName, binaryMessenger: binaryMessenger, codec: codec)
+    channel.sendMessage([requestArg] as [Any?]) { response in
+      guard let listResponse = response as? [Any?] else {
+        completion(.failure(createConnectionError(withChannelName: channelName)))
+        return
+      }
+      if listResponse.count > 1 {
+        let code: String = listResponse[0] as! String
+        let message: String? = nilOrValue(listResponse[1])
+        let details: String? = nilOrValue(listResponse[2])
+        completion(.failure(PigeonError(code: code, message: message, details: details)))
+      } else {
+        completion(.success(()))
+      }
+    }
+  }
+  func onGattWriteRequest(request requestArg: BtGattWriteRequest, completion: @escaping (Result<Void, PigeonError>) -> Void) {
+    let channelName: String = "dev.flutter.pigeon.layrz_ble.LayrzBleCallbackChannel.onGattWriteRequest\(messageChannelSuffix)"
+    let channel = FlutterBasicMessageChannel(name: channelName, binaryMessenger: binaryMessenger, codec: codec)
+    channel.sendMessage([requestArg] as [Any?]) { response in
+      guard let listResponse = response as? [Any?] else {
+        completion(.failure(createConnectionError(withChannelName: channelName)))
+        return
+      }
+      if listResponse.count > 1 {
+        let code: String = listResponse[0] as! String
+        let message: String? = nilOrValue(listResponse[1])
+        let details: String? = nilOrValue(listResponse[2])
+        completion(.failure(PigeonError(code: code, message: message, details: details)))
+      } else {
+        completion(.success(()))
+      }
+    }
+  }
+  func onGattMtuChanged(macAddress macAddressArg: String, newMtu newMtuArg: Int64, completion: @escaping (Result<Void, PigeonError>) -> Void) {
+    let channelName: String = "dev.flutter.pigeon.layrz_ble.LayrzBleCallbackChannel.onGattMtuChanged\(messageChannelSuffix)"
+    let channel = FlutterBasicMessageChannel(name: channelName, binaryMessenger: binaryMessenger, codec: codec)
+    channel.sendMessage([macAddressArg, newMtuArg] as [Any?]) { response in
       guard let listResponse = response as? [Any?] else {
         completion(.failure(createConnectionError(withChannelName: channelName)))
         return

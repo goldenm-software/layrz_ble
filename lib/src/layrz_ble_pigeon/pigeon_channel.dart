@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:typed_data';
 
+import 'package:flutter/foundation.dart';
 import 'package:layrz_ble/src/layrz_ble_pigeon/layrz_ble.g.dart';
 import 'package:layrz_ble/src/platform_interface.dart';
 import 'package:layrz_ble/src/types/types.dart';
@@ -14,6 +15,14 @@ class LayrzBlePigeonChannel extends LayrzBlePlatform {
   final StreamController<BleDevice> _scanController = StreamController<BleDevice>.broadcast();
   final StreamController<BleCharacteristicNotification> _notifyController =
       StreamController<BleCharacteristicNotification>.broadcast();
+  final StreamController<BleGattEvent> _gattController = StreamController<BleGattEvent>.broadcast();
+
+  bool _advertising = false;
+  @override
+  bool get isAdvertising => _advertising;
+  bool _scanning = false;
+  @override
+  bool get isScanning => _scanning;
 
   @override
   Stream<BleEvent> get onEvent => _eventsController.stream;
@@ -23,6 +32,9 @@ class LayrzBlePigeonChannel extends LayrzBlePlatform {
 
   @override
   Stream<BleCharacteristicNotification> get onNotify => _notifyController.stream;
+
+  @override
+  Stream<BleGattEvent> get onGattUpdate => _gattController.stream;
 
   LayrzBlePigeonChannel._() {
     _setupListeners();
@@ -153,11 +165,99 @@ class LayrzBlePigeonChannel extends LayrzBlePlatform {
         characteristicUuid: characteristicUuid,
       );
 
+  @override
+  Future<bool> startAdvertise({
+    List<BleManufacturerData> manufacturerData = const [],
+    List<BleServiceData> serviceData = const [],
+    bool canConnect = false,
+    List<BleService> servicesSpecs = const [],
+    bool allowBluetooth5 = true,
+    String? name,
+  }) =>
+      _channel.startAdvertise(
+        manufacturerData: manufacturerData.map((mf) {
+          return BtManufacturerData(
+            companyId: mf.companyId,
+            data: Uint8List.fromList(mf.data ?? []),
+          );
+        }).toList(),
+        serviceData: serviceData.map((sd) {
+          return BtServiceData(
+            uuid: sd.uuid,
+            data: Uint8List.fromList(sd.data ?? []),
+          );
+        }).toList(),
+        canConnect: canConnect,
+        servicesSpecs: servicesSpecs.map((service) {
+          return BtService(
+            uuid: service.uuid,
+            characteristics: (service.characteristics ?? []).map((characteristic) {
+              return BtCharacteristic(
+                uuid: characteristic.uuid,
+                properties: characteristic.properties.map((property) {
+                  return property.toJson();
+                }).toList(),
+              );
+            }).toList(),
+          );
+        }).toList(),
+        allowBluetooth5: allowBluetooth5,
+        name: name,
+      );
+
+  @override
+  Future<bool> stopAdvertise() => _channel.stopAdvertise();
+
+  @override
+  Future<bool> respondReadRequest({
+    required int requestId,
+    required String macAddress,
+    required int offset,
+    Uint8List? data,
+  }) =>
+      _channel.respondReadRequest(
+        requestId: requestId,
+        macAddress: macAddress,
+        offset: offset,
+        data: data,
+      );
+
+  @override
+  Future<bool> respondWriteRequest({
+    required int requestId,
+    required String macAddress,
+    required int offset,
+    required bool success,
+  }) =>
+      _channel.respondWriteRequest(
+        requestId: requestId,
+        macAddress: macAddress,
+        offset: offset,
+        success: success,
+      );
+
+  @override
+  Future<bool> sendNotification({
+    required String serviceUuid,
+    required String characteristicUuid,
+    required Uint8List payload,
+    bool requestConfirmation = false,
+  }) =>
+      _channel.sendNotification(
+        serviceUuid: serviceUuid,
+        characteristicUuid: characteristicUuid,
+        payload: payload,
+        requestConfirmation: requestConfirmation,
+      );
+
   void _setupListeners() {
     LayrzBleCallbackChannel.setUp(_LayrzBleCallbackHandler(
       eventController: _eventsController,
       scanController: _scanController,
       notifyController: _notifyController,
+      gattController: _gattController,
+      onScanChanged: (isScanning) => _scanning = isScanning,
+      onAdvertiseChanged: (isAdvertising) => _advertising = isAdvertising,
     ));
   }
 }
@@ -166,20 +266,30 @@ class _LayrzBleCallbackHandler extends LayrzBleCallbackChannel {
   final StreamController<BleEvent> eventController;
   final StreamController<BleDevice> scanController;
   final StreamController<BleCharacteristicNotification> notifyController;
+  final StreamController<BleGattEvent> gattController;
+  final ValueChanged<bool> onScanChanged;
+  final ValueChanged<bool> onAdvertiseChanged;
 
   _LayrzBleCallbackHandler({
     required this.eventController,
     required this.scanController,
     required this.notifyController,
+    required this.gattController,
+    required this.onScanChanged,
+    required this.onAdvertiseChanged,
   });
 
   @override
   void onBluetoothOff() {
+    onScanChanged.call(false);
+    onAdvertiseChanged.call(false);
     eventController.add(BleAdapterOff());
   }
 
   @override
   void onBluetoothOn() {
+    onScanChanged.call(false);
+    onAdvertiseChanged.call(false);
     eventController.add(BleAdapterOn());
   }
 
@@ -227,11 +337,62 @@ class _LayrzBleCallbackHandler extends LayrzBleCallbackChannel {
 
   @override
   void onScanStarted() {
+    onScanChanged.call(true);
     eventController.add(BleScanStarted());
   }
 
   @override
   void onScanStopped() {
+    onScanChanged.call(false);
     eventController.add(BleScanStopped());
+  }
+
+  @override
+  void onGattConnected(BtDevice device) {
+    gattController.add(GattConnected(macAddress: device.macAddress, name: device.name));
+  }
+
+  @override
+  void onGattDisconnected(BtDevice device) {
+    gattController.add(GattDisconnected(macAddress: device.macAddress));
+  }
+
+  @override
+  void onGattMtuChanged(String macAddress, int newMtu) {
+    gattController.add(GattMtuChanged(macAddress: macAddress, mtu: newMtu));
+  }
+
+  @override
+  void onGattReadRequest(BtGattReadRequest request) {
+    gattController.add(GattReadRequest(
+      macAddress: request.macAddress,
+      requestId: request.requestId,
+      offset: request.offset,
+      serviceUuid: request.serviceUuid,
+      characteristicUuid: request.characteristicUuid,
+    ));
+  }
+
+  @override
+  void onGattWriteRequest(BtGattWriteRequest request) {
+    gattController.add(GattWriteRequest(
+      macAddress: request.macAddress,
+      requestId: request.requestId,
+      offset: request.offset,
+      serviceUuid: request.serviceUuid,
+      characteristicUuid: request.characteristicUuid,
+    ));
+  }
+
+  @override
+  void onAdvertiseStarted() {
+    onAdvertiseChanged.call(true);
+    gattController.add(GattStarted());
+  }
+
+  @override
+  void onAdvertiseStopped() {
+    onAdvertiseChanged.call(false);
+    gattController.add(GattStopped());
   }
 }

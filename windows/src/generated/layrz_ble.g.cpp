@@ -442,6 +442,228 @@ BtCharacteristicNotification BtCharacteristicNotification::FromEncodableList(con
   return decoded;
 }
 
+// BtGattReadRequest
+
+BtGattReadRequest::BtGattReadRequest(
+  const std::string& mac_address,
+  int64_t request_id,
+  int64_t offset,
+  const std::string& service_uuid,
+  const std::string& characteristic_uuid)
+ : mac_address_(mac_address),
+    request_id_(request_id),
+    offset_(offset),
+    service_uuid_(service_uuid),
+    characteristic_uuid_(characteristic_uuid) {}
+
+const std::string& BtGattReadRequest::mac_address() const {
+  return mac_address_;
+}
+
+void BtGattReadRequest::set_mac_address(std::string_view value_arg) {
+  mac_address_ = value_arg;
+}
+
+
+int64_t BtGattReadRequest::request_id() const {
+  return request_id_;
+}
+
+void BtGattReadRequest::set_request_id(int64_t value_arg) {
+  request_id_ = value_arg;
+}
+
+
+int64_t BtGattReadRequest::offset() const {
+  return offset_;
+}
+
+void BtGattReadRequest::set_offset(int64_t value_arg) {
+  offset_ = value_arg;
+}
+
+
+const std::string& BtGattReadRequest::service_uuid() const {
+  return service_uuid_;
+}
+
+void BtGattReadRequest::set_service_uuid(std::string_view value_arg) {
+  service_uuid_ = value_arg;
+}
+
+
+const std::string& BtGattReadRequest::characteristic_uuid() const {
+  return characteristic_uuid_;
+}
+
+void BtGattReadRequest::set_characteristic_uuid(std::string_view value_arg) {
+  characteristic_uuid_ = value_arg;
+}
+
+
+EncodableList BtGattReadRequest::ToEncodableList() const {
+  EncodableList list;
+  list.reserve(5);
+  list.push_back(EncodableValue(mac_address_));
+  list.push_back(EncodableValue(request_id_));
+  list.push_back(EncodableValue(offset_));
+  list.push_back(EncodableValue(service_uuid_));
+  list.push_back(EncodableValue(characteristic_uuid_));
+  return list;
+}
+
+BtGattReadRequest BtGattReadRequest::FromEncodableList(const EncodableList& list) {
+  BtGattReadRequest decoded(
+    std::get<std::string>(list[0]),
+    std::get<int64_t>(list[1]),
+    std::get<int64_t>(list[2]),
+    std::get<std::string>(list[3]),
+    std::get<std::string>(list[4]));
+  return decoded;
+}
+
+// BtGattWriteRequest
+
+BtGattWriteRequest::BtGattWriteRequest(
+  const std::string& mac_address,
+  int64_t request_id,
+  int64_t offset,
+  const std::string& service_uuid,
+  const std::string& characteristic_uuid,
+  bool prepared_write,
+  bool response_needed)
+ : mac_address_(mac_address),
+    request_id_(request_id),
+    offset_(offset),
+    service_uuid_(service_uuid),
+    characteristic_uuid_(characteristic_uuid),
+    prepared_write_(prepared_write),
+    response_needed_(response_needed) {}
+
+BtGattWriteRequest::BtGattWriteRequest(
+  const std::string& mac_address,
+  int64_t request_id,
+  int64_t offset,
+  const std::string& service_uuid,
+  const std::string& characteristic_uuid,
+  const std::vector<uint8_t>* data,
+  bool prepared_write,
+  bool response_needed)
+ : mac_address_(mac_address),
+    request_id_(request_id),
+    offset_(offset),
+    service_uuid_(service_uuid),
+    characteristic_uuid_(characteristic_uuid),
+    data_(data ? std::optional<std::vector<uint8_t>>(*data) : std::nullopt),
+    prepared_write_(prepared_write),
+    response_needed_(response_needed) {}
+
+const std::string& BtGattWriteRequest::mac_address() const {
+  return mac_address_;
+}
+
+void BtGattWriteRequest::set_mac_address(std::string_view value_arg) {
+  mac_address_ = value_arg;
+}
+
+
+int64_t BtGattWriteRequest::request_id() const {
+  return request_id_;
+}
+
+void BtGattWriteRequest::set_request_id(int64_t value_arg) {
+  request_id_ = value_arg;
+}
+
+
+int64_t BtGattWriteRequest::offset() const {
+  return offset_;
+}
+
+void BtGattWriteRequest::set_offset(int64_t value_arg) {
+  offset_ = value_arg;
+}
+
+
+const std::string& BtGattWriteRequest::service_uuid() const {
+  return service_uuid_;
+}
+
+void BtGattWriteRequest::set_service_uuid(std::string_view value_arg) {
+  service_uuid_ = value_arg;
+}
+
+
+const std::string& BtGattWriteRequest::characteristic_uuid() const {
+  return characteristic_uuid_;
+}
+
+void BtGattWriteRequest::set_characteristic_uuid(std::string_view value_arg) {
+  characteristic_uuid_ = value_arg;
+}
+
+
+const std::vector<uint8_t>* BtGattWriteRequest::data() const {
+  return data_ ? &(*data_) : nullptr;
+}
+
+void BtGattWriteRequest::set_data(const std::vector<uint8_t>* value_arg) {
+  data_ = value_arg ? std::optional<std::vector<uint8_t>>(*value_arg) : std::nullopt;
+}
+
+void BtGattWriteRequest::set_data(const std::vector<uint8_t>& value_arg) {
+  data_ = value_arg;
+}
+
+
+bool BtGattWriteRequest::prepared_write() const {
+  return prepared_write_;
+}
+
+void BtGattWriteRequest::set_prepared_write(bool value_arg) {
+  prepared_write_ = value_arg;
+}
+
+
+bool BtGattWriteRequest::response_needed() const {
+  return response_needed_;
+}
+
+void BtGattWriteRequest::set_response_needed(bool value_arg) {
+  response_needed_ = value_arg;
+}
+
+
+EncodableList BtGattWriteRequest::ToEncodableList() const {
+  EncodableList list;
+  list.reserve(8);
+  list.push_back(EncodableValue(mac_address_));
+  list.push_back(EncodableValue(request_id_));
+  list.push_back(EncodableValue(offset_));
+  list.push_back(EncodableValue(service_uuid_));
+  list.push_back(EncodableValue(characteristic_uuid_));
+  list.push_back(data_ ? EncodableValue(*data_) : EncodableValue());
+  list.push_back(EncodableValue(prepared_write_));
+  list.push_back(EncodableValue(response_needed_));
+  return list;
+}
+
+BtGattWriteRequest BtGattWriteRequest::FromEncodableList(const EncodableList& list) {
+  BtGattWriteRequest decoded(
+    std::get<std::string>(list[0]),
+    std::get<int64_t>(list[1]),
+    std::get<int64_t>(list[2]),
+    std::get<std::string>(list[3]),
+    std::get<std::string>(list[4]),
+    std::get<bool>(list[6]),
+    std::get<bool>(list[7]));
+  auto& encodable_data = list[5];
+  if (!encodable_data.IsNull()) {
+    decoded.set_data(std::get<std::vector<uint8_t>>(encodable_data));
+  }
+  return decoded;
+}
+
 
 PigeonInternalCodecSerializer::PigeonInternalCodecSerializer() {}
 
@@ -469,6 +691,12 @@ EncodableValue PigeonInternalCodecSerializer::ReadValueOfType(
       }
     case 135: {
         return CustomEncodableValue(BtCharacteristicNotification::FromEncodableList(std::get<EncodableList>(ReadValue(stream))));
+      }
+    case 136: {
+        return CustomEncodableValue(BtGattReadRequest::FromEncodableList(std::get<EncodableList>(ReadValue(stream))));
+      }
+    case 137: {
+        return CustomEncodableValue(BtGattWriteRequest::FromEncodableList(std::get<EncodableList>(ReadValue(stream))));
       }
     default:
       return flutter::StandardCodecSerializer::ReadValueOfType(type, stream);
@@ -512,6 +740,16 @@ void PigeonInternalCodecSerializer::WriteValue(
     if (custom_value->type() == typeid(BtCharacteristicNotification)) {
       stream->WriteByte(135);
       WriteValue(EncodableValue(std::any_cast<BtCharacteristicNotification>(*custom_value).ToEncodableList()), stream);
+      return;
+    }
+    if (custom_value->type() == typeid(BtGattReadRequest)) {
+      stream->WriteByte(136);
+      WriteValue(EncodableValue(std::any_cast<BtGattReadRequest>(*custom_value).ToEncodableList()), stream);
+      return;
+    }
+    if (custom_value->type() == typeid(BtGattWriteRequest)) {
+      stream->WriteByte(137);
+      WriteValue(EncodableValue(std::any_cast<BtGattWriteRequest>(*custom_value).ToEncodableList()), stream);
       return;
     }
   }
@@ -974,6 +1212,220 @@ void LayrzBlePlatformChannel::SetUp(
       channel.SetMessageHandler(nullptr);
     }
   }
+  {
+    BasicMessageChannel<> channel(binary_messenger, "dev.flutter.pigeon.layrz_ble.LayrzBlePlatformChannel.startAdvertise" + prepended_suffix, &GetCodec());
+    if (api != nullptr) {
+      channel.SetMessageHandler([api](const EncodableValue& message, const flutter::MessageReply<EncodableValue>& reply) {
+        try {
+          const auto& args = std::get<EncodableList>(message);
+          const auto& encodable_manufacturer_data_arg = args.at(0);
+          if (encodable_manufacturer_data_arg.IsNull()) {
+            reply(WrapError("manufacturer_data_arg unexpectedly null."));
+            return;
+          }
+          const auto& manufacturer_data_arg = std::get<EncodableList>(encodable_manufacturer_data_arg);
+          const auto& encodable_service_data_arg = args.at(1);
+          if (encodable_service_data_arg.IsNull()) {
+            reply(WrapError("service_data_arg unexpectedly null."));
+            return;
+          }
+          const auto& service_data_arg = std::get<EncodableList>(encodable_service_data_arg);
+          const auto& encodable_can_connect_arg = args.at(2);
+          if (encodable_can_connect_arg.IsNull()) {
+            reply(WrapError("can_connect_arg unexpectedly null."));
+            return;
+          }
+          const auto& can_connect_arg = std::get<bool>(encodable_can_connect_arg);
+          const auto& encodable_name_arg = args.at(3);
+          const auto* name_arg = std::get_if<std::string>(&encodable_name_arg);
+          const auto& encodable_services_specs_arg = args.at(4);
+          if (encodable_services_specs_arg.IsNull()) {
+            reply(WrapError("services_specs_arg unexpectedly null."));
+            return;
+          }
+          const auto& services_specs_arg = std::get<EncodableList>(encodable_services_specs_arg);
+          const auto& encodable_allow_bluetooth5_arg = args.at(5);
+          if (encodable_allow_bluetooth5_arg.IsNull()) {
+            reply(WrapError("allow_bluetooth5_arg unexpectedly null."));
+            return;
+          }
+          const auto& allow_bluetooth5_arg = std::get<bool>(encodable_allow_bluetooth5_arg);
+          api->StartAdvertise(manufacturer_data_arg, service_data_arg, can_connect_arg, name_arg, services_specs_arg, allow_bluetooth5_arg, [reply](ErrorOr<bool>&& output) {
+            if (output.has_error()) {
+              reply(WrapError(output.error()));
+              return;
+            }
+            EncodableList wrapped;
+            wrapped.push_back(EncodableValue(std::move(output).TakeValue()));
+            reply(EncodableValue(std::move(wrapped)));
+          });
+        } catch (const std::exception& exception) {
+          reply(WrapError(exception.what()));
+        }
+      });
+    } else {
+      channel.SetMessageHandler(nullptr);
+    }
+  }
+  {
+    BasicMessageChannel<> channel(binary_messenger, "dev.flutter.pigeon.layrz_ble.LayrzBlePlatformChannel.stopAdvertise" + prepended_suffix, &GetCodec());
+    if (api != nullptr) {
+      channel.SetMessageHandler([api](const EncodableValue& message, const flutter::MessageReply<EncodableValue>& reply) {
+        try {
+          api->StopAdvertise([reply](ErrorOr<bool>&& output) {
+            if (output.has_error()) {
+              reply(WrapError(output.error()));
+              return;
+            }
+            EncodableList wrapped;
+            wrapped.push_back(EncodableValue(std::move(output).TakeValue()));
+            reply(EncodableValue(std::move(wrapped)));
+          });
+        } catch (const std::exception& exception) {
+          reply(WrapError(exception.what()));
+        }
+      });
+    } else {
+      channel.SetMessageHandler(nullptr);
+    }
+  }
+  {
+    BasicMessageChannel<> channel(binary_messenger, "dev.flutter.pigeon.layrz_ble.LayrzBlePlatformChannel.respondReadRequest" + prepended_suffix, &GetCodec());
+    if (api != nullptr) {
+      channel.SetMessageHandler([api](const EncodableValue& message, const flutter::MessageReply<EncodableValue>& reply) {
+        try {
+          const auto& args = std::get<EncodableList>(message);
+          const auto& encodable_request_id_arg = args.at(0);
+          if (encodable_request_id_arg.IsNull()) {
+            reply(WrapError("request_id_arg unexpectedly null."));
+            return;
+          }
+          const int64_t request_id_arg = encodable_request_id_arg.LongValue();
+          const auto& encodable_mac_address_arg = args.at(1);
+          if (encodable_mac_address_arg.IsNull()) {
+            reply(WrapError("mac_address_arg unexpectedly null."));
+            return;
+          }
+          const auto& mac_address_arg = std::get<std::string>(encodable_mac_address_arg);
+          const auto& encodable_offset_arg = args.at(2);
+          if (encodable_offset_arg.IsNull()) {
+            reply(WrapError("offset_arg unexpectedly null."));
+            return;
+          }
+          const int64_t offset_arg = encodable_offset_arg.LongValue();
+          const auto& encodable_data_arg = args.at(3);
+          const auto* data_arg = std::get_if<std::vector<uint8_t>>(&encodable_data_arg);
+          api->RespondReadRequest(request_id_arg, mac_address_arg, offset_arg, data_arg, [reply](ErrorOr<bool>&& output) {
+            if (output.has_error()) {
+              reply(WrapError(output.error()));
+              return;
+            }
+            EncodableList wrapped;
+            wrapped.push_back(EncodableValue(std::move(output).TakeValue()));
+            reply(EncodableValue(std::move(wrapped)));
+          });
+        } catch (const std::exception& exception) {
+          reply(WrapError(exception.what()));
+        }
+      });
+    } else {
+      channel.SetMessageHandler(nullptr);
+    }
+  }
+  {
+    BasicMessageChannel<> channel(binary_messenger, "dev.flutter.pigeon.layrz_ble.LayrzBlePlatformChannel.respondWriteRequest" + prepended_suffix, &GetCodec());
+    if (api != nullptr) {
+      channel.SetMessageHandler([api](const EncodableValue& message, const flutter::MessageReply<EncodableValue>& reply) {
+        try {
+          const auto& args = std::get<EncodableList>(message);
+          const auto& encodable_request_id_arg = args.at(0);
+          if (encodable_request_id_arg.IsNull()) {
+            reply(WrapError("request_id_arg unexpectedly null."));
+            return;
+          }
+          const int64_t request_id_arg = encodable_request_id_arg.LongValue();
+          const auto& encodable_mac_address_arg = args.at(1);
+          if (encodable_mac_address_arg.IsNull()) {
+            reply(WrapError("mac_address_arg unexpectedly null."));
+            return;
+          }
+          const auto& mac_address_arg = std::get<std::string>(encodable_mac_address_arg);
+          const auto& encodable_offset_arg = args.at(2);
+          if (encodable_offset_arg.IsNull()) {
+            reply(WrapError("offset_arg unexpectedly null."));
+            return;
+          }
+          const int64_t offset_arg = encodable_offset_arg.LongValue();
+          const auto& encodable_success_arg = args.at(3);
+          if (encodable_success_arg.IsNull()) {
+            reply(WrapError("success_arg unexpectedly null."));
+            return;
+          }
+          const auto& success_arg = std::get<bool>(encodable_success_arg);
+          api->RespondWriteRequest(request_id_arg, mac_address_arg, offset_arg, success_arg, [reply](ErrorOr<bool>&& output) {
+            if (output.has_error()) {
+              reply(WrapError(output.error()));
+              return;
+            }
+            EncodableList wrapped;
+            wrapped.push_back(EncodableValue(std::move(output).TakeValue()));
+            reply(EncodableValue(std::move(wrapped)));
+          });
+        } catch (const std::exception& exception) {
+          reply(WrapError(exception.what()));
+        }
+      });
+    } else {
+      channel.SetMessageHandler(nullptr);
+    }
+  }
+  {
+    BasicMessageChannel<> channel(binary_messenger, "dev.flutter.pigeon.layrz_ble.LayrzBlePlatformChannel.sendNotification" + prepended_suffix, &GetCodec());
+    if (api != nullptr) {
+      channel.SetMessageHandler([api](const EncodableValue& message, const flutter::MessageReply<EncodableValue>& reply) {
+        try {
+          const auto& args = std::get<EncodableList>(message);
+          const auto& encodable_service_uuid_arg = args.at(0);
+          if (encodable_service_uuid_arg.IsNull()) {
+            reply(WrapError("service_uuid_arg unexpectedly null."));
+            return;
+          }
+          const auto& service_uuid_arg = std::get<std::string>(encodable_service_uuid_arg);
+          const auto& encodable_characteristic_uuid_arg = args.at(1);
+          if (encodable_characteristic_uuid_arg.IsNull()) {
+            reply(WrapError("characteristic_uuid_arg unexpectedly null."));
+            return;
+          }
+          const auto& characteristic_uuid_arg = std::get<std::string>(encodable_characteristic_uuid_arg);
+          const auto& encodable_payload_arg = args.at(2);
+          if (encodable_payload_arg.IsNull()) {
+            reply(WrapError("payload_arg unexpectedly null."));
+            return;
+          }
+          const auto& payload_arg = std::get<std::vector<uint8_t>>(encodable_payload_arg);
+          const auto& encodable_request_confirmation_arg = args.at(3);
+          if (encodable_request_confirmation_arg.IsNull()) {
+            reply(WrapError("request_confirmation_arg unexpectedly null."));
+            return;
+          }
+          const auto& request_confirmation_arg = std::get<bool>(encodable_request_confirmation_arg);
+          api->SendNotification(service_uuid_arg, characteristic_uuid_arg, payload_arg, request_confirmation_arg, [reply](ErrorOr<bool>&& output) {
+            if (output.has_error()) {
+              reply(WrapError(output.error()));
+              return;
+            }
+            EncodableList wrapped;
+            wrapped.push_back(EncodableValue(std::move(output).TakeValue()));
+            reply(EncodableValue(std::move(wrapped)));
+          });
+        } catch (const std::exception& exception) {
+          reply(WrapError(exception.what()));
+        }
+      });
+    } else {
+      channel.SetMessageHandler(nullptr);
+    }
+  }
 }
 
 EncodableValue LayrzBlePlatformChannel::WrapError(std::string_view error_message) {
@@ -1178,6 +1630,177 @@ void LayrzBleCallbackChannel::OnCharacteristicUpdate(
   BasicMessageChannel<> channel(binary_messenger_, channel_name, &GetCodec());
   EncodableValue encoded_api_arguments = EncodableValue(EncodableList{
     CustomEncodableValue(notification_arg),
+  });
+  channel.Send(encoded_api_arguments, [channel_name, on_success = std::move(on_success), on_error = std::move(on_error)](const uint8_t* reply, size_t reply_size) {
+    std::unique_ptr<EncodableValue> response = GetCodec().DecodeMessage(reply, reply_size);
+    const auto& encodable_return_value = *response;
+    const auto* list_return_value = std::get_if<EncodableList>(&encodable_return_value);
+    if (list_return_value) {
+      if (list_return_value->size() > 1) {
+        on_error(FlutterError(std::get<std::string>(list_return_value->at(0)), std::get<std::string>(list_return_value->at(1)), list_return_value->at(2)));
+      } else {
+        on_success();
+      }
+    } else {
+      on_error(CreateConnectionError(channel_name));
+    } 
+  });
+}
+
+void LayrzBleCallbackChannel::OnAdvertiseStarted(
+  std::function<void(void)>&& on_success,
+  std::function<void(const FlutterError&)>&& on_error) {
+  const std::string channel_name = "dev.flutter.pigeon.layrz_ble.LayrzBleCallbackChannel.onAdvertiseStarted" + message_channel_suffix_;
+  BasicMessageChannel<> channel(binary_messenger_, channel_name, &GetCodec());
+  EncodableValue encoded_api_arguments = EncodableValue();
+  channel.Send(encoded_api_arguments, [channel_name, on_success = std::move(on_success), on_error = std::move(on_error)](const uint8_t* reply, size_t reply_size) {
+    std::unique_ptr<EncodableValue> response = GetCodec().DecodeMessage(reply, reply_size);
+    const auto& encodable_return_value = *response;
+    const auto* list_return_value = std::get_if<EncodableList>(&encodable_return_value);
+    if (list_return_value) {
+      if (list_return_value->size() > 1) {
+        on_error(FlutterError(std::get<std::string>(list_return_value->at(0)), std::get<std::string>(list_return_value->at(1)), list_return_value->at(2)));
+      } else {
+        on_success();
+      }
+    } else {
+      on_error(CreateConnectionError(channel_name));
+    } 
+  });
+}
+
+void LayrzBleCallbackChannel::OnAdvertiseStopped(
+  std::function<void(void)>&& on_success,
+  std::function<void(const FlutterError&)>&& on_error) {
+  const std::string channel_name = "dev.flutter.pigeon.layrz_ble.LayrzBleCallbackChannel.onAdvertiseStopped" + message_channel_suffix_;
+  BasicMessageChannel<> channel(binary_messenger_, channel_name, &GetCodec());
+  EncodableValue encoded_api_arguments = EncodableValue();
+  channel.Send(encoded_api_arguments, [channel_name, on_success = std::move(on_success), on_error = std::move(on_error)](const uint8_t* reply, size_t reply_size) {
+    std::unique_ptr<EncodableValue> response = GetCodec().DecodeMessage(reply, reply_size);
+    const auto& encodable_return_value = *response;
+    const auto* list_return_value = std::get_if<EncodableList>(&encodable_return_value);
+    if (list_return_value) {
+      if (list_return_value->size() > 1) {
+        on_error(FlutterError(std::get<std::string>(list_return_value->at(0)), std::get<std::string>(list_return_value->at(1)), list_return_value->at(2)));
+      } else {
+        on_success();
+      }
+    } else {
+      on_error(CreateConnectionError(channel_name));
+    } 
+  });
+}
+
+void LayrzBleCallbackChannel::OnGattConnected(
+  const BtDevice& device_arg,
+  std::function<void(void)>&& on_success,
+  std::function<void(const FlutterError&)>&& on_error) {
+  const std::string channel_name = "dev.flutter.pigeon.layrz_ble.LayrzBleCallbackChannel.onGattConnected" + message_channel_suffix_;
+  BasicMessageChannel<> channel(binary_messenger_, channel_name, &GetCodec());
+  EncodableValue encoded_api_arguments = EncodableValue(EncodableList{
+    CustomEncodableValue(device_arg),
+  });
+  channel.Send(encoded_api_arguments, [channel_name, on_success = std::move(on_success), on_error = std::move(on_error)](const uint8_t* reply, size_t reply_size) {
+    std::unique_ptr<EncodableValue> response = GetCodec().DecodeMessage(reply, reply_size);
+    const auto& encodable_return_value = *response;
+    const auto* list_return_value = std::get_if<EncodableList>(&encodable_return_value);
+    if (list_return_value) {
+      if (list_return_value->size() > 1) {
+        on_error(FlutterError(std::get<std::string>(list_return_value->at(0)), std::get<std::string>(list_return_value->at(1)), list_return_value->at(2)));
+      } else {
+        on_success();
+      }
+    } else {
+      on_error(CreateConnectionError(channel_name));
+    } 
+  });
+}
+
+void LayrzBleCallbackChannel::OnGattDisconnected(
+  const BtDevice& device_arg,
+  std::function<void(void)>&& on_success,
+  std::function<void(const FlutterError&)>&& on_error) {
+  const std::string channel_name = "dev.flutter.pigeon.layrz_ble.LayrzBleCallbackChannel.onGattDisconnected" + message_channel_suffix_;
+  BasicMessageChannel<> channel(binary_messenger_, channel_name, &GetCodec());
+  EncodableValue encoded_api_arguments = EncodableValue(EncodableList{
+    CustomEncodableValue(device_arg),
+  });
+  channel.Send(encoded_api_arguments, [channel_name, on_success = std::move(on_success), on_error = std::move(on_error)](const uint8_t* reply, size_t reply_size) {
+    std::unique_ptr<EncodableValue> response = GetCodec().DecodeMessage(reply, reply_size);
+    const auto& encodable_return_value = *response;
+    const auto* list_return_value = std::get_if<EncodableList>(&encodable_return_value);
+    if (list_return_value) {
+      if (list_return_value->size() > 1) {
+        on_error(FlutterError(std::get<std::string>(list_return_value->at(0)), std::get<std::string>(list_return_value->at(1)), list_return_value->at(2)));
+      } else {
+        on_success();
+      }
+    } else {
+      on_error(CreateConnectionError(channel_name));
+    } 
+  });
+}
+
+void LayrzBleCallbackChannel::OnGattReadRequest(
+  const BtGattReadRequest& request_arg,
+  std::function<void(void)>&& on_success,
+  std::function<void(const FlutterError&)>&& on_error) {
+  const std::string channel_name = "dev.flutter.pigeon.layrz_ble.LayrzBleCallbackChannel.onGattReadRequest" + message_channel_suffix_;
+  BasicMessageChannel<> channel(binary_messenger_, channel_name, &GetCodec());
+  EncodableValue encoded_api_arguments = EncodableValue(EncodableList{
+    CustomEncodableValue(request_arg),
+  });
+  channel.Send(encoded_api_arguments, [channel_name, on_success = std::move(on_success), on_error = std::move(on_error)](const uint8_t* reply, size_t reply_size) {
+    std::unique_ptr<EncodableValue> response = GetCodec().DecodeMessage(reply, reply_size);
+    const auto& encodable_return_value = *response;
+    const auto* list_return_value = std::get_if<EncodableList>(&encodable_return_value);
+    if (list_return_value) {
+      if (list_return_value->size() > 1) {
+        on_error(FlutterError(std::get<std::string>(list_return_value->at(0)), std::get<std::string>(list_return_value->at(1)), list_return_value->at(2)));
+      } else {
+        on_success();
+      }
+    } else {
+      on_error(CreateConnectionError(channel_name));
+    } 
+  });
+}
+
+void LayrzBleCallbackChannel::OnGattWriteRequest(
+  const BtGattWriteRequest& request_arg,
+  std::function<void(void)>&& on_success,
+  std::function<void(const FlutterError&)>&& on_error) {
+  const std::string channel_name = "dev.flutter.pigeon.layrz_ble.LayrzBleCallbackChannel.onGattWriteRequest" + message_channel_suffix_;
+  BasicMessageChannel<> channel(binary_messenger_, channel_name, &GetCodec());
+  EncodableValue encoded_api_arguments = EncodableValue(EncodableList{
+    CustomEncodableValue(request_arg),
+  });
+  channel.Send(encoded_api_arguments, [channel_name, on_success = std::move(on_success), on_error = std::move(on_error)](const uint8_t* reply, size_t reply_size) {
+    std::unique_ptr<EncodableValue> response = GetCodec().DecodeMessage(reply, reply_size);
+    const auto& encodable_return_value = *response;
+    const auto* list_return_value = std::get_if<EncodableList>(&encodable_return_value);
+    if (list_return_value) {
+      if (list_return_value->size() > 1) {
+        on_error(FlutterError(std::get<std::string>(list_return_value->at(0)), std::get<std::string>(list_return_value->at(1)), list_return_value->at(2)));
+      } else {
+        on_success();
+      }
+    } else {
+      on_error(CreateConnectionError(channel_name));
+    } 
+  });
+}
+
+void LayrzBleCallbackChannel::OnGattMtuChanged(
+  const std::string& mac_address_arg,
+  int64_t new_mtu_arg,
+  std::function<void(void)>&& on_success,
+  std::function<void(const FlutterError&)>&& on_error) {
+  const std::string channel_name = "dev.flutter.pigeon.layrz_ble.LayrzBleCallbackChannel.onGattMtuChanged" + message_channel_suffix_;
+  BasicMessageChannel<> channel(binary_messenger_, channel_name, &GetCodec());
+  EncodableValue encoded_api_arguments = EncodableValue(EncodableList{
+    EncodableValue(mac_address_arg),
+    EncodableValue(new_mtu_arg),
   });
   channel.Send(encoded_api_arguments, [channel_name, on_success = std::move(on_success), on_error = std::move(on_error)](const uint8_t* reply, size_t reply_size) {
     std::unique_ptr<EncodableValue> response = GetCodec().DecodeMessage(reply, reply_size);
