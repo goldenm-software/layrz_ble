@@ -1,15 +1,14 @@
 library;
 
-import 'dart:typed_data';
-
+import 'package:flutter/foundation.dart';
 import 'package:layrz_ble/layrz_ble.dart';
+import 'package:layrz_ble/src/layrz_ble_linux/linux_channel.dart';
 import 'package:layrz_ble/src/layrz_ble_pigeon/pigeon_channel.dart';
+import 'package:layrz_ble/src/layrz_ble_web/web_channel.dart';
 import 'package:layrz_ble/src/platform_interface.dart';
 
 export 'package:layrz_models/layrz_models.dart'
     show BleDevice, BleService, BleCharacteristic, BleProperty, BleManufacturerData, BleServiceData;
-
-export 'platforms/stub.dart' if (dart.library.io) 'platforms/linux.dart';
 
 export 'src/types/types.dart';
 
@@ -22,10 +21,8 @@ class LayrzBle {
 
   /// [_defaultPlatform] is used to get the default platform interface for the LayrzBle plugin.
   static LayrzBlePlatform _defaultPlatform() {
-    // if (kIsWeb) return LayrzBleWeb.instance;
-    // if (defaultTargetPlatform == TargetPlatform.linux) {
-    //   return LayrzBleLinux.instance;
-    // }
+    if (kIsWeb) return LayrzBlePluginWeb.instance;
+    if (defaultTargetPlatform == TargetPlatform.linux) return LayrzBlePluginLinux.instance;
     return LayrzBlePigeonChannel.instance;
   }
 

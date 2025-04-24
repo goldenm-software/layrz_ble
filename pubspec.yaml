@@ -61,9 +61,4 @@ flutter:
       #   sharedDarwinSource: true
       # windows:
       #   pluginClass: LayrzBlePluginCApi
-      # web:
-      #   pluginClass: LayrzBlePluginWeb
-      #   fileName: platforms/web.dart
-      # linux:
-      #   dartPluginClass: LayrzBlePluginLinux
-      #   fileName: platforms/linux.dart
+
