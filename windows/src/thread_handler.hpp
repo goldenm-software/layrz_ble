@@ -1,5 +1,8 @@
 #pragma once
 
+#ifndef __LAYRZ_BLE_PLUGIN_UI_THREAD__
+#define __LAYRZ_BLE_PLUGIN_UI_THREAD__
+
 #include <windows.h>
 
 #include <flutter/plugin_registrar_windows.h>
@@ -92,3 +95,5 @@ private:
     std::list<std::function<void()>> queuedFuncs_;
     std::mutex mutex_;
 };
+
+#endif // __LAYRZ_BLE_PLUGIN_UI_THREAD__

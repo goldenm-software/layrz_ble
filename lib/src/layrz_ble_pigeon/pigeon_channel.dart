@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:typed_data';
 
 import 'package:flutter/foundation.dart';
 import 'package:layrz_ble/src/layrz_ble_pigeon/layrz_ble.g.dart';

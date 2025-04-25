@@ -116,6 +116,7 @@ class _HomePageState extends State<HomePage> {
   @override
   Widget build(BuildContext context) {
     return ThemedLayout(
+      isBackEnabled: false,
       logo: logo,
       favicon: favicon,
       appTitle: 'Layrz BLE Example',

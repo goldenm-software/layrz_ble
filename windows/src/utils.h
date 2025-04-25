@@ -1,5 +1,8 @@
 #pragma once
 
+#ifndef __LAYRZ_BLE_PLUGIN_UTILS_H__
+#define __LAYRZ_BLE_PLUGIN_UTILS_H__
+
 #include <iostream>
 #include <codecvt>
 #include <sstream>
@@ -28,3 +31,5 @@ namespace layrz_ble {
   IBuffer VectorToIBuffer(const std::vector<uint8_t> &data);
   std::vector<uint8_t> IBufferToVector(const IBuffer &buffer);
 }
+
+#endif // __LAYRZ_BLE_PLUGIN_UTILS_H__
