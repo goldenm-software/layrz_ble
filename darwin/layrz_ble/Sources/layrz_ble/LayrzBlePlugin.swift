@@ -221,6 +221,8 @@ private class LayrzBleDarwin: NSObject, LayrzBlePlatformChannel, CBCentralManage
                 manufacturerData: [],
                 serviceData: [],
             )) { _ in }
+            connectedPeripherals.removeValue(forKey: uuid)
+            servicesAndCharacteristics.removeValue(forKey: uuid)
             return
         }
         
@@ -314,10 +316,12 @@ private class LayrzBleDarwin: NSObject, LayrzBlePlatformChannel, CBCentralManage
             }
             
             connectedPeripherals.removeAll()
+            servicesAndCharacteristics.removeAll()
         } else {
             if let peripheral = connectedPeripherals[macAddress!.uppercased()] {
                 centralManager.cancelPeripheralConnection(peripheral)
                 connectedPeripherals.removeValue(forKey: macAddress!.uppercased())
+                servicesAndCharacteristics.removeValue(forKey: macAddress!.uppercased())
             } else {
                 log("Device not found")
             }
@@ -641,12 +645,14 @@ private class LayrzBleDarwin: NSObject, LayrzBlePlatformChannel, CBCentralManage
             manufacturerData: [],
             serviceData: [],
         )) { _ in }
+        
+        connectedPeripherals.removeValue(forKey: uuid)
+        servicesAndCharacteristics.removeValue(forKey: uuid)
     }
     
     func centralManager(_ central: CBCentralManager, didFailToConnect peripheral: CBPeripheral, error: (any Error)?) {
         let uuid = peripheral.identifier.uuidString.uppercased()
         log("Failed to connect to \(uuid): \(error?.localizedDescription ?? "Unknown error")")
-        connectedPeripherals[uuid] = nil
         connectCallback?(.success(false))
         connectCallback = nil
         callbackChannel.onDisconnected(device: BtDevice(
@@ -655,6 +661,8 @@ private class LayrzBleDarwin: NSObject, LayrzBlePlatformChannel, CBCentralManage
             manufacturerData: [],
             serviceData: [],
         )) { _ in }
+        connectedPeripherals.removeValue(forKey: uuid)
+        servicesAndCharacteristics.removeValue(forKey: uuid)
     }
     
     func centralManagerDidUpdateState(_ central: CBCentralManager) {

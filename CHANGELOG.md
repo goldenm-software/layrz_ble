@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.3.0-rc.1
+
+- Fixes related to disconnection on iOS and macOS.
+- Testing phase started
+
 ## 1.3.0-prerelease.1
 
 - Migrated the plugin to use `pigeon` instead of manual `MethodChannel` implementation.
