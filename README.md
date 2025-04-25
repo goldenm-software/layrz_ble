@@ -27,7 +27,7 @@ For example, most of the libraries out there requires services and characteristi
 | Read from characteristics | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | `readCharacteristic` |
 | Write to characteristics | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | `writeCharacteristic` |
 | Subscribe to characteristic notifications | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | `startNotify`, `stopNotify` and `onNotify` |
-| Multi-connection support | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | Read below |
+| Multi-connection support | ✅ | ✅ | ✅ | ❌ | ❌ | ❌ | Read below |
 
 ### Advertising and GATT server
 
