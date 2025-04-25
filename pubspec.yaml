@@ -55,10 +55,10 @@ flutter:
         pluginClass: LayrzBlePlugin
       windows:
         pluginClass: LayrzBlePluginCApi
-      # ios:
-      #   pluginClass: LayrzBlePlugin
-      #   sharedDarwinSource: true
-      # macos:
-      #   pluginClass: LayrzBlePlugin
-      #   sharedDarwinSource: true
+      ios:
+        pluginClass: LayrzBlePlugin
+        sharedDarwinSource: true
+      macos:
+        pluginClass: LayrzBlePlugin
+        sharedDarwinSource: true
 
