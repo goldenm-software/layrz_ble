@@ -107,3 +107,11 @@ abstract class GattMtuChanged extends BleGattEvent with _$GattMtuChanged {
 
   factory GattMtuChanged.fromJson(Map<String, dynamic> json) => _$GattMtuChangedFromJson(json);
 }
+
+class GattStarted extends BleGattEvent {
+  const GattStarted() : super.event();
+}
+
+class GattStopped extends BleGattEvent {
+  const GattStopped() : super.event();
+}

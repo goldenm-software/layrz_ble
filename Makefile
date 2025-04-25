@@ -1,7 +1,11 @@
-.PHONY: all test build lint clean
+.PHONY: all test build lint clean pigeon
 
 build:
 	dart run build_runner build --delete-conflicting-outputs
+	dart run pigeon --input pigeon/layrz_ble.dart
+
+pigeon:
+	dart run pigeon --input pigeon/layrz_ble.dart
 
 lint:
 	dart fix --dry-run

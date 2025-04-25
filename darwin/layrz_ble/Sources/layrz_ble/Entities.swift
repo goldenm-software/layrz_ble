@@ -9,8 +9,9 @@ import CoreBluetooth
 
 class BleService {
     let uuid: CBUUID
-    let characteristics: [BleCharacteristic]
+    var characteristics: [BleCharacteristic]
     let service: CBService
+    var discovered: Bool = false
     
     public var uuidString: String { uuid.uuidString.uppercased() }
 
@@ -19,6 +20,10 @@ class BleService {
             "uuid": uuidString,
             "characteristics": characteristics.map { $0.toDictionary() }
         ]
+    }
+    
+    public func toPigeon() -> BtService {
+        return BtService(uuid: uuidString, characteristics: characteristics.map { $0.toPigeon() })
     }
     
     // Define the constructor
@@ -41,6 +46,13 @@ class BleCharacteristic {
             "uuid": uuidString,
             "properties": properties
         ]
+    }
+    
+    public func toPigeon() -> BtCharacteristic {
+        return BtCharacteristic(
+            uuid: uuidString,
+            properties: properties
+        )
     }
     
     // Define the constructor

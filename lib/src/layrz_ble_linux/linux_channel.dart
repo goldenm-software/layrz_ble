@@ -8,6 +8,12 @@ import 'package:layrz_ble/src/types/types.dart';
 import 'package:layrz_models/layrz_models.dart';
 
 class LayrzBlePluginLinux extends LayrzBlePlatform {
+  static LayrzBlePluginLinux? _instance;
+  static LayrzBlePluginLinux get instance {
+    _instance ??= LayrzBlePluginLinux();
+    return _instance!;
+  }
+
   LayrzBlePluginLinux() {
     try {
       _client = BlueZClient();
@@ -17,10 +23,6 @@ class LayrzBlePluginLinux extends LayrzBlePlatform {
     } catch (e) {
       log("Error initializing BlueZClient: $e");
     }
-  }
-
-  static void registerWith() {
-    LayrzBlePlatform.instance = LayrzBlePluginLinux();
   }
 
   bool _isScanning = false;
@@ -36,6 +38,7 @@ class LayrzBlePluginLinux extends LayrzBlePlatform {
   final StreamController<BleEvent> _eventController = StreamController<BleEvent>.broadcast();
   final StreamController<BleCharacteristicNotification> _notifyController =
       StreamController<BleCharacteristicNotification>.broadcast();
+  final StreamController<BleGattEvent> _gattController = StreamController<BleGattEvent>.broadcast();
 
   @override
   bool get isAdvertising => false;
@@ -48,6 +51,9 @@ class LayrzBlePluginLinux extends LayrzBlePlatform {
 
   @override
   Stream<BleEvent> get onEvent => _eventController.stream;
+
+  @override
+  Stream<BleGattEvent> get onGattUpdate => _gattController.stream;
 
   @override
   Stream<BleCharacteristicNotification> get onNotify => _notifyController.stream;

@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.3.0-prerelease.1
+
+- Migrated the plugin to use `pigeon` instead of manual `MethodChannel` implementation.
+
 ## 1.3.0-beta.6
 
 - Fixed issues with scan of Bluetooth Core 5.0 spec on Android.

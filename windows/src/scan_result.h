@@ -1,5 +1,8 @@
 #pragma once
 
+#ifndef __LAYRZ_BLE_PLUGIN_SCAN_RESULT_H__
+#define __LAYRZ_BLE_PLUGIN_SCAN_RESULT_H__
+
 #include <optional>
 #include <string>
 #include <vector>
@@ -64,3 +67,5 @@ namespace layrz_ble {
       std::optional<uint16_t> txPower_;
   };
 }
+
+#endif // __LAYRZ_BLE_PLUGIN_SCAN_RESULT_H__

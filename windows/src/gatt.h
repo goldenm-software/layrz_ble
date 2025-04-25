@@ -1,5 +1,8 @@
 #pragma once
 
+#ifndef __LAYRZ_BLE_PLUGIN_GATT__
+#define __LAYRZ_BLE_PLUGIN_GATT__
+
 #include <winrt/Windows.Devices.Bluetooth.GenericAttributeProfile.h>
 #include "utils.h"
 
@@ -38,3 +41,5 @@ namespace layrz_ble {
       std::unordered_map<std::string, BleCharacteristic> characteristics_;
   }; // class BleService
 } // namespace layrz_ble
+
+#endif // __LAYRZ_BLE_PLUGIN_GATT__

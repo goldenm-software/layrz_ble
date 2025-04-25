@@ -2,18 +2,19 @@ import 'dart:async';
 
 import 'package:collection/collection.dart';
 import 'package:flutter/foundation.dart';
-import 'package:flutter_web_plugins/flutter_web_plugins.dart';
 import 'package:layrz_ble/src/platform_interface.dart';
 import 'package:layrz_ble/src/types/types.dart';
 import 'package:layrz_models/layrz_models.dart';
 import 'package:flutter_web_bluetooth/flutter_web_bluetooth.dart';
 
 class LayrzBlePluginWeb extends LayrzBlePlatform {
-  LayrzBlePluginWeb();
-
-  static void registerWith(Registrar registrar) {
-    LayrzBlePlatform.instance = LayrzBlePluginWeb();
+  static LayrzBlePluginWeb? _instance;
+  static LayrzBlePluginWeb get instance {
+    _instance ??= LayrzBlePluginWeb();
+    return _instance!;
   }
+
+  LayrzBlePluginWeb();
 
   BluetoothDevice? _currentConnected;
   final Map<String, StreamSubscription<ByteData>> _notifications = {};
@@ -24,6 +25,7 @@ class LayrzBlePluginWeb extends LayrzBlePlatform {
   final StreamController<BleEvent> _eventController = StreamController<BleEvent>.broadcast();
   final StreamController<BleCharacteristicNotification> _notifyController =
       StreamController<BleCharacteristicNotification>.broadcast();
+  final StreamController<BleGattEvent> _gattController = StreamController<BleGattEvent>.broadcast();
 
   @override
   bool get isAdvertising => false;
@@ -39,6 +41,9 @@ class LayrzBlePluginWeb extends LayrzBlePlatform {
 
   @override
   Stream<BleCharacteristicNotification> get onNotify => _notifyController.stream;
+
+  @override
+  Stream<BleGattEvent> get onGattUpdate => _gattController.stream;
 
   @override
   Future<bool> checkCapabilities() => Future.value(FlutterWebBluetooth.instance.isBluetoothApiSupported);

@@ -83,8 +83,6 @@ class _HomePageState extends State<HomePage> {
             requestId: event.requestId,
             macAddress: event.macAddress,
             offset: event.offset,
-            serviceUuid: event.serviceUuid,
-            characteristicUuid: event.characteristicUuid,
             success: true,
           );
         } else if (event is GattReadRequest) {
@@ -94,8 +92,6 @@ class _HomePageState extends State<HomePage> {
             requestId: event.requestId,
             macAddress: event.macAddress,
             offset: event.offset,
-            serviceUuid: event.serviceUuid,
-            characteristicUuid: event.characteristicUuid,
             data: Uint8List.fromList([0x01, 0x02, 0x03, 0x04]),
           );
         } else {
@@ -120,6 +116,7 @@ class _HomePageState extends State<HomePage> {
   @override
   Widget build(BuildContext context) {
     return ThemedLayout(
+      isBackEnabled: false,
       logo: logo,
       favicon: favicon,
       appTitle: 'Layrz BLE Example',
@@ -330,7 +327,7 @@ class _HomePageState extends State<HomePage> {
                         onTap: () async {
                           setState(() => _isLoading = true);
                           _devices = {};
-                          _isScanning = await plugin.startScan() ?? false;
+                          _isScanning = await plugin.startScan();
                           setState(() => _isLoading = false);
 
                           ThemedSnackbarMessenger.of(context).showSnackbar(ThemedSnackbar(

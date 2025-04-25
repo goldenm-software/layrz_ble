@@ -40,6 +40,8 @@ list(APPEND PLUGIN_SOURCES
   "src/scan_result.h"
   "src/layrz_ble_plugin.cpp"
   "src/layrz_ble_plugin.h"
+  "src/generated/layrz_ble.g.cpp"
+  "src/generated/layrz_ble.g.h"
 )
 
 add_library(${PLUGIN_NAME} SHARED
