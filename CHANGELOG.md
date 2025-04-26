@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.3.0-rc.2
+
+- Added `platforms` on the `pubspec.yaml` to prevent issues with `pub.dev`
+
 ## 1.3.0-rc.1
 
 - Fixes related to disconnection on iOS and macOS.
