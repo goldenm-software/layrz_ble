@@ -411,7 +411,7 @@ class LayrzBlePluginLinux extends LayrzBlePlatform {
 
     for (final entry in device.serviceData.entries) {
       final bytes = entry.key.value;
-      final serviceUuid = _standarizeServiceUuid([bytes[2], bytes[3]]);
+      int serviceUuid = bytes[2] << 8 | bytes[3];
       final data = entry.value;
       if (data.isEmpty) continue;
 
@@ -428,14 +428,5 @@ class LayrzBlePluginLinux extends LayrzBlePlatform {
       manufacturerData: manufacturerData,
       serviceData: serviceData,
     );
-  }
-
-  int _standarizeServiceUuid(List<int> bytes) {
-    return int.tryParse(
-          bytes.map((e) {
-            return e.toRadixString(16).padLeft(2, '0');
-          }).join(''),
-        ) ??
-        0x0000;
   }
 }
