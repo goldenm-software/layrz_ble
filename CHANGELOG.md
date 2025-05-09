@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.3.0
+
+- Stable release of the 1.3.0 version.
+
 ## 1.3.0-rc.3
 
 - Fixed an issue with the service data parser on Linux
