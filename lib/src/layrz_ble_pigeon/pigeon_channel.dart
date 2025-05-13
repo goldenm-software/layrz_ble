@@ -315,7 +315,7 @@ class _LayrzBleCallbackHandler extends LayrzBleCallbackChannel {
   @override
   void onScanResult(BtDevice device) {
     scanController.add(BleDevice(
-      macAddress: device.macAddress,
+      macAddress: device.macAddress.toUpperCase(),
       name: device.name,
       rssi: device.rssi,
       txPower: device.txPower,
