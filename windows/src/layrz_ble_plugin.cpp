@@ -196,7 +196,7 @@ namespace layrz_ble {
   /// @return void
   /// @note The result is returned as a boolean
   winrt::fire_and_forget LayrzBlePlugin::connectAsync(const std::string& mac_address, std::function<void(ErrorOr<bool> reply)> result) {
-    auto it = visibleDevices.find(toLowercase(mac_address));
+    auto it = visibleDevices.find(toUppercase(mac_address));
     if (it == visibleDevices.end()) {
       Log("Device not found");
       result(false);
@@ -243,14 +243,14 @@ namespace layrz_ble {
       Log("%d GATT services found", servicesResult.Services().Size());
 
       for (auto service : servicesResult.Services()) {
-        auto serviceUuid = toLowercase(GuidToString(service.Uuid()));
-        Log("\tParsing service %s", serviceUuid.c_str());
+        auto serviceUuid = toUppercase(GuidToString(service.Uuid()));
+        // Log("\tParsing service %s", serviceUuid.c_str());
         servicesAndCharacteristics[serviceUuid] = BleService(service);
   
         auto characteristics = co_await service.GetCharacteristicsAsync(BluetoothCacheMode::Uncached);
         for (auto characteristic : characteristics.Characteristics()) {
-          auto characteristicUuid = toLowercase(GuidToString(characteristic.Uuid()));
-          Log("\t\tParsing characteristic %s", characteristicUuid.c_str());
+          auto characteristicUuid = toUppercase(GuidToString(characteristic.Uuid()));
+          // Log("\t\tParsing characteristic %s", characteristicUuid.c_str());
           servicesAndCharacteristics[serviceUuid].addCharacteristic(BleCharacteristic(characteristic));
         }
       }
@@ -287,7 +287,7 @@ namespace layrz_ble {
     device->Close();
 
     BtDevice payload = BtDevice(
-      toLowercase(HStringToString(device->DeviceId())),
+      toUppercase(HStringToString(device->DeviceId())),
       flutter::EncodableList(),
       flutter::EncodableList()
     );
@@ -451,7 +451,7 @@ namespace layrz_ble {
       return;
     }
 
-    auto serviceSearch = servicesAndCharacteristics.find(toLowercase(service_uuid));
+    auto serviceSearch = servicesAndCharacteristics.find(toUppercase(service_uuid));
     if (serviceSearch == servicesAndCharacteristics.end()) {
       Log("Service %s not found", service_uuid.c_str());
       result(ErrorOr<std::vector<uint8_t>>(std::vector<uint8_t>()));
@@ -460,7 +460,7 @@ namespace layrz_ble {
     auto service = serviceSearch->second;
 
     auto characteristics = service.Characteristics();
-    auto characteristicsSearch = characteristics.find(toLowercase(characteristic_uuid));
+    auto characteristicsSearch = characteristics.find(toUppercase(characteristic_uuid));
     if (characteristicsSearch == characteristics.end()) {
       Log("Characteristic %s not found in service %s", characteristic_uuid.c_str(), service_uuid.c_str());
       result(ErrorOr<std::vector<uint8_t>>(std::vector<uint8_t>()));
@@ -536,7 +536,7 @@ namespace layrz_ble {
       return;
     }
 
-    auto serviceSearch = servicesAndCharacteristics.find(toLowercase(service_uuid));
+    auto serviceSearch = servicesAndCharacteristics.find(toUppercase(service_uuid));
     if (serviceSearch == servicesAndCharacteristics.end()) {
       Log("Service %s not found", service_uuid.c_str());
       result(false);
@@ -545,7 +545,7 @@ namespace layrz_ble {
     auto service = serviceSearch->second;
 
     auto characteristics = service.Characteristics();
-    auto characteristicsSearch = characteristics.find(toLowercase(characteristic_uuid));
+    auto characteristicsSearch = characteristics.find(toUppercase(characteristic_uuid));
     if (characteristicsSearch == characteristics.end()) {
       Log("Characteristic %s not found in service %s", characteristic_uuid.c_str(), service_uuid.c_str());
       result(false);
@@ -645,7 +645,7 @@ namespace layrz_ble {
       return;
     }
 
-    auto serviceSearch = servicesAndCharacteristics.find(toLowercase(service_uuid));
+    auto serviceSearch = servicesAndCharacteristics.find(toUppercase(service_uuid));
     if (serviceSearch == servicesAndCharacteristics.end()) {
       Log("Service %s not found", service_uuid.c_str());
       result(false);
@@ -654,7 +654,7 @@ namespace layrz_ble {
     auto service = serviceSearch->second;
 
     auto characteristics = service.Characteristics();
-    auto characteristicsSearch = characteristics.find(toLowercase(characteristic_uuid));
+    auto characteristicsSearch = characteristics.find(toUppercase(characteristic_uuid));
     if (characteristicsSearch == characteristics.end()) {
       Log("Characteristic %s not found in service %s", characteristic_uuid.c_str(), service_uuid.c_str());
       result(false);
@@ -696,7 +696,7 @@ namespace layrz_ble {
         co_return;
       }
       
-      auto uuid = toLowercase(GuidToString(characteristic.Uuid()));
+      auto uuid = toUppercase(GuidToString(characteristic.Uuid()));
       servicesNotifying[uuid] = {0};
       characteristic.ValueChanged(servicesNotifying[uuid]);
       auto token  = characteristic.ValueChanged({this, &LayrzBlePlugin::onCharacteristicValueChanged});
@@ -737,7 +737,7 @@ namespace layrz_ble {
       return;
     }
 
-    auto serviceSearch = servicesAndCharacteristics.find(toLowercase(service_uuid));
+    auto serviceSearch = servicesAndCharacteristics.find(toUppercase(service_uuid));
     if (serviceSearch == servicesAndCharacteristics.end()) {
       Log("Service %s not found", service_uuid.c_str());
       result(false);
@@ -746,7 +746,7 @@ namespace layrz_ble {
     auto service = serviceSearch->second;
 
     auto characteristics = service.Characteristics();
-    auto characteristicsSearch = characteristics.find(toLowercase(characteristic_uuid));
+    auto characteristicsSearch = characteristics.find(toUppercase(characteristic_uuid));
     if (characteristicsSearch == characteristics.end()) {
       Log("Characteristic %s not found in service %s", characteristic_uuid.c_str(), service_uuid.c_str());
       result(false);
@@ -761,7 +761,7 @@ namespace layrz_ble {
       return;
     }
     
-    auto uuid = toLowercase(GuidToString(characteristic.Uuid()));
+    auto uuid = toUppercase(GuidToString(characteristic.Uuid()));
     if (servicesNotifying.find(uuid) == servicesNotifying.end()) {
       Log("Not subscribed to characteristic notifications");
       result(true);
@@ -789,7 +789,7 @@ namespace layrz_ble {
         co_return;
       }
 
-      auto uuid = toLowercase(GuidToString(characteristic.Uuid()));
+      auto uuid = toUppercase(GuidToString(characteristic.Uuid()));
       servicesNotifying[uuid] = {0};
       characteristic.ValueChanged(servicesNotifying[uuid]);
       servicesNotifying.erase(uuid);
@@ -808,13 +808,13 @@ namespace layrz_ble {
   /// @param args the arguments of the event
   /// @return void
   void LayrzBlePlugin::onCharacteristicValueChanged(GattCharacteristic sender, GattValueChangedEventArgs args) {
-    Log("Received characteristic value changed event");
-    auto characteristicUuid = toLowercase(GuidToString(sender.Uuid()));
-    Log("\tCharacteristic UUID: %s", characteristicUuid.c_str());
-    auto serviceUuid = toLowercase(GuidToString(sender.Service().Uuid()));
-    Log("\tService UUID: %s", serviceUuid.c_str());
+    // Log("Received characteristic value changed event");
+    auto characteristicUuid = toUppercase(GuidToString(sender.Uuid()));
+    // Log("\tCharacteristic UUID: %s", characteristicUuid.c_str());
+    auto serviceUuid = toUppercase(GuidToString(sender.Service().Uuid()));
+    // Log("\tService UUID: %s", serviceUuid.c_str());
     auto value = IBufferToVector(args.CharacteristicValue());
-    Log("\tData size: %d", value.size());
+    // Log("\tData size: %d", value.size());
 
     BtCharacteristicNotification response(
       connectedDevice->DeviceId(),
@@ -835,7 +835,7 @@ namespace layrz_ble {
   /// @param args 
   void LayrzBlePlugin::onConnectionStatusChanged(BluetoothLEDevice device, IInspectable args) {
     auto status = device.ConnectionStatus();
-    auto macAddress = toLowercase(HStringToString(device.DeviceId()));
+    auto macAddress = toUppercase(HStringToString(device.DeviceId()));
     BtDevice payload(macAddress, flutter::EncodableList(), flutter::EncodableList());
     if (connectedDevice != nullptr) {
       if (connectedDevice->Name() != nullptr) {
@@ -901,7 +901,7 @@ namespace layrz_ble {
       leScanner.ScanningMode(BluetoothLEScanningMode::Active);
       // Subscribe to the Received event
       leScanner.Received([this](BluetoothLEAdvertisementWatcher const&, BluetoothLEAdvertisementReceivedEventArgs const& args) {
-        auto macAddress = toLowercase(formatBluetoothAddress(args.BluetoothAddress()));
+        auto macAddress = toUppercase(formatBluetoothAddress(args.BluetoothAddress()));
 
         BleScanResult deviceInfo(macAddress);
         deviceInfo.setAddress(args.BluetoothAddress());
@@ -1002,7 +1002,7 @@ namespace layrz_ble {
     
 
     auto bluetoothAddressPropertyValue = properties.Lookup(L"System.Devices.Aep.DeviceAddress").as<IPropertyValue>();
-    std::string macAddress = toLowercase(HStringToString(bluetoothAddressPropertyValue.GetString()));
+    std::string macAddress = toUppercase(HStringToString(bluetoothAddressPropertyValue.GetString()));
 
     auto result = BleScanResult(macAddress);
     if(!device.Name().empty())

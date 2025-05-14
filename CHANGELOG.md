@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.3.2
+
+- Reduced # of logs on Windows implementation
+- Standarized `toUppercase` on all UUIDs and Mac addresses on Windows implementation
+
 ## 1.3.1
 
 - Some fixes on Windows implementation

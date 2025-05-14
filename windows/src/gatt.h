@@ -32,7 +32,7 @@ namespace layrz_ble {
       GattDeviceService Service() const { return service_; }
 
       void addCharacteristic(const BleCharacteristic characteristic) {
-        characteristics_[toLowercase(GuidToString(characteristic.Characteristic().Uuid()))] = characteristic;
+        characteristics_[toUppercase(GuidToString(characteristic.Characteristic().Uuid()))] = characteristic;
       }
       const std::unordered_map<std::string, BleCharacteristic> Characteristics() const { return characteristics_; }
 
