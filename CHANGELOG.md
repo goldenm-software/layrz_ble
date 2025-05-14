@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.3.1
+
+- Some fixes on Windows implementation
+
 ## 1.3.0
 
 - Stable release of the 1.3.0 version.

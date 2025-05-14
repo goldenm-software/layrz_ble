@@ -31,22 +31,27 @@ namespace layrz_ble {
   /// @brief Get the Radios available on the system
   /// @return winrt::fire_and_forget
   winrt::fire_and_forget LayrzBlePlugin::GetRadiosAsync() {
-    BluetoothAdapter adapter = co_await BluetoothAdapter::GetDefaultAsync();
-    Log("Adapter checks:");
-    Log("\tIsLowEnergySupported: %s", BooleanToString(adapter.IsLowEnergySupported()).c_str());
-    Log("\tIsClassicSupported: %s", BooleanToString(adapter.IsClassicSupported()).c_str());
-    Log("\tIsExtendedAdvertisingSupported: %s", BooleanToString(adapter.IsExtendedAdvertisingSupported()).c_str());
+    try {
+      BluetoothAdapter adapter = co_await BluetoothAdapter::GetDefaultAsync();
+      Log("Adapter checks:");
+      Log("\tIsLowEnergySupported: %s", BooleanToString(adapter.IsLowEnergySupported()).c_str());
+      Log("\tIsClassicSupported: %s", BooleanToString(adapter.IsClassicSupported()).c_str());
+      Log("\tIsExtendedAdvertisingSupported: %s", BooleanToString(adapter.IsExtendedAdvertisingSupported()).c_str());
 
-    if (adapter.IsLowEnergySupported()) {
-      Log("Valid adapter found!");
-      btRadio = co_await adapter.GetRadioAsync();
-      if (adapter.IsExtendedAdvertisingSupported()) {
-        Log("\tBluetooth 5.X supported!");
+      if (adapter.IsLowEnergySupported()) {
+        Log("Valid adapter found!");
+        btRadio = co_await adapter.GetRadioAsync();
+        if (adapter.IsExtendedAdvertisingSupported()) {
+          Log("\tBluetooth 5.X supported!");
+        } else {
+          Log("\tBluetooth 5.X not supported, falling back to Bluetooth 4.X");
+        }
       } else {
-        Log("\tBluetooth 5.X not supported, falling back to Bluetooth 4.X");
+        Log("No valid adapter found");
+        btRadio = nullptr;
       }
-    } else {
-      Log("No valid adapter found");
+    } catch (...) {
+      Log("Failed to get Bluetooth adapter");
       btRadio = nullptr;
     }
   } // GetRadiosAync
@@ -446,7 +451,7 @@ namespace layrz_ble {
       return;
     }
 
-    auto serviceSearch = servicesAndCharacteristics.find(service_uuid);
+    auto serviceSearch = servicesAndCharacteristics.find(toLowercase(service_uuid));
     if (serviceSearch == servicesAndCharacteristics.end()) {
       Log("Service %s not found", service_uuid.c_str());
       result(ErrorOr<std::vector<uint8_t>>(std::vector<uint8_t>()));
@@ -455,7 +460,7 @@ namespace layrz_ble {
     auto service = serviceSearch->second;
 
     auto characteristics = service.Characteristics();
-    auto characteristicsSearch = characteristics.find(characteristic_uuid);
+    auto characteristicsSearch = characteristics.find(toLowercase(characteristic_uuid));
     if (characteristicsSearch == characteristics.end()) {
       Log("Characteristic %s not found in service %s", characteristic_uuid.c_str(), service_uuid.c_str());
       result(ErrorOr<std::vector<uint8_t>>(std::vector<uint8_t>()));
@@ -531,7 +536,7 @@ namespace layrz_ble {
       return;
     }
 
-    auto serviceSearch = servicesAndCharacteristics.find(service_uuid);
+    auto serviceSearch = servicesAndCharacteristics.find(toLowercase(service_uuid));
     if (serviceSearch == servicesAndCharacteristics.end()) {
       Log("Service %s not found", service_uuid.c_str());
       result(false);
@@ -540,7 +545,7 @@ namespace layrz_ble {
     auto service = serviceSearch->second;
 
     auto characteristics = service.Characteristics();
-    auto characteristicsSearch = characteristics.find(characteristic_uuid);
+    auto characteristicsSearch = characteristics.find(toLowercase(characteristic_uuid));
     if (characteristicsSearch == characteristics.end()) {
       Log("Characteristic %s not found in service %s", characteristic_uuid.c_str(), service_uuid.c_str());
       result(false);
@@ -640,7 +645,7 @@ namespace layrz_ble {
       return;
     }
 
-    auto serviceSearch = servicesAndCharacteristics.find(service_uuid);
+    auto serviceSearch = servicesAndCharacteristics.find(toLowercase(service_uuid));
     if (serviceSearch == servicesAndCharacteristics.end()) {
       Log("Service %s not found", service_uuid.c_str());
       result(false);
@@ -649,7 +654,7 @@ namespace layrz_ble {
     auto service = serviceSearch->second;
 
     auto characteristics = service.Characteristics();
-    auto characteristicsSearch = characteristics.find(characteristic_uuid);
+    auto characteristicsSearch = characteristics.find(toLowercase(characteristic_uuid));
     if (characteristicsSearch == characteristics.end()) {
       Log("Characteristic %s not found in service %s", characteristic_uuid.c_str(), service_uuid.c_str());
       result(false);
@@ -732,7 +737,7 @@ namespace layrz_ble {
       return;
     }
 
-    auto serviceSearch = servicesAndCharacteristics.find(service_uuid);
+    auto serviceSearch = servicesAndCharacteristics.find(toLowercase(service_uuid));
     if (serviceSearch == servicesAndCharacteristics.end()) {
       Log("Service %s not found", service_uuid.c_str());
       result(false);
@@ -741,7 +746,7 @@ namespace layrz_ble {
     auto service = serviceSearch->second;
 
     auto characteristics = service.Characteristics();
-    auto characteristicsSearch = characteristics.find(characteristic_uuid);
+    auto characteristicsSearch = characteristics.find(toLowercase(characteristic_uuid));
     if (characteristicsSearch == characteristics.end()) {
       Log("Characteristic %s not found in service %s", characteristic_uuid.c_str(), service_uuid.c_str());
       result(false);
@@ -879,8 +884,7 @@ namespace layrz_ble {
       btScanner.Updated([this](DeviceWatcher const&, DeviceInformationUpdate const& args) {
         auto deviceId = toUppercase(HStringToString(args.Id()));
         auto it = deviceWatcherDevices.find(deviceId);
-        if (it != deviceWatcherDevices.end()) 
-        {
+        if (it != deviceWatcherDevices.end())  {
           it->second.Update(args);
           handleScanResult(it->second);
         }
@@ -995,6 +999,7 @@ namespace layrz_ble {
   /// @return void
   void LayrzBlePlugin::handleScanResult(DeviceInformation device) {
     auto properties = device.Properties();
+    
 
     auto bluetoothAddressPropertyValue = properties.Lookup(L"System.Devices.Aep.DeviceAddress").as<IPropertyValue>();
     std::string macAddress = toLowercase(HStringToString(bluetoothAddressPropertyValue.GetString()));
@@ -1021,8 +1026,9 @@ namespace layrz_ble {
       return;
     }
 
-    if(filteredDeviceId.length() > 0 && result.DeviceId() != filteredDeviceId)
+    if(filteredDeviceId.length() > 0 && toUppercase(result.DeviceId()) != toUppercase(filteredDeviceId)) {
       return;
+    }
 
     // Check if the result.deviceId is inside of visibleDevices
     auto it = visibleDevices.find(result.DeviceId());

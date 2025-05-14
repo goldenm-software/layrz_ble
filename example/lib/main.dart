@@ -327,7 +327,9 @@ class _HomePageState extends State<HomePage> {
                         onTap: () async {
                           setState(() => _isLoading = true);
                           _devices = {};
-                          _isScanning = await plugin.startScan();
+                          _isScanning = await plugin.startScan(
+                            macAddress: '74:4d:bd:88:e9:6d',
+                          );
                           setState(() => _isLoading = false);
 
                           ThemedSnackbarMessenger.of(context).showSnackbar(ThemedSnackbar(
