@@ -115,6 +115,9 @@ abstract class LayrzBlePlatformChannel {
     required Uint8List payload,
     bool requestConfirmation = false,
   });
+
+  @async
+  bool openBluetoothSettings();
 }
 
 // Flutter API from Native to Flutter
@@ -145,10 +148,12 @@ abstract class LayrzBleCallbackChannel {
 class BtStatus {
   final bool advertising;
   final bool scanning;
+  final bool isEnabled;
 
   const BtStatus({
     this.advertising = false,
     this.scanning = false,
+    this.isEnabled = false,
   });
 }
 

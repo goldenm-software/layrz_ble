@@ -49,13 +49,15 @@ dependencies:
 dev_dependencies:
   flutter_test:
     sdk: flutter
-  flutter_lints: ^5.0.0
+  flutter_lints: ^6.0.0
   build_runner: ^2.4.15
   freezed: ^3.0.6
   json_serializable: ^6.9.5
-  pigeon: ^25.3.1
+  pigeon: ^26.3.3
+  mockito: ^5.4.4
 
 flutter:
+  uses-material-design: true
   plugin:
     platforms:
       android:

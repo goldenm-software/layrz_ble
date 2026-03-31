@@ -22,8 +22,9 @@ public class LayrzBlePlugin: NSObject, FlutterPlugin {
 
 private class LayrzBleDarwin: NSObject, LayrzBlePlatformChannel, CBCentralManagerDelegate, CBPeripheralDelegate {
     var callbackChannel: LayrzBleCallbackChannel
-    
+
     var isAdvertising: Bool = false
+    var isBluetoothEnabled: Bool = false
     var centralManager: CBCentralManager!
 
     var filterMac: String?
@@ -41,15 +42,24 @@ private class LayrzBleDarwin: NSObject, LayrzBlePlatformChannel, CBCentralManage
         self.callbackChannel = callbackChannel
         super.init()
         self.centralManager = CBCentralManager(delegate: self, queue: nil)
+        // Sync initial state from CBCentralManager
+        // Note: CBCentralManager state is set immediately in init
+        self.isBluetoothEnabled = self.centralManager.state == .poweredOn
     }
     
     func isTurnedOn() -> Bool {
-        log("Status: \(centralManager.state)")
-        return centralManager.state == .poweredOn
+        let currentState = centralManager.state == .poweredOn
+        log("Status: \(centralManager.state) | Cached: \(isBluetoothEnabled)")
+        // Return the current state if available, otherwise use cached value from delegate
+        // This handles the case where CBCentralManager hasn't called the delegate yet
+        if centralManager.state == .unknown {
+            return isBluetoothEnabled
+        }
+        return currentState
     }
     
     func getStatuses(completion: @escaping (Result<BtStatus, any Error>) -> Void) {
-        completion(.success(BtStatus(advertising: isAdvertising, scanning: centralManager.isScanning)))
+        completion(.success(BtStatus(advertising: isAdvertising, scanning: centralManager.isScanning, isEnabled: isTurnedOn())))
     }
 
     func checkCapabilities(completion: @escaping (Result<Bool, any Error>) -> Void) {
@@ -83,7 +93,30 @@ private class LayrzBleDarwin: NSObject, LayrzBlePlatformChannel, CBCentralManage
     func checkAdvertisePermissions(completion: @escaping (Result<Bool, any Error>) -> Void) {
         completion(.success(validateAdvertisePermissions()))
     }
-    
+
+    func openBluetoothSettings(completion: @escaping (Result<Bool, any Error>) -> Void) {
+        #if os(iOS)
+        // Open Settings app. User needs to navigate to Bluetooth manually
+        // (Apple restricts direct access to Bluetooth settings in recent iOS versions)
+        DispatchQueue.main.async {
+            if let url = URL(string: UIApplication.openSettingsURLString) {
+                UIApplication.shared.open(url, options: [:]) { success in
+                    completion(.success(success))
+                }
+            } else {
+                completion(.success(false))
+            }
+        }
+        #elseif os(macOS)
+        if let url = URL(string: "x-apple.systempreferences:com.apple.preferences.Bluetooth") {
+            NSWorkspace.shared.open(url)
+            completion(.success(true))
+        } else {
+            completion(.success(false))
+        }
+        #endif
+    }
+
     func startScan(macAddress: String?, servicesUuids: [String]?, completion: @escaping (Result<Bool, any Error>) -> Void) {
         if (centralManager.isScanning) {
             log("Already scanning")
@@ -669,12 +702,15 @@ private class LayrzBleDarwin: NSObject, LayrzBlePlatformChannel, CBCentralManage
         switch central.state {
         case .poweredOn:
             log("Bluetooth powered on")
+            isBluetoothEnabled = true
             callbackChannel.onBluetoothOn() { _ in }
         case .poweredOff:
             log("Bluetooth powered off")
+            isBluetoothEnabled = false
             callbackChannel.onBluetoothOff() { _ in }
         case .resetting:
             log("Bluetooth resetting")
+            isBluetoothEnabled = false
         case .unauthorized:
             log("Bluetooth unauthorized")
         case .unsupported:

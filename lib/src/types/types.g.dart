@@ -125,10 +125,12 @@ Map<String, dynamic> _$GattMtuChangedToJson(_GattMtuChanged instance) =>
 _BleStatus _$BleStatusFromJson(Map<String, dynamic> json) => _BleStatus(
       advertising: json['advertising'] as bool,
       scanning: json['scanning'] as bool,
+      isEnabled: json['isEnabled'] as bool? ?? false,
     );
 
 Map<String, dynamic> _$BleStatusToJson(_BleStatus instance) =>
     <String, dynamic>{
       'advertising': instance.advertising,
       'scanning': instance.scanning,
+      'isEnabled': instance.isEnabled,
     };

@@ -39,12 +39,16 @@ class LayrzBlePluginLinux extends LayrzBlePlatform {
   final StreamController<BleCharacteristicNotification> _notifyController =
       StreamController<BleCharacteristicNotification>.broadcast();
   final StreamController<BleGattEvent> _gattController = StreamController<BleGattEvent>.broadcast();
+  final StreamController<bool> _bluetoothStateController = StreamController<bool>.broadcast();
 
   @override
   bool get isAdvertising => false;
 
   @override
   bool get isScanning => _isScanning;
+
+  @override
+  Stream<bool> get onBluetoothStateChanged => _bluetoothStateController.stream;
 
   @override
   Stream<BleDevice> get onScan => _scanController.stream;
@@ -75,7 +79,16 @@ class LayrzBlePluginLinux extends LayrzBlePlatform {
   Future<bool> checkAdvertisePermissions() => Future.value(false);
 
   @override
-  Future<BleStatus> getStatuses() => Future.value(BleStatus(advertising: false, scanning: _isScanning));
+  Future<BleStatus> getStatuses() async {
+    bool isEnabled = false;
+    try {
+      isEnabled = _client?.adapters.isNotEmpty ?? false;
+    } catch (e) {
+      isEnabled = false;
+    }
+    _bluetoothStateController.add(isEnabled);
+    return BleStatus(advertising: false, scanning: _isScanning, isEnabled: isEnabled);
+  }
 
   @override
   Future<bool> startScan({String? macAddress, List<String>? servicesUuids}) async {
@@ -429,4 +442,7 @@ class LayrzBlePluginLinux extends LayrzBlePlatform {
       serviceData: serviceData,
     );
   }
+
+  @override
+  Future<bool> openBluetoothSettings() => Future.value(false);
 }

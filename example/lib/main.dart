@@ -47,6 +47,7 @@ class _HomePageState extends State<HomePage> {
   bool _isScanning = false;
   bool _isLoading = false;
   bool _isAdvertising = false;
+  bool _isBluetoothEnabled = false;
   BleDevice? _selectedDevice;
 
   String get serviceUuid => '00000000-0000-0000-0000-000000000001';
@@ -68,6 +69,15 @@ class _HomePageState extends State<HomePage> {
   void initState() {
     super.initState();
 
+    // Sync initial Bluetooth state
+    _initializeBluetoothState();
+
+    // Listen to Bluetooth state changes (reactive approach)
+    _ble.onBluetoothStateChanged.listen((isEnabled) {
+      debugPrint('Bluetooth state changed: $isEnabled');
+      setState(() => _isBluetoothEnabled = isEnabled);
+    });
+
     _ble.onScan.listen((BleDevice device) {
       _devices[device.macAddress] = device;
       setState(() {});
@@ -76,7 +86,8 @@ class _HomePageState extends State<HomePage> {
     if (ThemedPlatform.isAndroid) {
       _ble.onGattUpdate.listen((BleGattEvent event) {
         if (event is GattWriteRequest) {
-          debugPrint('Received GATT write request: ${event.characteristicUuid}');
+          debugPrint(
+              'Received GATT write request: ${event.characteristicUuid}');
 
           debugPrint('\tSending success');
           _ble.respondWriteRequest(
@@ -113,6 +124,18 @@ class _HomePageState extends State<HomePage> {
     });
   }
 
+  Future<void> _initializeBluetoothState() async {
+    try {
+      final status = await plugin.getStatuses();
+      if (mounted) {
+        setState(() => _isBluetoothEnabled = status.isEnabled);
+        debugPrint('Initial Bluetooth state: ${status.isEnabled}');
+      }
+    } catch (e) {
+      debugPrint('Error initializing Bluetooth state: $e');
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return ThemedLayout(
@@ -129,9 +152,20 @@ class _HomePageState extends State<HomePage> {
         width: double.infinity,
         child: Column(
           children: [
-            Text(
-              "Layrz BLE Example",
-              style: Theme.of(context).textTheme.titleMedium,
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  Icons.bluetooth,
+                  color: _isBluetoothEnabled ? Colors.blue : Colors.grey,
+                  size: 24,
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  "Layrz BLE Example",
+                  style: Theme.of(context).textTheme.titleMedium,
+                ),
+              ],
             ),
             const SizedBox(height: 10),
             SingleChildScrollView(
@@ -197,6 +231,53 @@ class _HomePageState extends State<HomePage> {
                       setState(() => _isLoading = false);
                     },
                   ),
+                  const SizedBox(width: 10),
+                  ThemedButton(
+                    isLoading: _isLoading,
+                    labelText: 'Check BT Enabled',
+                    color: Colors.purple,
+                    onTap: () async {
+                      setState(() => _isLoading = true);
+                      // Refresh status (which will update the reactive stream)
+                      final status = await plugin.getStatuses();
+                      debugPrint(
+                          'Bluetooth state refreshed: ${status.isEnabled}');
+
+                      ThemedSnackbarMessenger.of(context).showSnackbar(
+                        ThemedSnackbar(
+                          message:
+                              'Bluetooth: ${status.isEnabled ? "🟢 ON" : "🔴 OFF"}',
+                          color: status.isEnabled ? Colors.green : Colors.red,
+                          icon: LayrzIcons.solarOutlineBluetoothSquare,
+                          maxLines: 5,
+                        ),
+                      );
+
+                      setState(() => _isLoading = false);
+                    },
+                  ),
+                  const SizedBox(width: 10),
+                  ThemedButton(
+                    isLoading: _isLoading,
+                    labelText: 'Open BT Settings',
+                    color: Colors.orange,
+                    onTap: () async {
+                      setState(() => _isLoading = true);
+                      final result = await plugin.openBluetoothSettings();
+                      debugPrint('openBluetoothSettings result: $result');
+
+                      ThemedSnackbarMessenger.of(context).showSnackbar(
+                        ThemedSnackbar(
+                          message: 'Opened Settings: $result',
+                          color: Colors.orange,
+                          icon: LayrzIcons.solarOutlineBluetoothSquare,
+                          maxLines: 5,
+                        ),
+                      );
+
+                      setState(() => _isLoading = false);
+                    },
+                  ),
                   if (_selectedDevice != null) ...[
                     const SizedBox(width: 10),
                     ThemedButton(
@@ -214,7 +295,8 @@ class _HomePageState extends State<HomePage> {
                         _isLoading = false;
                         setState(() {});
 
-                        ThemedSnackbarMessenger.of(context).showSnackbar(ThemedSnackbar(
+                        ThemedSnackbarMessenger.of(context)
+                            .showSnackbar(ThemedSnackbar(
                           message: 'Disconnected from device',
                           color: Colors.red,
                           icon: LayrzIcons.solarOutlineBluetoothSquare,
@@ -259,7 +341,8 @@ class _HomePageState extends State<HomePage> {
                                       ],
                                     ),
                                     const BleCharacteristic(
-                                      uuid: '00000000-0000-0000-0000-000000000003',
+                                      uuid:
+                                          '00000000-0000-0000-0000-000000000003',
                                       properties: [BleProperty.write],
                                     ),
                                   ],
@@ -268,7 +351,8 @@ class _HomePageState extends State<HomePage> {
                             );
                             setState(() => _isLoading = false);
 
-                            ThemedSnackbarMessenger.of(context).showSnackbar(ThemedSnackbar(
+                            ThemedSnackbarMessenger.of(context)
+                                .showSnackbar(ThemedSnackbar(
                               message: 'Scanning for BLE devices...',
                               color: Colors.blue,
                               icon: LayrzIcons.solarOutlineBluetoothSquare,
@@ -292,7 +376,8 @@ class _HomePageState extends State<HomePage> {
                             _isLoading = false;
                             setState(() {});
 
-                            ThemedSnackbarMessenger.of(context).showSnackbar(ThemedSnackbar(
+                            ThemedSnackbarMessenger.of(context)
+                                .showSnackbar(ThemedSnackbar(
                               message: 'Advertise stopped',
                               color: Colors.red,
                               icon: LayrzIcons.solarOutlineBluetoothSquare,
@@ -309,7 +394,8 @@ class _HomePageState extends State<HomePage> {
                             final result = await plugin.sendNotification(
                               serviceUuid: serviceUuid,
                               characteristicUuid: readCharacteristic,
-                              payload: Uint8List.fromList([0x04, 0x03, 0x02, 0x01, 0x05]),
+                              payload: Uint8List.fromList(
+                                  [0x04, 0x03, 0x02, 0x01, 0x05]),
                               requestConfirmation: false,
                             );
                             debugPrint('Send notification result: $result');
@@ -332,7 +418,8 @@ class _HomePageState extends State<HomePage> {
                           );
                           setState(() => _isLoading = false);
 
-                          ThemedSnackbarMessenger.of(context).showSnackbar(ThemedSnackbar(
+                          ThemedSnackbarMessenger.of(context)
+                              .showSnackbar(ThemedSnackbar(
                             message: 'Scanning for BLE devices...',
                             color: Colors.blue,
                             icon: LayrzIcons.solarOutlineBluetoothSquare,
@@ -356,7 +443,8 @@ class _HomePageState extends State<HomePage> {
                           _isLoading = false;
                           setState(() {});
 
-                          ThemedSnackbarMessenger.of(context).showSnackbar(ThemedSnackbar(
+                          ThemedSnackbarMessenger.of(context)
+                              .showSnackbar(ThemedSnackbar(
                             message: 'Scan stopped',
                             color: Colors.red,
                             icon: LayrzIcons.solarOutlineBluetoothSquare,
@@ -379,14 +467,16 @@ class _HomePageState extends State<HomePage> {
                       onTap: () async {
                         debugPrint('Selected device: ${device.macAddress}');
                         setState(() => _isLoading = true);
-                        final result = await plugin.connect(macAddress: device.macAddress);
+                        final result =
+                            await plugin.connect(macAddress: device.macAddress);
                         if (result == true) {
                           _selectedDevice = device;
                           _services = [];
                         }
                         setState(() => _isLoading = false);
 
-                        ThemedSnackbarMessenger.of(context).showSnackbar(ThemedSnackbar(
+                        ThemedSnackbarMessenger.of(context)
+                            .showSnackbar(ThemedSnackbar(
                           message: 'Connected to device: ${device.macAddress}',
                           color: Colors.green,
                           icon: LayrzIcons.solarOutlineBluetoothSquare,
@@ -407,24 +497,29 @@ class _HomePageState extends State<HomePage> {
                                 children: [
                                   Text(
                                     device.name ?? 'Unknown device',
-                                    style: Theme.of(context).textTheme.titleSmall,
+                                    style:
+                                        Theme.of(context).textTheme.titleSmall,
                                   ),
                                   Text(
                                     device.macAddress,
-                                    style: Theme.of(context).textTheme.bodySmall,
+                                    style:
+                                        Theme.of(context).textTheme.bodySmall,
                                   ),
                                   Text(
                                     'RSSI: ${device.rssi} - TX power: ${device.txPower}',
-                                    style: Theme.of(context).textTheme.bodySmall,
+                                    style:
+                                        Theme.of(context).textTheme.bodySmall,
                                   ),
                                   Text(
                                     "Manufacturer data: ${_castManufaturerData(device.manufacturerData)}",
-                                    style: Theme.of(context).textTheme.bodySmall,
+                                    style:
+                                        Theme.of(context).textTheme.bodySmall,
                                     maxLines: 10,
                                   ),
                                   Text(
                                     "Service data: ${_castServiceData(device.serviceData)}",
-                                    style: Theme.of(context).textTheme.bodySmall,
+                                    style:
+                                        Theme.of(context).textTheme.bodySmall,
                                     maxLines: 10,
                                   ),
                                 ],
@@ -588,17 +683,20 @@ class _HomePageState extends State<HomePage> {
                           Padding(
                             padding: const EdgeInsets.only(left: 10),
                             child: Column(
-                              children: (service.characteristics ?? []).map((characteristic) {
+                              children: (service.characteristics ?? [])
+                                  .map((characteristic) {
                                 return Column(
                                   children: [
                                     Text(
                                       'Characteristic: ${characteristic.uuid}',
-                                      style: Theme.of(context).textTheme.bodySmall,
+                                      style:
+                                          Theme.of(context).textTheme.bodySmall,
                                     ),
                                     const SizedBox(height: 5),
                                     Text(
                                       'Properties: ${characteristic.properties}',
-                                      style: Theme.of(context).textTheme.bodySmall,
+                                      style:
+                                          Theme.of(context).textTheme.bodySmall,
                                     ),
                                   ],
                                 );

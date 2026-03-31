@@ -30,6 +30,7 @@ import android.content.Context.RECEIVER_EXPORTED
 import android.content.Intent
 import android.content.IntentFilter
 import android.content.pm.PackageManager
+import android.provider.Settings
 import android.os.Build
 import android.os.Handler
 import android.os.Looper
@@ -102,7 +103,8 @@ class LayrzBlePlugin : LayrzBlePlatformChannel, FlutterPlugin, ActivityAware, Pl
 	}
 
 	override fun getStatuses(callback: (Result<BtStatus>) -> Unit) {
-		callback(Result.success(BtStatus(advertising = gattServer != null, scanning = isScanning)))
+		val adapter = bluetooth?.adapter
+		callback(Result.success(BtStatus(advertising = gattServer != null, scanning = isScanning, isEnabled = adapter?.isEnabled ?: false)))
 	}
 
 	override fun checkCapabilities(callback: (Result<Boolean>) -> Unit) {
@@ -891,6 +893,21 @@ class LayrzBlePlugin : LayrzBlePlatformChannel, FlutterPlugin, ActivityAware, Pl
 			callbackChannel?.onAdvertiseStopped {}
 		}
 		return
+	}
+
+	override fun openBluetoothSettings(callback: (Result<Boolean>) -> Unit) {
+		val currentActivity = activity
+		if (currentActivity == null) {
+			callback(Result.success(false))
+			return
+		}
+		try {
+			val intent = Intent(Settings.ACTION_BLUETOOTH_SETTINGS)
+			currentActivity.startActivity(intent)
+			callback(Result.success(true))
+		} catch (e: Exception) {
+			callback(Result.failure(e))
+		}
 	}
 
 	override fun respondReadRequest(

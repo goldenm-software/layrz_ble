@@ -11,6 +11,7 @@ abstract class LayrzBlePlatform {
   Stream<BleEvent> get onEvent => throw UnimplementedError('onEvent has not been implemented.');
   Stream<BleCharacteristicNotification> get onNotify => throw UnimplementedError('onNotify has not been implemented.');
   Stream<BleGattEvent> get onGattUpdate => throw UnimplementedError('onGattUpdate has not been implemented.');
+  Stream<bool> get onBluetoothStateChanged => throw UnimplementedError('onBluetoothStateChanged has not been implemented.');
 
   Future<BleStatus> getStatuses() => throw UnimplementedError('getStatuses has not been implemented.');
   Future<bool> checkCapabilities() => throw UnimplementedError('checkCapabilities() has not been implemented.');
@@ -95,4 +96,7 @@ abstract class LayrzBlePlatform {
     bool requestConfirmation = false,
   }) =>
       throw UnimplementedError('sendNotification() has not been implemented.');
+
+  Future<bool> openBluetoothSettings() =>
+      throw UnimplementedError('openBluetoothSettings() has not been implemented.');
 }

@@ -38,6 +38,10 @@ class LayrzBle {
   /// Also, can be updated automatically when you call `getStatuses` method.
   bool get isScanning => _platform.isScanning;
 
+  /// [onBluetoothStateChanged] is a stream that emits `true` when Bluetooth is enabled
+  /// and `false` when Bluetooth is disabled. This is updated automatically by the native layer.
+  Stream<bool> get onBluetoothStateChanged => _platform.onBluetoothStateChanged;
+
   /// [onScan] is a stream of BLE devices detected during a scan.
   Stream<BleDevice> get onScan => _platform.onScan;
 
@@ -335,4 +339,11 @@ class LayrzBle {
       requestConfirmation: requestConfirmation,
     );
   }
+
+  /// [openBluetoothSettings] opens the native Bluetooth settings screen.
+  /// On Android, iOS, and Windows, this will open the system Bluetooth settings.
+  /// On Linux and Web, this method returns `false` (not supported).
+  ///
+  /// Returns `true` if the settings screen was opened successfully, `false` otherwise.
+  Future<bool> openBluetoothSettings() => _platform.openBluetoothSettings();
 }

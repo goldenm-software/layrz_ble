@@ -73,6 +73,7 @@ namespace layrz_ble
       void CheckCapabilities(std::function<void(ErrorOr<bool> reply)> result);
       void CheckScanPermissions(std::function<void(ErrorOr<bool> reply)> result);
       void CheckAdvertisePermissions(std::function<void(ErrorOr<bool> reply)> result);
+      void OpenBluetoothSettings(std::function<void(ErrorOr<bool> reply)> result);
 
       void StartScan(const std::string* mac_address, const flutter::EncodableList* services_uuids, std::function<void(ErrorOr<bool> reply)> result);
       void StopScan(const std::string* mac_address, std::function<void(ErrorOr<bool> reply)> result);

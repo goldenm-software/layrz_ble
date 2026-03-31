@@ -68,7 +68,7 @@ namespace layrz_ble {
         Log("Bluetooth classic scanner current status: %s", castBtScannerStatus(btScanner.Status()).c_str());
         btScannerOn = btScanner.Status() == DeviceWatcherStatus::Started || btScanner.Status() == DeviceWatcherStatus::EnumerationCompleted;
       }
-      
+
       bool leScannerOn = false;
       if (leScanner != nullptr) {
         Log("Bluetooth LE scanner current status: %s", castLeScannerStatus(leScanner.Status()).c_str());
@@ -79,7 +79,8 @@ namespace layrz_ble {
       isScanning = false;
     }
 
-    result(BtStatus{false, isScanning});
+    bool isEnabled = btRadio && btRadio.State() == RadioState::On;
+    result(BtStatus{isEnabled, isScanning});
   }
 
   /// @brief Check the capabilities of the device
@@ -104,6 +105,14 @@ namespace layrz_ble {
   /// @note Always returns false as the advertise permissions are not available on Windows
   void LayrzBlePlugin::CheckAdvertisePermissions(std::function<void(ErrorOr<bool> reply)> result) {
     result(false);
+  }
+
+  /// @brief Opens the native Bluetooth settings screen
+  /// @param result the callback to return the result
+  /// @return void
+  void LayrzBlePlugin::OpenBluetoothSettings(std::function<void(ErrorOr<bool> reply)> result) {
+    ShellExecuteW(nullptr, L"open", L"ms-settings:bluetooth", nullptr, nullptr, SW_SHOW);
+    result(true);
   }
 
   /// @brief Starts the Bluetooth classic scanner and LE scanner

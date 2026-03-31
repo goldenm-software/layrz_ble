@@ -26,12 +26,16 @@ class LayrzBlePluginWeb extends LayrzBlePlatform {
   final StreamController<BleCharacteristicNotification> _notifyController =
       StreamController<BleCharacteristicNotification>.broadcast();
   final StreamController<BleGattEvent> _gattController = StreamController<BleGattEvent>.broadcast();
+  final StreamController<bool> _bluetoothStateController = StreamController<bool>.broadcast();
 
   @override
   bool get isAdvertising => false;
 
   @override
   bool get isScanning => false;
+
+  @override
+  Stream<bool> get onBluetoothStateChanged => _bluetoothStateController.stream;
 
   @override
   Stream<BleDevice> get onScan => _scanController.stream;
@@ -55,7 +59,11 @@ class LayrzBlePluginWeb extends LayrzBlePlatform {
   Future<bool> checkAdvertisePermissions() => Future.value(false);
 
   @override
-  Future<BleStatus> getStatuses() => Future.value(BleStatus(advertising: false, scanning: false));
+  Future<BleStatus> getStatuses() async {
+    final isEnabled = FlutterWebBluetooth.instance.isBluetoothApiSupported;
+    _bluetoothStateController.add(isEnabled);
+    return BleStatus(advertising: false, scanning: false, isEnabled: isEnabled);
+  }
 
   @override
   Future<bool> startScan({String? macAddress, List<String>? servicesUuids}) async {
@@ -321,4 +329,7 @@ class LayrzBlePluginWeb extends LayrzBlePlatform {
   void log(String message) {
     debugPrint("LayrzBlePlugin/Web: $message");
   }
+
+  @override
+  Future<bool> openBluetoothSettings() => Future.value(false);
 }

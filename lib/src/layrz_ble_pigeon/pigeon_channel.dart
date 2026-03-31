@@ -23,6 +23,10 @@ class LayrzBlePigeonChannel extends LayrzBlePlatform {
   @override
   bool get isScanning => _scanning;
 
+  final StreamController<bool> _bluetoothStateController = StreamController<bool>.broadcast();
+  @override
+  Stream<bool> get onBluetoothStateChanged => _bluetoothStateController.stream;
+
   @override
   Stream<BleEvent> get onEvent => _eventsController.stream;
 
@@ -44,9 +48,12 @@ class LayrzBlePigeonChannel extends LayrzBlePlatform {
   @override
   Future<BleStatus> getStatuses() async {
     final status = await _channel.getStatuses();
+    // Emit state to stream so UI can react
+    _bluetoothStateController.add(status.isEnabled);
     return BleStatus(
       advertising: status.advertising,
       scanning: status.scanning,
+      isEnabled: status.isEnabled,
     );
   }
 
@@ -249,12 +256,16 @@ class LayrzBlePigeonChannel extends LayrzBlePlatform {
         requestConfirmation: requestConfirmation,
       );
 
+  @override
+  Future<bool> openBluetoothSettings() => _channel.openBluetoothSettings();
+
   void _setupListeners() {
     LayrzBleCallbackChannel.setUp(_LayrzBleCallbackHandler(
       eventController: _eventsController,
       scanController: _scanController,
       notifyController: _notifyController,
       gattController: _gattController,
+      bluetoothStateController: _bluetoothStateController,
       onScanChanged: (isScanning) => _scanning = isScanning,
       onAdvertiseChanged: (isAdvertising) => _advertising = isAdvertising,
     ));
@@ -266,6 +277,7 @@ class _LayrzBleCallbackHandler extends LayrzBleCallbackChannel {
   final StreamController<BleDevice> scanController;
   final StreamController<BleCharacteristicNotification> notifyController;
   final StreamController<BleGattEvent> gattController;
+  final StreamController<bool> bluetoothStateController;
   final ValueChanged<bool> onScanChanged;
   final ValueChanged<bool> onAdvertiseChanged;
 
@@ -274,12 +286,14 @@ class _LayrzBleCallbackHandler extends LayrzBleCallbackChannel {
     required this.scanController,
     required this.notifyController,
     required this.gattController,
+    required this.bluetoothStateController,
     required this.onScanChanged,
     required this.onAdvertiseChanged,
   });
 
   @override
   void onBluetoothOff() {
+    bluetoothStateController.add(false);
     onScanChanged.call(false);
     onAdvertiseChanged.call(false);
     eventController.add(BleAdapterOff());
@@ -287,6 +301,7 @@ class _LayrzBleCallbackHandler extends LayrzBleCallbackChannel {
 
   @override
   void onBluetoothOn() {
+    bluetoothStateController.add(true);
     onScanChanged.call(false);
     onAdvertiseChanged.call(false);
     eventController.add(BleAdapterOn());

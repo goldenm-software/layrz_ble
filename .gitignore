@@ -44,3 +44,5 @@ build/
 .vscode/c_cpp_properties.json
 
 darwin/layrz_ble/.swiftpm/
+darwin/layrz_ble/.build/
+.atl
