@@ -46,6 +46,25 @@ namespace layrz_ble {
         } else {
           Log("\tBluetooth 5.X not supported, falling back to Bluetooth 4.X");
         }
+
+        // Start a listener of radio state changes to update the status of the plugin
+        winrt::event_token token = btRadio.StateChanged([this](auto&&, auto&&) {
+          bool state = btRadio.State() == RadioState::On;
+
+          Log("Bluetooth radio state changed: %s", BooleanToString(state).c_str());
+
+          if (state) {
+            callbackChannel->OnBluetoothOn(
+              []() {},
+              [](const FlutterError&) {}
+            );
+          } else {
+            callbackChannel->OnBluetoothOff(
+              []() {},
+              [](const FlutterError&) {}
+            );
+          }
+        });
       } else {
         Log("No valid adapter found");
         btRadio = nullptr;
@@ -80,7 +99,7 @@ namespace layrz_ble {
     }
 
     bool isEnabled = btRadio && btRadio.State() == RadioState::On;
-    result(BtStatus{isEnabled, isScanning});
+    result(BtStatus(isEnabled, isScanning, isEnabled));
   }
 
   /// @brief Check the capabilities of the device
