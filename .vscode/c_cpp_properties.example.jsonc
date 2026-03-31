@@ -1,0 +1,25 @@
+{
+  "configurations": [
+    {
+      "name": "Win32",
+      "includePath": [
+        "${workspaceFolder}/**",
+        "${workspaceFolder}/windows/src",
+        "C:/path/to/flutter/bin/cache/artifacts/engine/windows-x64/cpp_client_wrapper/include",
+        "C:/path/to/flutter/bin/cache/artifacts/engine/windows-x64/cpp_client_wrapper/include/flutter",
+        "C:/path/to/flutter/pub-cache/hosted/pub.dev"
+      ],
+      "defines": [
+        "_DEBUG",
+        "UNICODE",
+        "_UNICODE"
+      ],
+      "windowsSdkVersion": "10.0.26100.0", // Update this to match your installed Windows SDK version
+      "compilerPath": "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.50.35717\\bin\\Hostx64\\x64\\cl.exe", // Path to your MSVC compiler
+      "cStandard": "c17",
+      "cppStandard": "c++17",
+      "intelliSenseMode": "windows-msvc-x64"
+    }
+  ],
+  "version": 4
+}
