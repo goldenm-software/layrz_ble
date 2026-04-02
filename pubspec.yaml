@@ -45,7 +45,7 @@ dependencies:
   bluez: ^0.8.2
   freezed_annotation: ^3.0.0
   json_annotation: ^4.9.0
-  meta: any
+  meta: ^1.17.0
 
 dev_dependencies:
   flutter_test:
