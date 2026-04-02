@@ -1,5 +1,8 @@
 # Changelog
 
+## 1.3.6
+- Just update to get a new tag
+
 ## 1.3.5
 - update to 1.3.5
 - Force to use meta 1.17.0
