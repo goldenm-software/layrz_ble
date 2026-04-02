@@ -1,5 +1,8 @@
 # Changelog
 
+## 1.3.4
+- Add `meta` in pubspect.yaml
+
 ## 1.3.3
 - Add in `BleStatus` `isEnabled`
 - Add `openBluetoothSettings` to open Bluetooth settings in Macos, iOs, android, Windows
