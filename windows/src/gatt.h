@@ -1,5 +1,8 @@
 #pragma once
 
+#ifndef __LAYRZ_BLE_PLUGIN_GATT__
+#define __LAYRZ_BLE_PLUGIN_GATT__
+
 #include <winrt/Windows.Devices.Bluetooth.GenericAttributeProfile.h>
 #include "utils.h"
 
@@ -29,7 +32,7 @@ namespace layrz_ble {
       GattDeviceService Service() const { return service_; }
 
       void addCharacteristic(const BleCharacteristic characteristic) {
-        characteristics_[toLowercase(GuidToString(characteristic.Characteristic().Uuid()))] = characteristic;
+        characteristics_[toUppercase(GuidToString(characteristic.Characteristic().Uuid()))] = characteristic;
       }
       const std::unordered_map<std::string, BleCharacteristic> Characteristics() const { return characteristics_; }
 
@@ -38,3 +41,5 @@ namespace layrz_ble {
       std::unordered_map<std::string, BleCharacteristic> characteristics_;
   }; // class BleService
 } // namespace layrz_ble
+
+#endif // __LAYRZ_BLE_PLUGIN_GATT__

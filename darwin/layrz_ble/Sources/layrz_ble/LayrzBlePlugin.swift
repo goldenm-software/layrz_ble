@@ -5,563 +5,728 @@
 #endif
 import CoreBluetooth
 
-public class LayrzBlePlugin: NSObject, FlutterPlugin, CBCentralManagerDelegate, CBPeripheralDelegate {
-    static var checkCapabilitiesChannel: FlutterMethodChannel?
-    static var startScanChannel: FlutterMethodChannel?
-    static var stopScanChannel: FlutterMethodChannel?
-    static var connectChannel: FlutterMethodChannel?
-    static var disconnectChannel: FlutterMethodChannel?
-    static var discoverServicesChannel: FlutterMethodChannel?
-    static var setMtuChannel: FlutterMethodChannel?
-    static var writeCharacteristicChannel: FlutterMethodChannel?
-    static var readCharacteristicChannel: FlutterMethodChannel?
-    static var startNotifyChannel: FlutterMethodChannel?
-    static var stopNotifyChannel: FlutterMethodChannel?
-    static var eventsChannel: FlutterMethodChannel?
+public class LayrzBlePlugin: NSObject, FlutterPlugin {
+    public static func register(with registrar: FlutterPluginRegistrar) {
+        var messenger: FlutterBinaryMessenger
+        #if os(iOS)
+            messenger = registrar.messenger()
+        #else
+            messenger = registrar.messenger
+        #endif
+        let callback = LayrzBleCallbackChannel(binaryMessenger: messenger)
+        let api = LayrzBleDarwin(callbackChannel: callback)
+        LayrzBlePlatformChannelSetup.setUp(binaryMessenger: messenger, api: api)
+    }
+        
+}
 
-    var lastResult: FlutterResult?
+private class LayrzBleDarwin: NSObject, LayrzBlePlatformChannel, CBCentralManagerDelegate, CBPeripheralDelegate {
+    var callbackChannel: LayrzBleCallbackChannel
+
+    var isAdvertising: Bool = false
+    var isBluetoothEnabled: Bool = false
     var centralManager: CBCentralManager!
+
+    var filterMac: String?
+    var connectedPeripherals: [String: CBPeripheral] = [:]
+    var servicesAndCharacteristics: [String: [BleService]] = [:]
+    var connectCallback: ((Result<Bool, any Error>) -> Void)?
+    var writeCallback: ((Result<Bool, any Error>) -> Void)?
+    var readCallback: ((Result<FlutterStandardTypedData, any Error>) -> Void)?
+    
     var discoveredPeripherals: [CBPeripheral] = []
-    var isScanning: Bool = false
     var devices: [String: CBPeripheral] = [:]
     var filteredUuid: String?
-    var connectedPeripheral: CBPeripheral?
-    var servicesAndCharacteristics: [String: BleService?] = [:]
-    var lastOp: LastOperation?
-    
-    override init() {
+
+    init(callbackChannel: LayrzBleCallbackChannel) {
+        self.callbackChannel = callbackChannel
         super.init()
-        centralManager = CBCentralManager(delegate: self, queue: nil)
+        self.centralManager = CBCentralManager(delegate: self, queue: nil)
+        // Sync initial state from CBCentralManager
+        // Note: CBCentralManager state is set immediately in init
+        self.isBluetoothEnabled = self.centralManager.state == .poweredOn
     }
     
-    public static func register(with registrar: FlutterPluginRegistrar) {
-        let instance = LayrzBlePlugin()
-
-        #if os(iOS)
-            let messenger = registrar.messenger()
-        #else
-            let messenger = registrar.messenger
-        #endif
-
-        checkCapabilitiesChannel = FlutterMethodChannel(name: "com.layrz.ble.checkCapabilities", binaryMessenger: messenger)
-        startScanChannel = FlutterMethodChannel(name: "com.layrz.ble.startScan", binaryMessenger: messenger)
-        stopScanChannel = FlutterMethodChannel(name: "com.layrz.ble.stopScan", binaryMessenger: messenger)
-        connectChannel = FlutterMethodChannel(name: "com.layrz.ble.connect", binaryMessenger: messenger)
-        disconnectChannel = FlutterMethodChannel(name: "com.layrz.ble.disconnect", binaryMessenger: messenger)
-        discoverServicesChannel = FlutterMethodChannel(name: "com.layrz.ble.discoverServices", binaryMessenger: messenger)
-        setMtuChannel = FlutterMethodChannel(name: "com.layrz.ble.setMtu", binaryMessenger: messenger)
-        writeCharacteristicChannel = FlutterMethodChannel(name: "com.layrz.ble.writeCharacteristic", binaryMessenger: messenger)
-        readCharacteristicChannel = FlutterMethodChannel(name: "com.layrz.ble.readCharacteristic", binaryMessenger: messenger)
-        startNotifyChannel = FlutterMethodChannel(name: "com.layrz.ble.startNotify", binaryMessenger: messenger)
-        stopNotifyChannel = FlutterMethodChannel(name: "com.layrz.ble.stopNotify", binaryMessenger: messenger)
-        eventsChannel = FlutterMethodChannel(name: "com.layrz.ble.events", binaryMessenger: messenger)
-
-        registrar.addMethodCallDelegate(instance, channel: checkCapabilitiesChannel!)
-        registrar.addMethodCallDelegate(instance, channel: startScanChannel!)
-        registrar.addMethodCallDelegate(instance, channel: stopScanChannel!)
-        registrar.addMethodCallDelegate(instance, channel: connectChannel!)
-        registrar.addMethodCallDelegate(instance, channel: disconnectChannel!)
-        registrar.addMethodCallDelegate(instance, channel: discoverServicesChannel!)
-        registrar.addMethodCallDelegate(instance, channel: setMtuChannel!)
-        registrar.addMethodCallDelegate(instance, channel: writeCharacteristicChannel!)
-        registrar.addMethodCallDelegate(instance, channel: readCharacteristicChannel!)
-        registrar.addMethodCallDelegate(instance, channel: startNotifyChannel!)
-        registrar.addMethodCallDelegate(instance, channel: stopNotifyChannel!)
-        registrar.addMethodCallDelegate(instance, channel: eventsChannel!)
+    func isTurnedOn() -> Bool {
+        let currentState = centralManager.state == .poweredOn
+        log("Status: \(centralManager.state) | Cached: \(isBluetoothEnabled)")
+        // Return the current state if available, otherwise use cached value from delegate
+        // This handles the case where CBCentralManager hasn't called the delegate yet
+        if centralManager.state == .unknown {
+            return isBluetoothEnabled
+        }
+        return currentState
+    }
+    
+    func getStatuses(completion: @escaping (Result<BtStatus, any Error>) -> Void) {
+        completion(.success(BtStatus(advertising: isAdvertising, scanning: centralManager.isScanning, isEnabled: isTurnedOn())))
     }
 
-    public func handle(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
-            log("Handling method call: \(call.method)")
-            switch call.method {
-            case "checkCapabilities":
-                checkCapabilities(result: result)
-            case "startScan":
-                startScan(call: call, result: result)
-            case "stopScan":
-                stopScan(call: call, result: result)
-            case "connect":
-                connect(call: call, result: result)
-            case "disconnect":
-                disconnect(call: call, result: result)
-            case "discoverServices":
-                discoverServices(call: call, result: result)
-            case "setMtu":
-                setMtu(call: call, result: result)
-            case "writeCharacteristic":
-                writeCharacteristic(call: call, result: result)
-            case "readCharacteristic":
-                readCharacteristic(call: call, result: result)
-            case "startNotify":
-                startNotify(call: call, result: result)
-            case "stopNotify":
-                stopNotify(call: call, result: result)
-            default:
-                result(FlutterMethodNotImplemented)
-            }
+    func checkCapabilities(completion: @escaping (Result<Bool, any Error>) -> Void) {
+        if (!validateScanPermissions()) {
+            completion(.success(false))
+            return
         }
         
-        private func checkCapabilities(result: @escaping FlutterResult) {
-            let auth = CBCentralManager.authorization
-            
-            return result([
-                "locationPermission": auth == .allowedAlways,
-                "bluetoothPermission": auth == .allowedAlways,
-                "bluetoothAdminOrScanPermission": auth == .allowedAlways,
-                "bluetoothConnectPermission": auth == .allowedAlways
-            ])
+        if (!isTurnedOn()) {
+            completion(.success(false))
+            return
         }
         
-        private func startScan(call: FlutterMethodCall, result: @escaping FlutterResult) {
-            if (isScanning) {
-                return result(true)
-            }
-            
-            let auth = CBCentralManager.authorization
-            if (auth != .allowedAlways) {
-                log("Bluetooth permission denied - \(auth)")
-                return result(false)
-            }
-            if (centralManager.state != .poweredOn) {
-                log("Bluetooth is not turned on - \(centralManager.state)")
-                return result(false)
-            }
-            
-            let args = call.arguments as? [String: Any] ?? [:]
-            filteredUuid = (args["macAddress"] as? String)?.uppercased()
-            centralManager.scanForPeripherals(withServices: nil, options: nil)
-            isScanning = true
-            return result(true)
-        }
-        
-        private func stopScan(call: FlutterMethodCall, result: @escaping FlutterResult) {
-            if (!isScanning) {
-                return result(true)
-            }
-            
-            centralManager.stopScan()
-            isScanning = false
-            return result(true)
-        }
-        
-        private func connect(call: FlutterMethodCall, result: @escaping FlutterResult) {
-            connectedPeripheral = nil
-            let uuid = (call.arguments as? String)?.uppercased()
-            if (uuid == nil) {
-                log("UUID not defined")
-                return result(false)
-            }
-            
-            if let device = devices[uuid!] {
-                if (isScanning) {
-                    centralManager.stopScan()
-                    isScanning = false
+        completion(.success(true))
+    }
+    
+    func validateScanPermissions() -> Bool {
+        let auth = CBCentralManager.authorization
+        return auth == .allowedAlways
+    }
+    
+    func checkScanPermissions(completion: @escaping (Result<Bool, any Error>) -> Void) {
+        completion(.success(validateScanPermissions()))
+    }
+    
+    func validateAdvertisePermissions() -> Bool {
+        let auth = CBPeripheralManager.authorization
+        return auth == .allowedAlways
+    }
+    
+    func checkAdvertisePermissions(completion: @escaping (Result<Bool, any Error>) -> Void) {
+        completion(.success(validateAdvertisePermissions()))
+    }
+
+    func openBluetoothSettings(completion: @escaping (Result<Bool, any Error>) -> Void) {
+        #if os(iOS)
+        // Open Settings app. User needs to navigate to Bluetooth manually
+        // (Apple restricts direct access to Bluetooth settings in recent iOS versions)
+        DispatchQueue.main.async {
+            if let url = URL(string: UIApplication.openSettingsURLString) {
+                UIApplication.shared.open(url, options: [:]) { success in
+                    completion(.success(success))
                 }
-                
-                lastResult = result
-                
-                centralManager.connect(device)
             } else {
-                log("Device not found")
-                return result(false)
+                completion(.success(false))
             }
         }
-        
-        private func disconnect(call: FlutterMethodCall, result: @escaping FlutterResult) {
-            if (connectedPeripheral != nil) {
-                centralManager.cancelPeripheralConnection(connectedPeripheral!)
-            }
-            
-            servicesAndCharacteristics.removeAll()
-            return result(true)
+        #elseif os(macOS)
+        if let url = URL(string: "x-apple.systempreferences:com.apple.preferences.Bluetooth") {
+            NSWorkspace.shared.open(url)
+            completion(.success(true))
+        } else {
+            completion(.success(false))
+        }
+        #endif
+    }
+
+    func startScan(macAddress: String?, servicesUuids: [String]?, completion: @escaping (Result<Bool, any Error>) -> Void) {
+        if (centralManager.isScanning) {
+            log("Already scanning")
+            completion(.success(true))
+            return
         }
         
-        private func discoverServices(call: FlutterMethodCall, result: @escaping FlutterResult) {
-            if (connectedPeripheral == nil) {
-                return result(nil)
-            }
-            
-            var output: [[String: Any]] = []
-            for (_, service) in servicesAndCharacteristics {
-                if service == nil { continue }
-                output.append(service!.toDictionary())
-            }
-            return result(output)
+        if (!validateScanPermissions()) {
+            log("Scan permissions not granted")
+            completion(.success(false))
+            return
         }
         
-        private func setMtu(call: FlutterMethodCall, result: @escaping FlutterResult) {
-            if connectedPeripheral == nil {
-                return result(nil)
-            }
-            
-            let mtu = connectedPeripheral!.maximumWriteValueLength(for: .withResponse)
-            return result(mtu)
+        if (!isTurnedOn()) {
+            log("Bluetooth not turned on")
+            completion(.success(false))
+            return
         }
         
-        private func writeCharacteristic(call: FlutterMethodCall, result: @escaping FlutterResult) {
-            let args = call.arguments as? [String: Any] ?? [:]
-            let serviceUuid = (args["serviceUuid"] as? String)?.uppercased()
-            if serviceUuid == nil {
-                log("Service UUID not defined")
-                return result(false)
-            }
-            
-            guard let service = servicesAndCharacteristics.first(where: { $0.value != nil && $0.value!.uuidString == serviceUuid })?.value else {
-                log("Service not found")
-                return result(false)
-            }
-            
-            let characteristicUuid = (args["characteristicUuid"] as? String)?.uppercased()
-            if characteristicUuid == nil {
-                log("Characteristic UUID not defined")
-                return result(false)
-            }
-            
-            guard let characteristic = service.characteristics.first(where: { $0.uuidString == characteristicUuid }) else {
-                log("Characteristic not found")
-                return result(false)
-            }
-            
-            let payload = args["payload"] as? FlutterStandardTypedData
-            if payload == nil {
-                log("Payload not defined")
-                return result(false)
-            }
-            
-            let withResponse = args["withResponse"] as? Bool ?? false
-            
-            if connectedPeripheral == nil {
-                log("Device is not connected")
-                return result(false)
-            }
-            
-            lastResult = result
-            connectedPeripheral!.writeValue(payload!.data, for: characteristic.characteristic, type: withResponse ? .withResponse : .withoutResponse)
-        }
+        filterMac = macAddress
+        centralManager.scanForPeripherals(withServices: nil, options: nil)
+        log("Started scanning")
+        completion(.success(true))
+    }
+    
+    func centralManager(_ central: CBCentralManager, didDiscover peripheral: CBPeripheral, advertisementData: [String : Any], rssi RSSI: NSNumber) {
+        let name = peripheral.name
+        let uuid = peripheral.identifier.uuidString.uppercased()
+        if (filteredUuid != nil && uuid != filteredUuid) { return }
         
-        private func readCharacteristic(call: FlutterMethodCall, result: @escaping FlutterResult) {
-            let args = call.arguments as? [String: Any] ?? [:]
-            let serviceUuid = (args["serviceUuid"] as? String)?.uppercased()
-            if serviceUuid == nil {
-                log("Service UUID not defined")
-                return result(nil)
-            }
-            
-            guard let service = servicesAndCharacteristics.first(where: { $0.value != nil && $0.value!.uuidString == serviceUuid })?.value else {
-                log("Service not found")
-                return result(nil)
-            }
-            
-            let characteristicUuid = (args["characteristicUuid"] as? String)?.uppercased()
-            if characteristicUuid == nil {
-                log("Characteristic UUID not defined")
-                return result(nil)
-            }
-            
-            guard let characteristic = service.characteristics.first(where: { $0.uuidString == characteristicUuid }) else {
-                log("Characteristic not found")
-                return result(nil)
-            }
-            
-            if connectedPeripheral == nil {
-                log("Device is not connected")
-                return result(nil)
-            }
-            
-            if characteristic.characteristic.isNotifying {
-                log("Characteristic is notifying, cannot read it.")
-                return result(nil)
-            }
-            
-            lastResult = result
-            connectedPeripheral!.readValue(for: characteristic.characteristic)
-        }
-        
-        private func startNotify(call: FlutterMethodCall, result: @escaping FlutterResult) {
-            let args = call.arguments as? [String: Any] ?? [:]
-            let serviceUuid = (args["serviceUuid"] as? String)?.uppercased()
-            if serviceUuid == nil {
-                log("Service UUID not defined")
-                return result(nil)
-            }
-            
-            guard let service = servicesAndCharacteristics.first(where: { $0.value != nil && $0.value!.uuidString == serviceUuid })?.value else {
-                log("Service not found")
-                return result(false)
-            }
-            
-            let characteristicUuid = (args["characteristicUuid"] as? String)?.uppercased()
-            if characteristicUuid == nil {
-                log("Characteristic UUID not defined")
-                return result(nil)
-            }
-            
-            guard let characteristic = service.characteristics.first(where: { $0.uuidString == characteristicUuid }) else {
-                log("Characteristic not found")
-                return result(false)
-            }
-            
-            if connectedPeripheral == nil {
-                log("Device is not connected")
-                return result(false)
-            }
-            
-            connectedPeripheral!.setNotifyValue(true, for: characteristic.characteristic)
-            log("Notify started")
-            return result(true)
-        }
-        
-        private func stopNotify(call: FlutterMethodCall, result: @escaping FlutterResult) {
-            let args = call.arguments as? [String: Any] ?? [:]
-            let serviceUuid = (args["serviceUuid"] as? String)?.uppercased()
-            if serviceUuid == nil {
-                log("Service UUID not defined")
-                return result(nil)
-            }
-            
-            guard let service = servicesAndCharacteristics.first(where: { $0.value != nil && $0.value!.uuidString == serviceUuid })?.value else {
-                log("Service not found")
-                return result(false)
-            }
-            
-            let characteristicUuid = (args["characteristicUuid"] as? String)?.uppercased()
-            if characteristicUuid == nil {
-                log("Characteristic UUID not defined")
-                return result(nil)
-            }
-            
-            guard let characteristic = service.characteristics.first(where: { $0.uuidString == characteristicUuid }) else {
-                log("Characteristic not found")
-                return result(false)
-            }
-            
-            if connectedPeripheral == nil {
-                log("Device is not connected")
-                return result(false)
-            }
-            
-            connectedPeripheral!.setNotifyValue(false, for: characteristic.characteristic)
-            return result(true)
-        }
-        
-        // Peripheral delegate
-        public func peripheral(_ peripheral: CBPeripheral, didUpdateNotificationStateFor characteristic: CBCharacteristic, error: (any Error)?) {
-            if let error = error {
-                log("Error updating notification state: \(error.localizedDescription)")
-                return
-            }
-            
-            if characteristic.isNotifying {
-                log("Notification started")
-            } else {
-                log("Notification stopped")
-            }
-        }
-        
-        public func peripheral(_ peripheral: CBPeripheral, didWriteValueFor characteristic: CBCharacteristic, error: (any Error)?) {
-            if let error = error {
-                log("Error writing value: \(error.localizedDescription)")
-                lastResult?(false)
-                lastResult = nil
-                return
-            }
-            
-            log("Payload sent successfully")
-            lastResult?(true)
-            lastResult = nil
-        }
-        
-        public func peripheral(_ peripheral: CBPeripheral, didUpdateValueFor characteristic: CBCharacteristic, error: (any Error)?) {
-            if let error = error {
-                log("Error reading value: \(error.localizedDescription)")
-                lastResult?(nil)
-                lastResult = nil
-                return
-            }
-            
-            if characteristic.isNotifying {
-                let notification: [String: Any?] = [
-                    "serviceUuid": characteristic.service?.uuid.uuidString.uppercased(),
-                    "characteristicUuid": characteristic.uuid.uuidString.uppercased(),
-                    "value": characteristic.value
-                ]
-                
-                LayrzBlePlugin.eventsChannel!.invokeMethod("onNotify", arguments: notification)
-            } else {
-                lastResult?(characteristic.value)
-                lastResult = nil
-            }
-        }
-        
-        public func peripheral(_ peripheral: CBPeripheral, didDiscoverServices error: (any Error)?) {
-            let uuid = peripheral.identifier.uuidString.uppercased()
-            log("Discovering services of \(uuid)")
-            if let error = error {
-                log("Error discovering services: \(error.localizedDescription)")
-                lastResult?(nil)
-                return
-            }
-            
-            guard let services = peripheral.services else { return }
-            
-            for service in services {
-                servicesAndCharacteristics.updateValue(nil, forKey: service.uuid.uuidString.uppercased())
-                peripheral.discoverCharacteristics(nil, for: service)
-            }
-        }
-        
-        public func peripheral(_ peripheral: CBPeripheral, didDiscoverCharacteristicsFor service: CBService, error: (any Error)?) {
-            if let error = error {
-                log("Error discovering services - \(error.localizedDescription)")
-                return
-            }
-            
-            let serviceUuid = service.uuid.uuidString.uppercased()
-            
-            guard let characteristics = service.characteristics else { return }
-            
-            var characteristicsParsed: [BleCharacteristic] = []
-            for characteristic in characteristics {
-                var propertiesList: [String] = []
-                let properties = characteristic.properties
-                if properties.contains(.read) { propertiesList.append("READ") }
-                if properties.contains(.write) { propertiesList.append("WRITE") }
-                if properties.contains(.writeWithoutResponse) { propertiesList.append("WRITE_WO_RSP") }
-                if properties.contains(.notify) { propertiesList.append("NOTIFY") }
-                if properties.contains(.indicate) { propertiesList.append("INDICATE") }
-                if properties.contains(.authenticatedSignedWrites) { propertiesList.append("AUTH_SIGN_WRITES") }
-                if properties.contains(.broadcast) { propertiesList.append("BROADCAST") }
-                if properties.contains(.extendedProperties) { propertiesList.append("EXTENDED_PROP") }
-                
-                characteristicsParsed.append(BleCharacteristic(
-                    uuid: characteristic.uuid,
-                    properties: propertiesList,
-                    characteristic: characteristic
+        var manufacturerData: [BtManufacturerData] = []
+        if let rawManufacturerData = advertisementData[CBAdvertisementDataManufacturerDataKey] as? Data {
+            // Extract company ID (first 2 bytes) and manufacturer data
+            if rawManufacturerData.count >= 2 {
+                let companyId = Int64(rawManufacturerData.prefix(2).withUnsafeBytes { $0.load(as: UInt16.self) })
+                let data = rawManufacturerData.dropFirst(2)
+
+                manufacturerData.append(BtManufacturerData(
+                    companyId: companyId,
+                    data: FlutterStandardTypedData(bytes: data)
                 ))
             }
-            
-            servicesAndCharacteristics.updateValue(
-                BleService(
-                    uuid: service.uuid,
-                    characteristics: characteristicsParsed,
-                    service: service
-                ),
-                forKey: serviceUuid
-            )
-            
-            log("Checking if all services are discovered")
-            for (uuid, service) in servicesAndCharacteristics {
-                if (service?.characteristics.isEmpty ?? true) {
-                    log("Service \(uuid) has not been discovered")
-                    return
-                }
+        }
+        
+        var serviceData: [BtServiceData] = []
+        if let raw = advertisementData[CBAdvertisementDataServiceDataKey] as? [CBUUID: Data] {
+            for (serviceUuid, data) in raw {
+                serviceData.append(BtServiceData(
+                    uuid: standarizeServiceUuid(serviceUuid),
+                    data: FlutterStandardTypedData(bytes: data)
+                ))
+            }
+        }
+        
+        var txPower: Int64? = nil
+        if let rawPower = advertisementData[CBAdvertisementDataTxPowerLevelKey] as? NSNumber {
+            txPower = rawPower.int64Value
+        }
+        
+        devices.updateValue(peripheral, forKey: uuid)
+        
+        callbackChannel.onScanResult(device: BtDevice(
+            macAddress: uuid,
+            name: name,
+            rssi: RSSI.int64Value,
+            txPower: txPower,
+            manufacturerData: manufacturerData,
+            serviceData: serviceData,
+        )) { _ in }
+    }
+    
+    func stopScan(macAddress: String?, completion: @escaping (Result<Bool, any Error>) -> Void) {
+        if (!centralManager.isScanning) {
+            log("Not scanning")
+            completion(.success(true))
+            return
+        }
+        
+        centralManager.stopScan()
+        log("Stopped scanning")
+        completion(.success(true))
+    }
+    
+    func connect(macAddress: String, completion: @escaping (Result<Bool, any Error>) -> Void) {
+        if (connectedPeripherals[macAddress.uppercased()] != nil) {
+            log("Already connected to \(macAddress)")
+            completion(.success(true))
+            return
+        }
+        
+        if (devices[macAddress] == nil) {
+            log("Device not found")
+            completion(.success(false))
+            return
+        }
+        
+        let peripheral = devices[macAddress.uppercased()]!
+        if (peripheral.state == .connected) {
+            log("Already connected")
+            completion(.success(true))
+            return
+        }
+        
+        centralManager.connect(peripheral)
+        connectCallback = completion
+    }
+    
+    func centralManager(_ central: CBCentralManager, didConnect peripheral: CBPeripheral) {
+        let uuid = peripheral.identifier.uuidString.uppercased()
+        log("Connected to \(uuid)")
+        peripheral.delegate = self
+        connectedPeripherals[uuid] = peripheral
+        
+        callbackChannel.onConnected(device: BtDevice(
+            macAddress: uuid,
+            name: peripheral.name,
+            manufacturerData: [],
+            serviceData: [],
+        )) { _ in }
+        
+        peripheral.discoverServices(nil)
+    }
+    
+    
+    func peripheral(_ peripheral: CBPeripheral, didDiscoverServices error: (any Error)?) {
+        let uuid = peripheral.identifier.uuidString.uppercased()
+        if let error = error {
+            log("Error discovering services for \(uuid): \(error.localizedDescription)")
+            connectCallback?(.success(false))
+            connectCallback = nil
+            centralManager.cancelPeripheralConnection(peripheral)
+            callbackChannel.onDisconnected(device: BtDevice(
+                macAddress: uuid,
+                name: peripheral.name,
+                manufacturerData: [],
+                serviceData: [],
+            )) { _ in }
+            connectedPeripherals.removeValue(forKey: uuid)
+            servicesAndCharacteristics.removeValue(forKey: uuid)
+            return
+        }
+        
+        guard let services = peripheral.services else {
+            log("No services found for \(uuid)")
+            connectCallback?(.success(true))
+            connectCallback = nil
+            return
+        }
+        
+        for service in services {
+            if servicesAndCharacteristics[uuid] == nil {
+                servicesAndCharacteristics[uuid] = []
             }
             
-            lastResult?(true)
+            servicesAndCharacteristics[uuid]!.append(BleService(
+                uuid: service.uuid,
+                characteristics: [],
+                service: service
+            ))
+            peripheral.discoverCharacteristics(nil, for: service)
+        }
+    }
+    
+    func peripheral(_ peripheral: CBPeripheral, didDiscoverCharacteristicsFor service: CBService, error: (any Error)?) {
+        let uuid = peripheral.identifier.uuidString.uppercased()
+        if let error = error {
+            // Find the service in servicesAndCharacteristics, and update the discovered to true
+            if let index = servicesAndCharacteristics[uuid]?.firstIndex(where: { $0.uuid == service.uuid }) {
+                servicesAndCharacteristics[uuid]![index].discovered = true
+            }
+            log("Error discovering characteristics for service \(service.uuid): \(error.localizedDescription)")
+            return
         }
         
-        // Central manager delegate
-        public func centralManager(_ central: CBCentralManager, didFailToConnect peripheral: CBPeripheral, error: (any Error)?) {
-            let uuid = peripheral.identifier.uuidString.uppercased()
-            log("Failed to connect to \(uuid) - \(error?.localizedDescription ?? "")")
-            connectedPeripheral = nil
-            LayrzBlePlugin.eventsChannel?.invokeMethod("onEvent", arguments: "DISCONNECTED")
-            lastResult?(false)
+        let serviceUuid = service.uuid.uuidString.uppercased()
+        guard let characteristics = service.characteristics else {
+            log("No characteristics found for service \(serviceUuid)")
+            // Find the service in servicesAndCharacteristics, and update the discovered to true
+            if let index = servicesAndCharacteristics[uuid]?.firstIndex(where: { $0.uuid == service.uuid }) {
+                servicesAndCharacteristics[uuid]![index].discovered = true
+            }
+            return
         }
         
-        public func centralManager(_ central: CBCentralManager, didDisconnectPeripheral peripheral: CBPeripheral, error: (any Error)?) {
-            let uuid = peripheral.identifier.uuidString.uppercased()
-            log("Disconnected from \(uuid) - \(error?.localizedDescription ?? "")")
-            connectedPeripheral = nil
-            LayrzBlePlugin.eventsChannel?.invokeMethod("onEvent", arguments: "DISCONNECTED")
-            lastResult?(false)
-        }
-        
-        public func centralManager(_ central: CBCentralManager, didDiscover peripheral: CBPeripheral, advertisementData: [String : Any], rssi RSSI: NSNumber) {
-            let name = peripheral.name
-            let uuid = peripheral.identifier.uuidString.uppercased()
+        var characteristicsList: [BleCharacteristic] = []
+        for characteristic in characteristics {
+            var propertiesList: [String] = []
+            let properties = characteristic.properties
+            if properties.contains(.read) { propertiesList.append("READ") }
+            if properties.contains(.write) { propertiesList.append("WRITE") }
+            if properties.contains(.writeWithoutResponse) { propertiesList.append("WRITE_WO_RSP") }
+            if properties.contains(.notify) { propertiesList.append("NOTIFY") }
+            if properties.contains(.indicate) { propertiesList.append("INDICATE") }
+            if properties.contains(.authenticatedSignedWrites) { propertiesList.append("AUTH_SIGN_WRITES") }
+            if properties.contains(.broadcast) { propertiesList.append("BROADCAST") }
+            if properties.contains(.extendedProperties) { propertiesList.append("EXTENDED_PROP") }
             
-            if (filteredUuid != nil && uuid != filteredUuid) {
-                // log("Device detected but rejected due to MAC Address filter")
+            characteristicsList.append(BleCharacteristic(
+                uuid: characteristic.uuid,
+                properties: propertiesList,
+                characteristic: characteristic
+            ))
+        }
+        
+        
+        if let index = servicesAndCharacteristics[uuid]?.firstIndex(where: { $0.uuid == service.uuid }) {
+            servicesAndCharacteristics[uuid]![index].characteristics = characteristicsList
+            servicesAndCharacteristics[uuid]![index].discovered = true
+        } else {
+            log("Service \(serviceUuid) not found in servicesAndCharacteristics")
+        }
+        
+        let toValidate = servicesAndCharacteristics[uuid] ?? []
+        for service in toValidate {
+            if !service.discovered {
+                log("Service \(service.uuid) has not discovered all characteristics yet")
+                return
+            }
+        }
+        
+        log("All services and characteristics discovered for \(uuid)")
+        connectCallback?(.success(true))
+        connectCallback = nil
+    }
+    
+    func disconnect(macAddress: String?, completion: @escaping (Result<Bool, any Error>) -> Void) {
+        if (macAddress == nil) {
+            for (_, peripheral) in connectedPeripherals {
+                centralManager.cancelPeripheralConnection(peripheral)
+            }
+            
+            connectedPeripherals.removeAll()
+            servicesAndCharacteristics.removeAll()
+        } else {
+            if let peripheral = connectedPeripherals[macAddress!.uppercased()] {
+                centralManager.cancelPeripheralConnection(peripheral)
+                connectedPeripherals.removeValue(forKey: macAddress!.uppercased())
+                servicesAndCharacteristics.removeValue(forKey: macAddress!.uppercased())
+            } else {
+                log("Device not found")
+            }
+        }
+        
+        completion(.success(true))
+    }
+    
+    func setMtu(macAddress: String, newMtu: Int64, completion: @escaping (Result<Int64?, any Error>) -> Void) {
+        let peripheral = connectedPeripherals[macAddress.uppercased()]
+        if peripheral == nil {
+            log("Device not found")
+            completion(.success(nil))
+            return
+        }
+        
+        let mtu = peripheral!.maximumWriteValueLength(for: .withResponse)
+        log("MTU for \(macAddress): \(mtu)")
+        completion(.success(Int64(mtu)))
+    }
+    
+    func discoverServices(macAddress: String, completion: @escaping (Result<[BtService], any Error>) -> Void) {
+        let services = servicesAndCharacteristics[macAddress.uppercased()]
+        if services == nil {
+            log("Device not found")
+            completion(.success([]))
+        }
+        
+        var servicesList: [BtService] = []
+        for service in services ?? [] {
+            servicesList.append(service.toPigeon())
+        }
+        
+        completion(.success(servicesList))
+    }
+    
+    func readCharacteristic(
+        macAddress: String,
+        serviceUuid: String,
+        characteristicUuid: String,
+        completion: @escaping (Result<FlutterStandardTypedData, any Error>) -> Void
+    ) {
+        let peripheral = connectedPeripherals[macAddress.uppercased()]
+        if peripheral == nil {
+            log("Device not found")
+            completion(.success(FlutterStandardTypedData(bytes: Data())))
+            return
+        }
+        
+        let services = servicesAndCharacteristics[macAddress.uppercased()]
+        if services == nil {
+            log("Device not found")
+            completion(.success(FlutterStandardTypedData(bytes: Data())))
+            return
+        }
+        
+        guard let service = services!.first(where: { $0.uuidString == serviceUuid.uppercased() }) else {
+            log("Service not found")
+            completion(.success(FlutterStandardTypedData(bytes: Data())))
+            return
+        }
+        
+        guard let characteristic = service.characteristics.first(where: { $0.uuidString == characteristicUuid.uppercased() }) else {
+            log("Characteristic not found")
+            completion(.success(FlutterStandardTypedData(bytes: Data())))
+            return
+        }
+        
+        if !characteristic.characteristic.properties.contains(.read) {
+            log("Characteristic does not support read")
+            completion(.success(FlutterStandardTypedData(bytes: Data())))
+            return
+        }
+        
+        if characteristic.characteristic.isNotifying {
+            log("Characteristic is notifying, cannot read it")
+            completion(.success(FlutterStandardTypedData(bytes: Data())))
+            return
+        }
+        
+        readCallback = completion
+        peripheral!.readValue(for: characteristic.characteristic)
+    }
+    
+    func peripheral(_ peripheral: CBPeripheral, didUpdateValueFor characteristic: CBCharacteristic, error: (any Error)?) {
+        if let error = error {
+            log("Error reading value for characteristic \(characteristic.uuid): \(error.localizedDescription)")
+            readCallback?(.success(FlutterStandardTypedData(bytes: Data())))
+            readCallback = nil
+            return
+        }
+        
+        if characteristic.isNotifying {
+            log("Received notification for characteristic \(characteristic.uuid)")
+            guard let serviceUuid = characteristic.service?.uuid.uuidString.uppercased() else {
+                log("Service UUID not found")
                 return
             }
             
-            var manufacturerData: [[String: Any]] = []
-            if let rawManufacturerData = advertisementData[CBAdvertisementDataManufacturerDataKey] as? Data {
-                // Extract company ID (first 2 bytes) and manufacturer data
-                if rawManufacturerData.count >= 2 {
-                    let companyId = Int(rawManufacturerData.prefix(2).withUnsafeBytes { $0.load(as: UInt16.self) })
-                    let data = rawManufacturerData.dropFirst(2)
-
-                    manufacturerData.append([
-                        "companyId": companyId,
-                        "data": data
-                    ])
-                }
-            }
+            let characteristicUuid = characteristic.uuid.uuidString.uppercased()
             
-            var serviceData: [[String: Any]] = []
-            if let raw = advertisementData[CBAdvertisementDataServiceDataKey] as? [CBUUID: Data] {
-                for (serviceUuid, data) in raw {
-                    serviceData.append([
-                        "uuid": standarizeServiceUuid(serviceUuid),
-                        "data": data
-                    ])
-                }
-            }
-            
-            var txPower: Int? = nil
-            if let rawPower = advertisementData[CBAdvertisementDataTxPowerLevelKey] as? NSNumber {
-                txPower = rawPower.intValue
-            }
-            
-            devices.updateValue(peripheral, forKey: uuid)
-            LayrzBlePlugin.eventsChannel?.invokeMethod("onScan", arguments: [
-                "name": name ?? "Unknown",
-                "macAddress": uuid,
-                "rssi": RSSI,
-                "manufacturerData": manufacturerData,
-                "serviceData": serviceData,
-                "txPower": txPower
-            ])
+            callbackChannel.onCharacteristicUpdate(
+                notification: BtCharacteristicNotification(
+                    macAddress: peripheral.identifier.uuidString.uppercased(),
+                    serviceUuid: serviceUuid,
+                    characteristicUuid: characteristicUuid,
+                    value: FlutterStandardTypedData(bytes: characteristic.value ?? Data())
+                )
+            ) { _ in }
+            return
         }
         
-        public func centralManager(_ central: CBCentralManager, didConnect peripheral: CBPeripheral) {
-            if (isScanning) {
-                centralManager.stopScan()
-                isScanning = false
-                LayrzBlePlugin.eventsChannel?.invokeMethod("onEvent", arguments: "SCAN_STOPPED")
-            }
-            
-            peripheral.delegate = self
-            connectedPeripheral = peripheral
-            LayrzBlePlugin.eventsChannel?.invokeMethod("onEvent", arguments: "CONNECTED")
-            peripheral.discoverServices(nil)
+        let uuid = peripheral.identifier.uuidString.uppercased()
+        log("Read value for characteristic \(characteristic.uuid) on device \(uuid)")
+        if let data = characteristic.value {
+            readCallback?(.success(FlutterStandardTypedData(bytes: data)))
+        } else {
+            readCallback?(.success(FlutterStandardTypedData(bytes: Data())))
         }
-        
-        public func centralManagerDidUpdateState(_ central: CBCentralManager) {
-            switch central.state {
-            case .poweredOn:
-                log("Bluetooth is turned on")
-            case .poweredOff:
-                if (isScanning) {
-                    LayrzBlePlugin.eventsChannel?.invokeMethod("onEvent", arguments: "SCAN_STOPPED")
-                    isScanning = false
-                }
-                log("Bluetooth is turned off")
-            case .unsupported:
-                log("Bluetooth is unsupported")
-            case .unauthorized:
-                log("Bluetooth is unauthorized")
-            default:
-                log("Unknown Bluetooth state \(central.state)")
-            }
-        }
-        
-        private func log(_ message: String) {
-            NSLog("LayrzBlePlugin/darwin: \(message)")
-        }
+        readCallback = nil
+    }
     
-    private func standarizeServiceUuid(_ uuid: CBUUID) -> Int {
-        return Int(uuid.data.withUnsafeBytes { $0.load(as: UInt16.self) }.littleEndian)
+    func writeCharacteristic(
+        macAddress: String,
+        serviceUuid: String,
+        characteristicUuid: String,
+        payload: FlutterStandardTypedData,
+        withResponse: Bool,
+        completion: @escaping (Result<Bool, any Error>) -> Void
+    ) {
+        let peripheral = connectedPeripherals[macAddress.uppercased()]
+        if peripheral == nil {
+            log("Device not found")
+            completion(.success(false))
+            return
+        }
+        
+        let services = servicesAndCharacteristics[macAddress.uppercased()]
+        if services == nil {
+            log("Device not found")
+            completion(.success(false))
+            return
+        }
+        
+        guard let service = services!.first(where: { $0.uuidString == serviceUuid.uppercased() }) else {
+            log("Service not found")
+            completion(.success(false))
+            return
+        }
+        
+        guard let characteristic = service.characteristics.first(where: { $0.uuidString == characteristicUuid.uppercased() }) else {
+            log("Characteristic not found")
+            completion(.success(false))
+            return
+        }
+        
+        if !characteristic.characteristic.properties.contains(.write) && !characteristic.characteristic.properties.contains(.writeWithoutResponse) {
+            log("Characteristic does not support write")
+            completion(.success(false))
+            return
+        }
+        
+        writeCallback = completion
+        peripheral!.writeValue(
+            payload.data,
+            for: characteristic.characteristic,
+            type: withResponse ? .withResponse : .withoutResponse
+        )
+    }
+    
+    func peripheral(_ peripheral: CBPeripheral, didWriteValueFor characteristic: CBCharacteristic, error: (any Error)?) {
+        if let error = error {
+            log("Error writing value for characteristic \(characteristic.uuid): \(error.localizedDescription)")
+            writeCallback?(.success(false))
+            writeCallback = nil
+            return
+        }
+        
+        let uuid = peripheral.identifier.uuidString.uppercased()
+        log("Wrote value for characteristic \(characteristic.uuid) on device \(uuid)")
+        writeCallback?(.success(true))
+        writeCallback = nil
+    }
+    
+    func startNotify(macAddress: String, serviceUuid: String, characteristicUuid: String, completion: @escaping (Result<Bool, any Error>) -> Void) {
+        let peripheral = connectedPeripherals[macAddress.uppercased()]
+        if peripheral == nil {
+            log("Device not found")
+            completion(.success(false))
+            return
+        }
+        
+        let services = servicesAndCharacteristics[macAddress.uppercased()]
+        if services == nil {
+            log("Device not found")
+            completion(.success(false))
+            return
+        }
+        
+        guard let service = services!.first(where: { $0.uuidString == serviceUuid.uppercased() }) else {
+            log("Service not found")
+            completion(.success(false))
+            return
+        }
+        
+        guard let characteristic = service.characteristics.first(where: { $0.uuidString == characteristicUuid.uppercased() }) else {
+            log("Characteristic not found")
+            completion(.success(false))
+            return
+        }
+        
+        if !characteristic.characteristic.properties.contains(.notify) && !characteristic.characteristic.properties.contains(.indicate) {
+            log("Characteristic does not support notify or indicate")
+            completion(.success(false))
+            return
+        }
+        
+        peripheral!.setNotifyValue(true, for: characteristic.characteristic)
+        log("Started notifying for characteristic \(characteristicUuid) on service \(serviceUuid)")
+        completion(.success(true))
+    }
+    
+    func stopNotify(macAddress: String, serviceUuid: String, characteristicUuid: String, completion: @escaping (Result<Bool, any Error>) -> Void) {
+        let peripheral = connectedPeripherals[macAddress.uppercased()]
+        if peripheral == nil {
+            log("Device not found")
+            completion(.success(false))
+            return
+        }
+        
+        let services = servicesAndCharacteristics[macAddress.uppercased()]
+        if services == nil {
+            log("Device not found")
+            completion(.success(false))
+            return
+        }
+        
+        guard let service = services!.first(where: { $0.uuidString == serviceUuid.uppercased() }) else {
+            log("Service not found")
+            completion(.success(false))
+            return
+        }
+        
+        guard let characteristic = service.characteristics.first(where: { $0.uuidString == characteristicUuid.uppercased() }) else {
+            log("Characteristic not found")
+            completion(.success(false))
+            return
+        }
+        
+        if !characteristic.characteristic.properties.contains(.notify) && !characteristic.characteristic.properties.contains(.indicate) {
+            log("Characteristic does not support notify or indicate")
+            completion(.success(false))
+            return
+        }
+        
+        peripheral!.setNotifyValue(false, for: characteristic.characteristic)
+        log("Stopped notifying for characteristic \(characteristicUuid) on service \(serviceUuid)")
+        completion(.success(true))
+    }
+    
+    func startAdvertise(
+        manufacturerData: [BtManufacturerData],
+        serviceData: [BtServiceData],
+        canConnect: Bool,
+        name: String?,
+        servicesSpecs: [BtService],
+        allowBluetooth5: Bool,
+        completion: @escaping (Result<Bool, any Error>) -> Void
+    ) {
+        completion(.success(false))
+    }
+    
+    func stopAdvertise(completion: @escaping (Result<Bool, any Error>) -> Void) {
+        completion(.success(false))
+    }
+    
+    func respondReadRequest(
+        requestId: Int64,
+        macAddress: String,
+        offset: Int64,
+        data: FlutterStandardTypedData?,
+        completion: @escaping (Result<Bool, any Error>) -> Void
+    ) {
+        completion(.success(false))
+    }
+    
+    func respondWriteRequest(
+        requestId: Int64,
+        macAddress: String,
+        offset: Int64,
+        success: Bool,
+        completion: @escaping (Result<Bool, any Error>) -> Void
+    ) {
+        completion(.success(false))
+    }
+    
+    func sendNotification(
+        serviceUuid: String,
+        characteristicUuid: String,
+        payload: FlutterStandardTypedData,
+        requestConfirmation: Bool,
+        completion: @escaping (Result<Bool, any Error>) -> Void
+    ) {
+        completion(.success(false))
+    }
+    
+    func centralManager(_ central: CBCentralManager, didDisconnectPeripheral peripheral: CBPeripheral, error: (any Error)?) {
+        let uuid = peripheral.identifier.uuidString.uppercased()
+        log("Disconnected from \(uuid)")
+        
+        connectedPeripherals[uuid] = nil
+        if let error = error {
+            log("Error disconnecting from \(uuid): \(error.localizedDescription)")
+        }
+        
+        connectCallback?(.success(false))
+        connectCallback = nil
+        callbackChannel.onDisconnected(device: BtDevice(
+            macAddress: uuid,
+            name: peripheral.name,
+            manufacturerData: [],
+            serviceData: [],
+        )) { _ in }
+        
+        connectedPeripherals.removeValue(forKey: uuid)
+        servicesAndCharacteristics.removeValue(forKey: uuid)
+    }
+    
+    func centralManager(_ central: CBCentralManager, didFailToConnect peripheral: CBPeripheral, error: (any Error)?) {
+        let uuid = peripheral.identifier.uuidString.uppercased()
+        log("Failed to connect to \(uuid): \(error?.localizedDescription ?? "Unknown error")")
+        connectCallback?(.success(false))
+        connectCallback = nil
+        callbackChannel.onDisconnected(device: BtDevice(
+            macAddress: uuid,
+            name: peripheral.name,
+            manufacturerData: [],
+            serviceData: [],
+        )) { _ in }
+        connectedPeripherals.removeValue(forKey: uuid)
+        servicesAndCharacteristics.removeValue(forKey: uuid)
+    }
+    
+    func centralManagerDidUpdateState(_ central: CBCentralManager) {
+        switch central.state {
+        case .poweredOn:
+            log("Bluetooth powered on")
+            isBluetoothEnabled = true
+            callbackChannel.onBluetoothOn() { _ in }
+        case .poweredOff:
+            log("Bluetooth powered off")
+            isBluetoothEnabled = false
+            callbackChannel.onBluetoothOff() { _ in }
+        case .resetting:
+            log("Bluetooth resetting")
+            isBluetoothEnabled = false
+        case .unauthorized:
+            log("Bluetooth unauthorized")
+        case .unsupported:
+            log("Bluetooth unsupported")
+        case .unknown:
+            log("Bluetooth unknown")
+        @unknown default:
+            log("Bluetooth unknown state")
+        }
+    }
+    
+    private func log(_ message: String) {
+        NSLog("LayrzBlePlugin/darwin: \(message)")
+    }
+    
+    private func standarizeServiceUuid(_ uuid: CBUUID) -> Int64 {
+        return Int64(uuid.data.withUnsafeBytes { $0.load(as: UInt16.self) }.littleEndian)
     }
 }

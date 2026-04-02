@@ -2,18 +2,19 @@ import 'dart:async';
 
 import 'package:collection/collection.dart';
 import 'package:flutter/foundation.dart';
-import 'package:flutter_web_plugins/flutter_web_plugins.dart';
 import 'package:layrz_ble/src/platform_interface.dart';
-import 'package:layrz_ble/src/types.dart';
+import 'package:layrz_ble/src/types/types.dart';
 import 'package:layrz_models/layrz_models.dart';
 import 'package:flutter_web_bluetooth/flutter_web_bluetooth.dart';
 
 class LayrzBlePluginWeb extends LayrzBlePlatform {
-  LayrzBlePluginWeb();
-
-  static void registerWith(Registrar registrar) {
-    LayrzBlePlatform.instance = LayrzBlePluginWeb();
+  static LayrzBlePluginWeb? _instance;
+  static LayrzBlePluginWeb get instance {
+    _instance ??= LayrzBlePluginWeb();
+    return _instance!;
   }
+
+  LayrzBlePluginWeb();
 
   BluetoothDevice? _currentConnected;
   final Map<String, StreamSubscription<ByteData>> _notifications = {};
@@ -24,6 +25,17 @@ class LayrzBlePluginWeb extends LayrzBlePlatform {
   final StreamController<BleEvent> _eventController = StreamController<BleEvent>.broadcast();
   final StreamController<BleCharacteristicNotification> _notifyController =
       StreamController<BleCharacteristicNotification>.broadcast();
+  final StreamController<BleGattEvent> _gattController = StreamController<BleGattEvent>.broadcast();
+  final StreamController<bool> _bluetoothStateController = StreamController<bool>.broadcast();
+
+  @override
+  bool get isAdvertising => false;
+
+  @override
+  bool get isScanning => false;
+
+  @override
+  Stream<bool> get onBluetoothStateChanged => _bluetoothStateController.stream;
 
   @override
   Stream<BleDevice> get onScan => _scanController.stream;
@@ -35,19 +47,26 @@ class LayrzBlePluginWeb extends LayrzBlePlatform {
   Stream<BleCharacteristicNotification> get onNotify => _notifyController.stream;
 
   @override
-  Future<BleCapabilities> checkCapabilities() async {
-    final supported = FlutterWebBluetooth.instance.isBluetoothApiSupported;
+  Stream<BleGattEvent> get onGattUpdate => _gattController.stream;
 
-    return BleCapabilities(
-      bluetoothAdminOrScanPermission: supported,
-      locationPermission: supported,
-      bluetoothPermission: supported,
-      bluetoothConnectPermission: supported,
-    );
+  @override
+  Future<bool> checkCapabilities() => Future.value(FlutterWebBluetooth.instance.isBluetoothApiSupported);
+
+  @override
+  Future<bool> checkScanPermissions() => checkCapabilities();
+
+  @override
+  Future<bool> checkAdvertisePermissions() => Future.value(false);
+
+  @override
+  Future<BleStatus> getStatuses() async {
+    final isEnabled = FlutterWebBluetooth.instance.isBluetoothApiSupported;
+    _bluetoothStateController.add(isEnabled);
+    return BleStatus(advertising: false, scanning: false, isEnabled: isEnabled);
   }
 
   @override
-  Future<bool?> startScan({String? macAddress, List<String>? servicesUuids}) async {
+  Future<bool> startScan({String? macAddress, List<String>? servicesUuids}) async {
     _devices.clear();
     final requestOptions = RequestOptionsBuilder.acceptAllDevices(optionalServices: servicesUuids);
     try {
@@ -55,28 +74,36 @@ class LayrzBlePluginWeb extends LayrzBlePlatform {
       final bleDevice = BleDevice(macAddress: device.id, name: device.name);
       _devices[device.id] = device;
       _scanController.add(bleDevice);
-      _eventController.add(BleEvent.scanStopped);
+      _eventController.add(BleScanStopped());
       return true;
     } catch (e) {
-      _eventController.add(BleEvent.scanStopped);
+      _eventController.add(BleScanStopped());
       log("Error getting device: $e");
       return false;
     }
   }
 
   @override
-  Future<bool?> stopScan() => Future.value(true);
+  Future<bool> stopScan() {
+    _eventController.add(BleScanStopped());
+    return Future.value(true);
+  }
 
   @override
-  Future<int?> setMtu({required int newMtu}) async {
+  Future<int?> setMtu({required String macAddress, required int newMtu}) async {
     log("Feature not supported on Web");
     return null;
   }
 
   @override
-  Future<bool?> connect({required String macAddress}) async {
+  Future<bool> connect({required String macAddress}) async {
     if (!_devices.containsKey(macAddress)) {
       log("Device not found: $macAddress");
+      return false;
+    }
+
+    if (_currentConnected != null) {
+      log("Already connected to another device: ${_currentConnected!.id}");
       return false;
     }
 
@@ -107,10 +134,7 @@ class LayrzBlePluginWeb extends LayrzBlePlatform {
           );
         }).toList();
 
-        _services.add(BleService(
-          uuid: service.uuid,
-          characteristics: bleCharacteristics,
-        ));
+        _services.add(BleService(uuid: service.uuid, characteristics: bleCharacteristics));
       }
     } catch (e) {
       log("Error discovering services: $e");
@@ -122,7 +146,7 @@ class LayrzBlePluginWeb extends LayrzBlePlatform {
   }
 
   @override
-  Future<bool?> disconnect() async {
+  Future<bool> disconnect({String? macAddress}) async {
     if (_currentConnected == null) {
       log("No device connected");
       return true;
@@ -136,6 +160,7 @@ class LayrzBlePluginWeb extends LayrzBlePlatform {
 
   @override
   Future<List<BleService>?> discoverServices({
+    required String macAddress,
     Duration timeout = const Duration(seconds: 30),
     List<String>? serviceUuids,
   }) async {
@@ -149,6 +174,7 @@ class LayrzBlePluginWeb extends LayrzBlePlatform {
 
   @override
   Future<bool> writeCharacteristic({
+    required String macAddress,
     required String serviceUuid,
     required String characteristicUuid,
     required Uint8List payload,
@@ -190,6 +216,7 @@ class LayrzBlePluginWeb extends LayrzBlePlatform {
 
   @override
   Future<Uint8List?> readCharacteristic({
+    required String macAddress,
     required String serviceUuid,
     required String characteristicUuid,
     Duration timeout = const Duration(seconds: 30),
@@ -222,7 +249,8 @@ class LayrzBlePluginWeb extends LayrzBlePlatform {
   }
 
   @override
-  Future<bool?> startNotify({
+  Future<bool> startNotify({
+    required String macAddress,
     required String serviceUuid,
     required String characteristicUuid,
   }) async {
@@ -246,11 +274,14 @@ class LayrzBlePluginWeb extends LayrzBlePlatform {
       }
       await characteristic.startNotifications();
       _notifications[characteristicUuid] = characteristic.value.listen((event) {
-        _notifyController.add(BleCharacteristicNotification(
-          serviceUuid: serviceUuid,
-          characteristicUuid: characteristicUuid,
-          value: event.buffer.asUint8List(),
-        ));
+        _notifyController.add(
+          BleCharacteristicNotification(
+            macAddress: 'TBD',
+            serviceUuid: serviceUuid,
+            characteristicUuid: characteristicUuid,
+            value: event.buffer.asUint8List(),
+          ),
+        );
       });
       return true;
     } catch (e) {
@@ -260,7 +291,8 @@ class LayrzBlePluginWeb extends LayrzBlePlatform {
   }
 
   @override
-  Future<bool?> stopNotify({
+  Future<bool> stopNotify({
+    required String macAddress,
     required String serviceUuid,
     required String characteristicUuid,
   }) async {
@@ -297,4 +329,7 @@ class LayrzBlePluginWeb extends LayrzBlePlatform {
   void log(String message) {
     debugPrint("LayrzBlePlugin/Web: $message");
   }
+
+  @override
+  Future<bool> openBluetoothSettings() => Future.value(false);
 }

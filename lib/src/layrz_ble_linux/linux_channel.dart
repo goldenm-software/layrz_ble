@@ -4,10 +4,16 @@ import 'package:bluez/bluez.dart';
 import 'package:collection/collection.dart';
 import 'package:flutter/foundation.dart';
 import 'package:layrz_ble/src/platform_interface.dart';
-import 'package:layrz_ble/src/types.dart';
+import 'package:layrz_ble/src/types/types.dart';
 import 'package:layrz_models/layrz_models.dart';
 
 class LayrzBlePluginLinux extends LayrzBlePlatform {
+  static LayrzBlePluginLinux? _instance;
+  static LayrzBlePluginLinux get instance {
+    _instance ??= LayrzBlePluginLinux();
+    return _instance!;
+  }
+
   LayrzBlePluginLinux() {
     try {
       _client = BlueZClient();
@@ -17,10 +23,6 @@ class LayrzBlePluginLinux extends LayrzBlePlatform {
     } catch (e) {
       log("Error initializing BlueZClient: $e");
     }
-  }
-
-  static void registerWith() {
-    LayrzBlePlatform.instance = LayrzBlePluginLinux();
   }
 
   bool _isScanning = false;
@@ -36,6 +38,17 @@ class LayrzBlePluginLinux extends LayrzBlePlatform {
   final StreamController<BleEvent> _eventController = StreamController<BleEvent>.broadcast();
   final StreamController<BleCharacteristicNotification> _notifyController =
       StreamController<BleCharacteristicNotification>.broadcast();
+  final StreamController<BleGattEvent> _gattController = StreamController<BleGattEvent>.broadcast();
+  final StreamController<bool> _bluetoothStateController = StreamController<bool>.broadcast();
+
+  @override
+  bool get isAdvertising => false;
+
+  @override
+  bool get isScanning => _isScanning;
+
+  @override
+  Stream<bool> get onBluetoothStateChanged => _bluetoothStateController.stream;
 
   @override
   Stream<BleDevice> get onScan => _scanController.stream;
@@ -44,28 +57,41 @@ class LayrzBlePluginLinux extends LayrzBlePlatform {
   Stream<BleEvent> get onEvent => _eventController.stream;
 
   @override
+  Stream<BleGattEvent> get onGattUpdate => _gattController.stream;
+
+  @override
   Stream<BleCharacteristicNotification> get onNotify => _notifyController.stream;
 
   @override
-  Future<BleCapabilities> checkCapabilities() async {
-    bool can = false;
+  Future<bool> checkCapabilities() async {
     try {
-      can = _client?.adapters.isNotEmpty ?? false;
+      return _client?.adapters.isNotEmpty ?? false;
     } catch (e) {
       log("Error initializing BlueZClient: $e");
-      can = false;
+      return false;
     }
-
-    return BleCapabilities(
-      bluetoothAdminOrScanPermission: can,
-      locationPermission: can,
-      bluetoothPermission: can,
-      bluetoothConnectPermission: can,
-    );
   }
 
   @override
-  Future<bool?> startScan({String? macAddress, List<String>? servicesUuids}) async {
+  Future<bool> checkScanPermissions() => checkCapabilities();
+
+  @override
+  Future<bool> checkAdvertisePermissions() => Future.value(false);
+
+  @override
+  Future<BleStatus> getStatuses() async {
+    bool isEnabled = false;
+    try {
+      isEnabled = _client?.adapters.isNotEmpty ?? false;
+    } catch (e) {
+      isEnabled = false;
+    }
+    _bluetoothStateController.add(isEnabled);
+    return BleStatus(advertising: false, scanning: _isScanning, isEnabled: isEnabled);
+  }
+
+  @override
+  Future<bool> startScan({String? macAddress, List<String>? servicesUuids}) async {
     if (_client == null) {
       log("Error initializing BlueZClient");
       return false;
@@ -82,6 +108,8 @@ class LayrzBlePluginLinux extends LayrzBlePlatform {
         _onScanAdded(device);
       }
 
+      _eventController.add(BleScanStarted());
+
       return true;
     } catch (e) {
       log("Error initializing BlueZClient: $e");
@@ -90,10 +118,10 @@ class LayrzBlePluginLinux extends LayrzBlePlatform {
   }
 
   @override
-  Future<bool?> stopScan() async {
+  Future<bool> stopScan() async {
     if (!_isScanning) return true;
 
-    _eventController.add(BleEvent.scanStopped);
+    _eventController.add(BleScanStopped());
     try {
       final adapter = _client?.adapters.firstOrNull;
       await adapter?.stopDiscovery();
@@ -106,7 +134,7 @@ class LayrzBlePluginLinux extends LayrzBlePlatform {
   }
 
   @override
-  Future<int?> setMtu({required int newMtu}) async {
+  Future<int?> setMtu({required String macAddress, required int newMtu}) async {
     if (_connectedDevice == null) {
       log("Not connected to any device");
       return null;
@@ -128,7 +156,7 @@ class LayrzBlePluginLinux extends LayrzBlePlatform {
   }
 
   @override
-  Future<bool?> connect({required String macAddress}) async {
+  Future<bool> connect({required String macAddress}) async {
     if (_client == null) {
       log("Error initializing BlueZClient");
       return false;
@@ -146,47 +174,50 @@ class LayrzBlePluginLinux extends LayrzBlePlatform {
     _connectedDevice = device;
     _services.clear();
 
-    _eventController.add(BleEvent.connected);
+    _eventController.add(BleConnected(macAddress: macAddress, name: device.name.isEmpty ? 'Unknown' : device.name));
 
     for (final service in _connectedDevice!.gattServices) {
       for (final characteristic in service.characteristics) {
-        _services.add(BleService(
-          uuid: service.uuid.toString(),
-          characteristics: [
-            BleCharacteristic(
-              uuid: characteristic.uuid.toString(),
-              properties: [
-                if (characteristic.flags.contains(BlueZGattCharacteristicFlag.read)) BleProperty.read,
-                if (characteristic.flags.contains(BlueZGattCharacteristicFlag.write)) BleProperty.write,
-                if (characteristic.flags.contains(BlueZGattCharacteristicFlag.notify)) BleProperty.notify,
-                if (characteristic.flags.contains(BlueZGattCharacteristicFlag.broadcast)) BleProperty.broadcast,
-                if (characteristic.flags.contains(BlueZGattCharacteristicFlag.writeWithoutResponse))
-                  BleProperty.writeWithoutResponse,
-                if (characteristic.flags.contains(BlueZGattCharacteristicFlag.indicate)) BleProperty.indicate,
-                if (characteristic.flags.contains(BlueZGattCharacteristicFlag.authenticatedSignedWrites))
-                  BleProperty.authenticatedSignedWrites,
-                if (characteristic.flags.contains(BlueZGattCharacteristicFlag.extendedProperties))
-                  BleProperty.extendedProperties,
-              ],
-            ),
-          ],
-        ));
+        _services.add(
+          BleService(
+            uuid: service.uuid.toString(),
+            characteristics: [
+              BleCharacteristic(
+                uuid: characteristic.uuid.toString(),
+                properties: [
+                  if (characteristic.flags.contains(BlueZGattCharacteristicFlag.read)) BleProperty.read,
+                  if (characteristic.flags.contains(BlueZGattCharacteristicFlag.write)) BleProperty.write,
+                  if (characteristic.flags.contains(BlueZGattCharacteristicFlag.notify)) BleProperty.notify,
+                  if (characteristic.flags.contains(BlueZGattCharacteristicFlag.broadcast)) BleProperty.broadcast,
+                  if (characteristic.flags.contains(BlueZGattCharacteristicFlag.writeWithoutResponse))
+                    BleProperty.writeWithoutResponse,
+                  if (characteristic.flags.contains(BlueZGattCharacteristicFlag.indicate)) BleProperty.indicate,
+                  if (characteristic.flags.contains(BlueZGattCharacteristicFlag.authenticatedSignedWrites))
+                    BleProperty.authenticatedSignedWrites,
+                  if (characteristic.flags.contains(BlueZGattCharacteristicFlag.extendedProperties))
+                    BleProperty.extendedProperties,
+                ],
+              ),
+            ],
+          ),
+        );
       }
     }
     return true;
   }
 
   @override
-  Future<bool> disconnect() async {
+  Future<bool> disconnect({String? macAddress}) async {
     _connectedDevice?.disconnect();
     _connectedDevice = null;
     _services.clear();
-    _eventController.add(BleEvent.disconnected);
+    // _eventController.add(BleDisconnected(macAddress: macAddress));
     return true;
   }
 
   @override
   Future<List<BleService>?> discoverServices({
+    required String macAddress,
     Duration timeout = const Duration(seconds: 30),
     List<String>? serviceUuids,
   }) async {
@@ -200,6 +231,7 @@ class LayrzBlePluginLinux extends LayrzBlePlatform {
 
   @override
   Future<bool> writeCharacteristic({
+    required String macAddress,
     required String serviceUuid,
     required String characteristicUuid,
     required Uint8List payload,
@@ -234,6 +266,7 @@ class LayrzBlePluginLinux extends LayrzBlePlatform {
 
   @override
   Future<Uint8List?> readCharacteristic({
+    required String macAddress,
     required String serviceUuid,
     required String characteristicUuid,
     Duration timeout = const Duration(seconds: 30),
@@ -270,7 +303,8 @@ class LayrzBlePluginLinux extends LayrzBlePlatform {
   }
 
   @override
-  Future<bool?> startNotify({
+  Future<bool> startNotify({
+    required String macAddress,
     required String serviceUuid,
     required String characteristicUuid,
   }) async {
@@ -305,11 +339,14 @@ class LayrzBlePluginLinux extends LayrzBlePlatform {
       for (final event in events) {
         if (event == 'Value') {
           final receivedValue = characteristic.value;
-          _notifyController.add(BleCharacteristicNotification(
-            serviceUuid: serviceUuid,
-            characteristicUuid: characteristicUuid,
-            value: Uint8List.fromList(receivedValue),
-          ));
+          _notifyController.add(
+            BleCharacteristicNotification(
+              macAddress: event,
+              serviceUuid: serviceUuid,
+              characteristicUuid: characteristicUuid,
+              value: Uint8List.fromList(receivedValue),
+            ),
+          );
         }
       }
     });
@@ -318,7 +355,8 @@ class LayrzBlePluginLinux extends LayrzBlePlatform {
   }
 
   @override
-  Future<bool?> stopNotify({
+  Future<bool> stopNotify({
+    required String macAddress,
     required String serviceUuid,
     required String characteristicUuid,
   }) async {
@@ -379,17 +417,14 @@ class LayrzBlePluginLinux extends LayrzBlePlatform {
 
       if (data.isEmpty) continue;
 
-      manufacturerData.add(BleManufacturerData(
-        companyId: companyId.id,
-        data: Uint8List.fromList(data),
-      ));
+      manufacturerData.add(BleManufacturerData(companyId: companyId.id, data: Uint8List.fromList(data)));
     }
 
     List<BleServiceData> serviceData = [];
 
     for (final entry in device.serviceData.entries) {
       final bytes = entry.key.value;
-      final serviceUuid = _standarizeServiceUuid([bytes[2], bytes[3]]);
+      int serviceUuid = bytes[2] << 8 | bytes[3];
       final data = entry.value;
       if (data.isEmpty) continue;
 
@@ -408,10 +443,6 @@ class LayrzBlePluginLinux extends LayrzBlePlatform {
     );
   }
 
-  int _standarizeServiceUuid(List<int> bytes) {
-    return int.tryParse(bytes.map((e) {
-          return e.toRadixString(16).padLeft(2, '0');
-        }).join('')) ??
-        0x0000;
-  }
+  @override
+  Future<bool> openBluetoothSettings() => Future.value(false);
 }

@@ -4,15 +4,16 @@
 
 
 namespace layrz_ble {
-  /// @brief Log a message to the console
-  /// @param message 
-  void Log(const std::string &message) {
-    std::cout << "LayrzBlePlugin/Windows: " << message << std::endl;
-  } // Log
+  void Log(const char* format, ...) {
+    // Append to the 
+    va_list args;
+    va_start(args, format);
+    char buffer[1024];
+    vsnprintf(buffer, sizeof(buffer), format, args);
+    va_end(args);
+    std::cout << "LayrzBlePlugin/Windows: " << buffer << std::endl; 
+  }
 
-  /// @brief Convert a wide string to a UTF-8 string
-  /// @param wstr 
-  /// @return std::string
   std::string WStringToString(const std::wstring& wstr) {
     if (wstr.empty()) {
         return {};
@@ -23,9 +24,6 @@ namespace layrz_ble {
     return str;
   } // WStringToString
 
-  /// @brief Convert an HString to a UTF-8 string
-  /// @param hstr
-  /// @return std::string
   std::string HStringToString(const winrt::hstring& hstr) {
     std::wstring wstr = hstr.c_str();  // Convert to std::wstring
     if (wstr.empty()) return {};
@@ -37,9 +35,6 @@ namespace layrz_ble {
     return str;
   } // HStringToString
 
-  /// @brief Format a Bluetooth MAC address
-  /// @param mac_address
-  /// @return std::string
   std::string formatBluetoothAddress(uint64_t mac_address) {
     uint8_t *mac_ptr = (uint8_t *)&mac_address;
     char mac_str[MAC_ADDRESS_STR_LENGTH + 1] = {0};
@@ -47,9 +42,6 @@ namespace layrz_ble {
     return std::string(mac_str);
   } // formatBluetoothAddress
 
-  /// @brief Convert a string to lowercase
-  /// @param str
-  /// @return std::string
   std::string toLowercase(const std::string &str) {
     std::string lower = str;
     std::transform(
@@ -60,9 +52,16 @@ namespace layrz_ble {
     return lower;
   } // toLowercase
 
-  /// @brief Convert a GUID to a string
-  /// @param guid
-  /// @return std::string
+  std::string toUppercase(const std::string &str) {
+    std::string upper = str;
+    std::transform(
+      upper.begin(), 
+      upper.end(), 
+      upper.begin(),
+      [](unsigned char c) { return static_cast<char>(std::toupper(c)); });
+    return upper;
+  } // toUppercase
+
   std::string GuidToString(const winrt::guid &guid) {
     std::ostringstream oss;
     oss << std::hex << std::uppercase << std::setfill('0')
@@ -79,9 +78,6 @@ namespace layrz_ble {
     return oss.str();
   }
 
-  /// @brief Convert a string to a GUID
-  /// @param str
-  /// @return winrt::guid
   winrt::guid StringToGuid(const std::string &str) {
     winrt::guid guid;
     std::istringstream iss(str);
@@ -100,22 +96,20 @@ namespace layrz_ble {
     return guid;
   }
 
-  /// @brief Convert a vector of bytes to an IBuffer
-  /// @param bytes 
-  /// @return Windows::Storage::Streams::IBuffer
   IBuffer VectorToIBuffer(const std::vector<uint8_t> &data) {
     auto writer = DataWriter();
     writer.WriteBytes(data);
     return writer.DetachBuffer();
   }
 
-  /// @brief Convert an IBuffer to a vector of bytes
-  /// @param buffer
-  /// @return std::vector<uint8_t>
   std::vector<uint8_t> IBufferToVector(const IBuffer &buffer) {
     auto reader = DataReader::FromBuffer(buffer);
     std::vector<uint8_t> data(buffer.Length());
     reader.ReadBytes(winrt::array_view<uint8_t>(data));
     return data;
   }
+
+  std::string BooleanToString(bool value) {
+    return value ? "true" : "false";
+  } // BooleanToString
 }

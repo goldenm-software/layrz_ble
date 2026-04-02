@@ -15,7 +15,7 @@ For example, most of the libraries out there requires services and characteristi
 
 ## Functionalities available per platform
 
-✅ - Supported | ❌ - Not available | 🟨 - Partially supported
+### Scanning and connecting
 
 | Feature | Android | iOS | macOS | Windows | Web | Linux | Method(s) | 
 | --- | --- | --- | --- | --- | --- | --- | --- |
@@ -27,8 +27,30 @@ For example, most of the libraries out there requires services and characteristi
 | Read from characteristics | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | `readCharacteristic` |
 | Write to characteristics | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | `writeCharacteristic` |
 | Subscribe to characteristic notifications | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | `startNotify`, `stopNotify` and `onNotify` |
+| Multi-connection support | ✅ | ✅ | ✅ | ❌ | ❌ | ❌ | Read below |
+
+### Advertising and GATT server
+
+| Feature | Android | iOS | macOS | Windows | Web | Linux | Method(s) | 
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| Language used | Kotlin | Swift | Swift | C++ | Dart | Dart | --- |
+| Advertise (On Bluetooth 4 or 5) | ✅* | ❌ | ❌ | ❌ | ❌ | ❌ | `startAdvertise` and `stopAdvertise` |
+| Services and characteristics | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | `respondReadRequest` and `respondWriteRequest` |
+| Notifications | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | `sendNotification` |
+
+* On Android, the stop advertisement does not disconnect the connected devices. Be careful with that.
+
+### Languages used
+| Platform | Language |
+| --- | --- |
+| Android | Kotlin |
+| iOS | Swift |
+| macOS | Swift |
+| Windows | C++ |
+| Web | Dart |
+| Linux | Dart |
+
+### Multiple connections
+We're not expecting to extend the support of multiple connections on this library at the moment, feel free to add it in your platform and send us a pull request, we're happy to review it and merge it.
 
 ### MTU thing...
 🟨 : Well, Windows (Directly on C++) and Linux (through [`bluez` package](https://pub.dev/packages/bluez)) does not support the capability to negotiate the MTU, but yes to return the max MTU allowed, so, when you call `setMtu` you will receive the max allowed from the APIs, not a negotiated value. And why this value is important? Well, you have a size limit of the things that you want to send to your device, knowing the MTU helps to adjusts your packets sizes before sending it to the device.
@@ -38,7 +60,7 @@ For example, most of the libraries out there requires services and characteristi
 ## Minimum requirements
 ### Android
 
-5.0 Lollipop (API Level 21) or later. Be careful with the permissions!.
+6.0 Marshmallow (API Level 23) or later. Be careful with the permissions!.
 
 ### iOS
 
@@ -104,16 +126,76 @@ ble.onScan.listen((BleDevice device) {
   debugPrint(device);
 });
 
-/// Check capabilities
+/// Listen for notifications
 ///
-/// `BleCapabilities` is from this package
-final BleCapabilities capabilities = await ble.checkCapabilities();
+/// `BleCharacteristicNotification` is from this package
+ble.onNotify.listen((BleCharacteristicNotification notification) {
+  debugPrint(notification);
+});
+
+/// GATT events, only for advertising
+///
+/// This class is a sealed class, so, you should use `gattUpdate is <class>` to check the type of the event
+/// 
+/// `GattConnected` triggers when a device is connected to the GATT server
+/// `GattDisconnected` triggers when a device is disconnected from the GATT server
+/// `GattReadRequest` triggers when a device requested to read a characteristic from the GATT server
+/// `GattWriteRequest` triggers when a device requested to write a characteristic from the GATT server
+/// `GattMtuChanged` triggers when the devices negotiates new the MTU size
+ble.onGattUpdate.listen((BleGattUpdate gattUpdate) {
+  debugPrint(gattUpdate);
+});
+
+/// Check capabilities returns `true` if the device is capable of BLE, `false` otherwise
+final bool capabilities = await ble.checkCapabilities();
+
+/// Check scan permissions
+final bool permissions = await ble.checkScanPermissions();
+
+/// Check advertise permissions
+final bool permissions = await ble.checkAdvertisePermissions();
 
 /// Scan for BLE devices
 final bool startResult = await ble.startScan();
 
 /// Stop scanning
 final bool stopResult = await ble.stopScan();
+
+/// Advertise
+final bool advertise = await ble.startAdvertise(
+  manufacturerData: [ // <- Defines the manufacturer data to be advertised
+    const BleManufacturerData(
+      companyId: 0xffff,
+      data: [0xff],
+    ),
+  ],
+  serviceData: [ // <- Defines the service data to be advertised
+    const BleServiceData(
+      uuid: 0xffff,
+      data: [0xff],
+    ),
+  ],
+  canConnect: true, // <- Indicates that the advertisement is connectable
+  allowBluetooth5: true, // <- Indicates that the advertisement can use Bluetooth 5 features if is available
+  servicesSpecs: [ // <- Defines the services and characteristics to be advertised
+    const BleService(
+      uuid: '00000000-0000-0000-0000-000000000001',
+      characteristics: [
+        BleCharacteristic(
+          uuid: '00000000-0000-0000-0000-000000000002',
+          properties: [
+            BleProperty.read,
+            BleProperty.notify,
+          ],
+        ),
+        BleCharacteristic(
+          uuid: '00000000-0000-0000-0000-000000000003',
+          properties: [BleProperty.write],
+        ),
+      ],
+    )
+  ],
+);
 ```
 
 ### Disclaimer about some classes used on this library
@@ -164,6 +246,14 @@ Before getting into the platform specific permissions, always raises the questio
 
   <!-- Required for BLE connection, in all API Levels -->
   <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
+
+  <!-- If you want to advertise and create a GATT server, you'll need to add this lines -->
+  <!-- Required for BLE advertising -->
+  <uses-permission
+    android:name="android.permission.BLUETOOTH_ADVERTISE"
+    android:minSdkVersion="23" />
+
+  <uses-feature android:name="android.hardware.bluetooth_le" android:required="true" />
 
   <!-- ... -->
 </manifest>
@@ -229,6 +319,9 @@ On Apple ecosystem (aka, iOS, iPadOS and macOS), Apple privacy policies are very
 
 ### In Web, why I need to supply the services and characteristics?
 This is a limitation of the Web Bluetooth API, you need to supply the services and characteristics to interact with the device. This is a security measure to prevent malicious websites to interact with your devices.
+
+### What's the target of the advertisement segment of this library?
+We are targeting to provide support for Android at the moment, later maybe we will add support for other platforms, but right now, we are focusing on Android.
 
 ### Why is this package called `layrz_ble`?
 All packages developed by [Layrz](https://layrz.com) are prefixed with `layrz_`, check out our other packages on [pub.dev](https://pub.dev/publishers/goldenm.com/packages).
