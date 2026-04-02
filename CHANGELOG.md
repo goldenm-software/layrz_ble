@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.3.5
+- update to 1.3.5
+- Force to use meta  1.7.0
+
 ## 1.3.4
 - Add `meta` in pubspect.yaml
 
