@@ -4,8 +4,8 @@
 - Just update to get a new tag
 
 ## 1.3.5
-- Update to 1.3.5
-- Force to use meta  1.7.0
+- update to 1.3.5
+- Force to use meta 1.17.0
 
 ## 1.3.4
 - Add `meta` in pubspect.yaml
