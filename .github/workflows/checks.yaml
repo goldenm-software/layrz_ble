@@ -2,8 +2,8 @@ name: "Checks"
 
 on:
   pull_request:
-    branches: [ main ]
-    types: [ opened, synchronize, reopened ]
+    branches: [main]
+    types: [opened, synchronize, reopened]
 
 jobs:
   lint-dart:
@@ -15,7 +15,7 @@ jobs:
         uses: flutter-actions/setup-flutter@v4
         with:
           channel: stable
-          version: '3.41.6'
+          version: "3.41.9"
           cache: true
           cache-sdk: true
           cache-key: ${{ runner.os }}-flutter-${{ hashFiles('pubspec.yaml') }}
@@ -53,7 +53,7 @@ jobs:
           name: dart-coverage-${{ github.run_id }}
           path: coverage/lcov.info
           retention-days: 1
-  
+
   coverage-comment:
     needs: lint-dart
     if: always() && github.event_name == 'pull_request'
@@ -67,7 +67,7 @@ jobs:
           name: dart-coverage-${{ github.run_id }}
           path: dart-coverage
 
-      - uses: ./.github/actions/coverage-comment
+      - uses: goldenm-software/layrz-actions/.github/actions/coverage-comment@v1
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           enable-dart: true
@@ -80,7 +80,7 @@ jobs:
         with:
           fetch-depth: 0
 
-      - uses: ./.github/actions/changelog
+      - uses: goldenm-software/layrz-actions/.github/actions/changelog@v1
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           post-comment: true
