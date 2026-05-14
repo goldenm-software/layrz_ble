@@ -1,7 +1,8 @@
 # Changelog
 
-## 1.3.6
-- Just update to get a new tag
+## 1.3.7
+
+- Re-generated android plugin files to be compatible with the latest version of Flutter.
 
 ## 1.3.5
 - update to 1.3.5
