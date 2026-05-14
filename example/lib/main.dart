@@ -22,9 +22,7 @@ class MyApp extends StatelessWidget {
       theme: generateLightTheme(),
       debugShowCheckedModeBanner: false,
       builder: (context, child) {
-        return ThemedSnackbarMessenger(
-          child: child ?? const SizedBox(),
-        );
+        return ThemedSnackbarMessenger(child: child ?? const SizedBox());
       },
       home: const HomePage(),
     );
@@ -54,13 +52,13 @@ class _HomePageState extends State<HomePage> {
   String get readCharacteristic => '00000000-0000-0000-0000-000000000002';
 
   AppThemedAsset get logo => const AppThemedAsset(
-        normal: 'https://cdn.layrz.com/resources/layrz/logo/normal.png',
-        white: 'https://cdn.layrz.com/resources/layrz/logo/white.png',
-      );
+    normal: 'https://cdn.layrz.com/resources/layrz/logo/normal.png',
+    white: 'https://cdn.layrz.com/resources/layrz/logo/white.png',
+  );
   AppThemedAsset get favicon => const AppThemedAsset(
-        normal: 'https://cdn.layrz.com/resources/layrz/favicon/normal.png',
-        white: 'https://cdn.layrz.com/resources/layrz/favicon/white.png',
-      );
+    normal: 'https://cdn.layrz.com/resources/layrz/favicon/normal.png',
+    white: 'https://cdn.layrz.com/resources/layrz/favicon/white.png',
+  );
 
   int mtu = 512;
   final plugin = LayrzBle();
@@ -87,7 +85,8 @@ class _HomePageState extends State<HomePage> {
       _ble.onGattUpdate.listen((BleGattEvent event) {
         if (event is GattWriteRequest) {
           debugPrint(
-              'Received GATT write request: ${event.characteristicUuid}');
+            'Received GATT write request: ${event.characteristicUuid}',
+          );
 
           debugPrint('\tSending success');
           _ble.respondWriteRequest(
@@ -241,7 +240,8 @@ class _HomePageState extends State<HomePage> {
                       // Refresh status (which will update the reactive stream)
                       final status = await plugin.getStatuses();
                       debugPrint(
-                          'Bluetooth state refreshed: ${status.isEnabled}');
+                        'Bluetooth state refreshed: ${status.isEnabled}',
+                      );
 
                       ThemedSnackbarMessenger.of(context).showSnackbar(
                         ThemedSnackbar(
@@ -295,12 +295,13 @@ class _HomePageState extends State<HomePage> {
                         _isLoading = false;
                         setState(() {});
 
-                        ThemedSnackbarMessenger.of(context)
-                            .showSnackbar(ThemedSnackbar(
-                          message: 'Disconnected from device',
-                          color: Colors.red,
-                          icon: LayrzIcons.solarOutlineBluetoothSquare,
-                        ));
+                        ThemedSnackbarMessenger.of(context).showSnackbar(
+                          ThemedSnackbar(
+                            message: 'Disconnected from device',
+                            color: Colors.red,
+                            icon: LayrzIcons.solarOutlineBluetoothSquare,
+                          ),
+                        );
                       },
                     ),
                   ] else ...[
@@ -346,17 +347,18 @@ class _HomePageState extends State<HomePage> {
                                       properties: [BleProperty.write],
                                     ),
                                   ],
-                                )
+                                ),
                               ],
                             );
                             setState(() => _isLoading = false);
 
-                            ThemedSnackbarMessenger.of(context)
-                                .showSnackbar(ThemedSnackbar(
-                              message: 'Scanning for BLE devices...',
-                              color: Colors.blue,
-                              icon: LayrzIcons.solarOutlineBluetoothSquare,
-                            ));
+                            ThemedSnackbarMessenger.of(context).showSnackbar(
+                              ThemedSnackbar(
+                                message: 'Scanning for BLE devices...',
+                                color: Colors.blue,
+                                icon: LayrzIcons.solarOutlineBluetoothSquare,
+                              ),
+                            );
                           },
                         ),
                       ] else ...[
@@ -376,12 +378,13 @@ class _HomePageState extends State<HomePage> {
                             _isLoading = false;
                             setState(() {});
 
-                            ThemedSnackbarMessenger.of(context)
-                                .showSnackbar(ThemedSnackbar(
-                              message: 'Advertise stopped',
-                              color: Colors.red,
-                              icon: LayrzIcons.solarOutlineBluetoothSquare,
-                            ));
+                            ThemedSnackbarMessenger.of(context).showSnackbar(
+                              ThemedSnackbar(
+                                message: 'Advertise stopped',
+                                color: Colors.red,
+                                icon: LayrzIcons.solarOutlineBluetoothSquare,
+                              ),
+                            );
                           },
                         ),
                         const SizedBox(width: 10),
@@ -394,8 +397,13 @@ class _HomePageState extends State<HomePage> {
                             final result = await plugin.sendNotification(
                               serviceUuid: serviceUuid,
                               characteristicUuid: readCharacteristic,
-                              payload: Uint8List.fromList(
-                                  [0x04, 0x03, 0x02, 0x01, 0x05]),
+                              payload: Uint8List.fromList([
+                                0x04,
+                                0x03,
+                                0x02,
+                                0x01,
+                                0x05,
+                              ]),
                               requestConfirmation: false,
                             );
                             debugPrint('Send notification result: $result');
@@ -413,17 +421,16 @@ class _HomePageState extends State<HomePage> {
                         onTap: () async {
                           setState(() => _isLoading = true);
                           _devices = {};
-                          _isScanning = await plugin.startScan(
-                            macAddress: '74:4d:bd:88:e9:6d',
-                          );
+                          _isScanning = await plugin.startScan();
                           setState(() => _isLoading = false);
 
-                          ThemedSnackbarMessenger.of(context)
-                              .showSnackbar(ThemedSnackbar(
-                            message: 'Scanning for BLE devices...',
-                            color: Colors.blue,
-                            icon: LayrzIcons.solarOutlineBluetoothSquare,
-                          ));
+                          ThemedSnackbarMessenger.of(context).showSnackbar(
+                            ThemedSnackbar(
+                              message: 'Scanning for BLE devices...',
+                              color: Colors.blue,
+                              icon: LayrzIcons.solarOutlineBluetoothSquare,
+                            ),
+                          );
                         },
                       ),
                     ] else ...[
@@ -443,12 +450,13 @@ class _HomePageState extends State<HomePage> {
                           _isLoading = false;
                           setState(() {});
 
-                          ThemedSnackbarMessenger.of(context)
-                              .showSnackbar(ThemedSnackbar(
-                            message: 'Scan stopped',
-                            color: Colors.red,
-                            icon: LayrzIcons.solarOutlineBluetoothSquare,
-                          ));
+                          ThemedSnackbarMessenger.of(context).showSnackbar(
+                            ThemedSnackbar(
+                              message: 'Scan stopped',
+                              color: Colors.red,
+                              icon: LayrzIcons.solarOutlineBluetoothSquare,
+                            ),
+                          );
                         },
                       ),
                     ],
@@ -467,20 +475,23 @@ class _HomePageState extends State<HomePage> {
                       onTap: () async {
                         debugPrint('Selected device: ${device.macAddress}');
                         setState(() => _isLoading = true);
-                        final result =
-                            await plugin.connect(macAddress: device.macAddress);
+                        final result = await plugin.connect(
+                          macAddress: device.macAddress,
+                        );
                         if (result == true) {
                           _selectedDevice = device;
                           _services = [];
                         }
                         setState(() => _isLoading = false);
 
-                        ThemedSnackbarMessenger.of(context)
-                            .showSnackbar(ThemedSnackbar(
-                          message: 'Connected to device: ${device.macAddress}',
-                          color: Colors.green,
-                          icon: LayrzIcons.solarOutlineBluetoothSquare,
-                        ));
+                        ThemedSnackbarMessenger.of(context).showSnackbar(
+                          ThemedSnackbar(
+                            message:
+                                'Connected to device: ${device.macAddress}',
+                            color: Colors.green,
+                            icon: LayrzIcons.solarOutlineBluetoothSquare,
+                          ),
+                        );
                       },
                       child: Padding(
                         padding: const EdgeInsets.all(8.0),
@@ -497,29 +508,34 @@ class _HomePageState extends State<HomePage> {
                                 children: [
                                   Text(
                                     device.name ?? 'Unknown device',
-                                    style:
-                                        Theme.of(context).textTheme.titleSmall,
+                                    style: Theme.of(
+                                      context,
+                                    ).textTheme.titleSmall,
                                   ),
                                   Text(
                                     device.macAddress,
-                                    style:
-                                        Theme.of(context).textTheme.bodySmall,
+                                    style: Theme.of(
+                                      context,
+                                    ).textTheme.bodySmall,
                                   ),
                                   Text(
                                     'RSSI: ${device.rssi} - TX power: ${device.txPower}',
-                                    style:
-                                        Theme.of(context).textTheme.bodySmall,
+                                    style: Theme.of(
+                                      context,
+                                    ).textTheme.bodySmall,
                                   ),
                                   Text(
                                     "Manufacturer data: ${_castManufaturerData(device.manufacturerData)}",
-                                    style:
-                                        Theme.of(context).textTheme.bodySmall,
+                                    style: Theme.of(
+                                      context,
+                                    ).textTheme.bodySmall,
                                     maxLines: 10,
                                   ),
                                   Text(
                                     "Service data: ${_castServiceData(device.serviceData)}",
-                                    style:
-                                        Theme.of(context).textTheme.bodySmall,
+                                    style: Theme.of(
+                                      context,
+                                    ).textTheme.bodySmall,
                                     maxLines: 10,
                                   ),
                                 ],
@@ -683,20 +699,23 @@ class _HomePageState extends State<HomePage> {
                           Padding(
                             padding: const EdgeInsets.only(left: 10),
                             child: Column(
-                              children: (service.characteristics ?? [])
-                                  .map((characteristic) {
+                              children: (service.characteristics ?? []).map((
+                                characteristic,
+                              ) {
                                 return Column(
                                   children: [
                                     Text(
                                       'Characteristic: ${characteristic.uuid}',
-                                      style:
-                                          Theme.of(context).textTheme.bodySmall,
+                                      style: Theme.of(
+                                        context,
+                                      ).textTheme.bodySmall,
                                     ),
                                     const SizedBox(height: 5),
                                     Text(
                                       'Properties: ${characteristic.properties}',
-                                      style:
-                                          Theme.of(context).textTheme.bodySmall,
+                                      style: Theme.of(
+                                        context,
+                                      ).textTheme.bodySmall,
                                     ),
                                   ],
                                 );

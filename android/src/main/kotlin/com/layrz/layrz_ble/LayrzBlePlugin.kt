@@ -1092,6 +1092,8 @@ class LayrzBlePlugin : LayrzBlePlatformChannel, FlutterPlugin, ActivityAware, Pl
 				txPower = null
 			}
 
+			Log.d(TAG, "Device scanned")
+
 			mainLooper?.post {
 				callbackChannel?.onScanResult(
 					deviceArg = BtDevice(
