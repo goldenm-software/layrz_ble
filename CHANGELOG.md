@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.4.0
+
+- Upgraded the Android build toolchain to Gradle `9.1`, Android Gradle Plugin `9.0.1`, and Kotlin `2.3.20`.
+- Replaced the deprecated `kotlinOptions` block with the modern `kotlin { compilerOptions }` DSL across the plugin and example app.
+
 ## 1.3.7
 
 - Re-generated android plugin files to be compatible with the latest version of Flutter.
