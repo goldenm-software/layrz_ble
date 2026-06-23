@@ -4,6 +4,7 @@
 
 - Upgraded the Android build toolchain to Gradle `9.1`, Android Gradle Plugin `9.0.1`, and Kotlin `2.3.20`.
 - Replaced the deprecated `kotlinOptions` block with the modern `kotlin { compilerOptions }` DSL across the plugin and example app.
+- Bumped the `bluez` dependency to `^0.8.3`.
 
 ## 1.3.7
 

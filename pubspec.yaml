@@ -42,7 +42,7 @@ dependencies:
   collection: ^1.18.0
   layrz_models: ^3.4.0
   flutter_web_bluetooth: ^1.0.0
-  bluez: ^0.8.2
+  bluez: ^0.8.3
   freezed_annotation: ^3.0.0
   json_annotation: ^4.9.0
   meta: ^1.17.0
