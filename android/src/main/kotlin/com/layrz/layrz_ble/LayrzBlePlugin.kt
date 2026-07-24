@@ -237,6 +237,9 @@ class LayrzBlePlugin : LayrzBlePlatformChannel, FlutterPlugin, ActivityAware, Pl
 
 		isScanning = true
 		Log.d(TAG, "Started scanning")
+		mainLooper?.post {
+			callbackChannel?.onScanStarted {}
+		}
 		callback(Result.success(true))
 		return
 	}
@@ -271,6 +274,9 @@ class LayrzBlePlugin : LayrzBlePlatformChannel, FlutterPlugin, ActivityAware, Pl
 			isScanning = false
 			Log.d(TAG, "Stopped scanning")
 			macFilter = null
+			mainLooper?.post {
+				callbackChannel?.onScanStopped {}
+			}
 		}
 
 		callback(Result.success(true))
@@ -1107,6 +1113,20 @@ class LayrzBlePlugin : LayrzBlePlatformChannel, FlutterPlugin, ActivityAware, Pl
 
 			devices[macAddress] = device
 		}
+
+		override fun onScanFailed(errorCode: Int) {
+			super.onScanFailed(errorCode)
+			// The OS can refuse/kill a scan after it was accepted (e.g. throttling
+			// after too many start/stop calls in a short window, or
+			// SCAN_FAILED_OUT_OF_HARDWARE_RESOURCES). Without this, `isScanning`
+			// stays true forever, startScan() becomes a permanent no-op, and no
+			// error ever reaches Dart - the app just looks stuck.
+			Log.w(TAG, "Scan failed with error code: $errorCode")
+			isScanning = false
+			mainLooper?.post {
+				callbackChannel?.onScanStopped {}
+			}
+		}
 	}
 
 	private var gattCallback = object : BluetoothGattCallback() {
@@ -1530,7 +1550,7 @@ class LayrzBlePlugin : LayrzBlePlatformChannel, FlutterPlugin, ActivityAware, Pl
 
 	private fun composeSettings(adapter: BluetoothAdapter): ScanSettings.Builder {
 		val settings = ScanSettings.Builder()
-		// settings.setScanMode(ScanSettings.SCAN_MODE_LOW_LATENCY)
+		settings.setScanMode(ScanSettings.SCAN_MODE_LOW_LATENCY)
 		if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && adapter.isLeExtendedAdvertisingSupported) {
 			Log.d(TAG, "Bluetooth 5.0 supported, using extended advertising")
 			settings.setLegacy(false)
