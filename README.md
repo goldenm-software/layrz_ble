@@ -335,6 +335,26 @@ All packages developed by [Layrz](https://layrz.com) are prefixed with `layrz_`,
 ### I have a question, how can I contact you?
 If you need more assistance, you open an issue on the [Repository](https://github.com/goldenm-software/layrz_ble) and we're happy to help you :)
 
+## Release process (maintainers)
+Publishing to pub.dev is fully automated through GitHub Actions (`.github/workflows/publish.yaml`) — there is no manual `dart pub publish` step, and no publish token is stored in the repo; the workflow authenticates to pub.dev via [Trusted Publishing (OIDC)](https://dart.dev/tools/pub/automated-publishing), configured once on the package's pub.dev admin page.
+
+To ship a new version:
+
+1. Merge your changes into `main` (via PR from `development`). Bump the `version:` field in `pubspec.yaml` and add a matching entry at the top of `CHANGELOG.md` as part of that PR.
+   - Follow semver: PATCH (`x.y.Z`) for bug fixes/behavior corrections with no public API change, MINOR (`x.Y.0`) for backwards-compatible additions (new methods, new platform support, tooling upgrades), MAJOR (`X.0.0`) for breaking changes to the public Dart API.
+2. Once merged, create and push a tag matching the new version, prefixed with `v` (e.g. `v1.4.1`), pointing at that commit on `main`:
+   ```bash
+   git checkout main
+   git pull
+   git tag v1.4.1
+   git push origin v1.4.1
+   ```
+3. Pushing the tag triggers `publish.yaml`:
+   - Validates the tag format (`vX.Y.Z`) and that it points at a commit already on `main`.
+   - Runs `flutter analyze` and a `flutter pub publish --dry-run`, then publishes for real with `flutter pub publish --force`.
+   - On success, auto-generates a GitHub Release with a changelog built from the commit history.
+   - On failure, the tag is renamed to `failed-vX.Y.Z-<timestamp>` and removed so you can fix the issue and re-tag.
+
 ## License
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 

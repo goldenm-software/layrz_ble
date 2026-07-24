@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.4.1
+
+- Fixed Android BLE scanning being significantly slower than other apps (e.g. nRF Connect) at discovering devices: `SCAN_MODE_LOW_LATENCY` was left commented out in `composeSettings()`, leaving scans on the default `SCAN_MODE_LOW_POWER` duty-cycled mode.
+- Fixed Android scans getting silently stuck: `ScanCallback.onScanFailed` was never overridden, so an OS-level scan failure (throttling, `SCAN_FAILED_OUT_OF_HARDWARE_RESOURCES`, etc.) left the plugin believing it was still scanning forever, with no way for the Dart side to recover. `startScan()`/`stopScan()` on Android now also emit `onScanStarted`/`onScanStopped` on their normal success paths for full scan lifecycle visibility from Dart.
+
 ## 1.4.0
 
 - Upgraded the Android build toolchain to Gradle `9.1`, Android Gradle Plugin `9.0.1`, and Kotlin `2.3.20`.
