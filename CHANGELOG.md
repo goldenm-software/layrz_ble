@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.4.2
+
+- Fixed Windows never reporting peripherals that advertise with Bluetooth 5 extended advertising PDUs: `BluetoothLEAdvertisementWatcher` only delivers legacy advertisements unless `AllowExtendedAdvertisements` is set, so those devices were dropped in the native layer and never reached Dart — no scan result, no error, as if they were not there. Android already opted in via `setLegacy(false)`/`PHY_LE_ALL_SUPPORTED` and CoreBluetooth needs no opt-in, leaving Windows as the only affected platform.
+- The opt-in is guarded: on adapters or Windows builds without extended advertising support the setter throws, and the watcher falls back to legacy-only scanning as before. Legacy (Bluetooth 4.x) discovery is unaffected either way, since the extended scanner also covers the primary advertising channels.
+- `IsExtendedAdvertisingSupported()` was already queried and logged in `GetRadiosAsync()` but never wired to the watcher; that detection is now meaningful.
+
 ## 1.4.1
 
 - Fixed Android BLE scanning being significantly slower than other apps (e.g. nRF Connect) at discovering devices: `SCAN_MODE_LOW_LATENCY` was left commented out in `composeSettings()`, leaving scans on the default `SCAN_MODE_LOW_POWER` duty-cycled mode.
