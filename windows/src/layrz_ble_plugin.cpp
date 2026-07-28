@@ -927,6 +927,20 @@ namespace layrz_ble {
     if (leScanner == nullptr) {
       leScanner = BluetoothLEAdvertisementWatcher();
       leScanner.ScanningMode(BluetoothLEScanningMode::Active);
+
+      // Without this, the watcher only reports legacy advertisements: any peripheral
+      // using Bluetooth 5 extended advertising PDUs is silently dropped and never
+      // reaches Dart. Android already opts in via setLegacy(false)/PHY_LE_ALL_SUPPORTED
+      // and CoreBluetooth needs no opt-in, so Windows was the odd one out.
+      //
+      // The setter throws on adapters or OS builds without extended advertising
+      // support, where falling back to legacy-only is the correct behaviour.
+      try {
+        leScanner.AllowExtendedAdvertisements(true);
+        Log("Extended advertisements enabled on the LE scanner");
+      } catch (...) {
+        Log("Extended advertisements not supported, scanning legacy advertisements only");
+      }
       // Subscribe to the Received event
       leScanner.Received([this](BluetoothLEAdvertisementWatcher const&, BluetoothLEAdvertisementReceivedEventArgs const& args) {
         auto macAddress = toUppercase(formatBluetoothAddress(args.BluetoothAddress()));
