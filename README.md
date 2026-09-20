@@ -121,7 +121,7 @@ ble.onEvent.listen((BleEvent event) {
 
 /// Listen for device discovery
 ///
-/// `BleDevice` is from `layrz_models` package, but we exported it here for convenience
+/// `BleDevice` is from `layrz_sdk` package, but we exported it here for convenience
 ble.onScan.listen((BleDevice device) {
   debugPrint(device);
 });
@@ -200,7 +200,7 @@ final bool advertise = await ble.startAdvertise(
 
 ### Disclaimer about some classes used on this library
 
-Part of the classes used on this library are from the [`layrz_models`](https://pub.dev/packages/layrz_models) package.
+Part of the classes used on this library are from the [`layrz_sdk`](https://pub.dev/packages/layrz_sdk) package.
 
 ```dart
 BleDevice         // Defines the BLE device itself, and of course the packet data separated on manufacturer and service data
@@ -209,7 +209,7 @@ BleCharacteristic // Defines the characteristic, with the UUID and the propertie
 BleProperty       // Defines the properties of the characteristic, with the most common properties defined.
 ```
 
-Of course, if you think that you need more attributes, or do you want to add other, feel free to request it on [layrz_ble](https://github.com/goldenm-software/layrz_ble) repository or in the [layrz_models](https://github.com/goldenm-software/layrz_models) repository if you already has the changes done on the `layrz_ble` package. We are open to contributions and suggestions.
+Of course, if you think that you need more attributes, or do you want to add other, feel free to request it on [layrz_ble](https://github.com/goldenm-software/layrz_ble) repository or in the [layrz_sdk](https://github.com/goldenm-software/layrz_sdk) repository if you already has the changes done on the `layrz_ble` package. We are open to contributions and suggestions.
 
 ## Permissions and requirements
 

@@ -1,5 +1,9 @@
 # Changelog
 
+## 2.0.0
+
+- Major upgrade to Flutter 3.47 and replacement of `layrz_models` in favor of `layrz_sdk`
+
 ## 1.4.2
 
 - Fixed Windows never reporting peripherals that advertise with Bluetooth 5 extended advertising PDUs: `BluetoothLEAdvertisementWatcher` only delivers legacy advertisements unless `AllowExtendedAdvertisements` is set, so those devices were dropped in the native layer and never reached Dart — no scan result, no error, as if they were not there. Android already opted in via `setLegacy(false)`/`PHY_LE_ALL_SUPPORTED` and CoreBluetooth needs no opt-in, leaving Windows as the only affected platform.

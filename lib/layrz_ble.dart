@@ -7,7 +7,7 @@ import 'package:layrz_ble/src/layrz_ble_pigeon/pigeon_channel.dart';
 import 'package:layrz_ble/src/layrz_ble_web/web_channel.dart';
 import 'package:layrz_ble/src/platform_interface.dart';
 
-export 'package:layrz_models/layrz_models.dart'
+export 'package:layrz_sdk/layrz_sdk.dart'
     show BleDevice, BleService, BleCharacteristic, BleProperty, BleManufacturerData, BleServiceData;
 
 export 'src/types/types.dart';

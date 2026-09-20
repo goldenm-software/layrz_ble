@@ -4,7 +4,7 @@ import 'package:collection/collection.dart';
 import 'package:flutter/foundation.dart';
 import 'package:layrz_ble/src/platform_interface.dart';
 import 'package:layrz_ble/src/types/types.dart';
-import 'package:layrz_models/layrz_models.dart';
+import 'package:layrz_sdk/layrz_sdk.dart';
 import 'package:flutter_web_bluetooth/flutter_web_bluetooth.dart';
 
 class LayrzBlePluginWeb extends LayrzBlePlatform {

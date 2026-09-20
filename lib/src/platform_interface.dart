@@ -2,7 +2,7 @@ import 'dart:async';
 import 'dart:typed_data';
 
 import 'package:layrz_ble/src/types/types.dart';
-import 'package:layrz_models/layrz_models.dart';
+import 'package:layrz_sdk/layrz_sdk.dart';
 
 abstract class LayrzBlePlatform {
   bool get isAdvertising => throw UnimplementedError('isAdvertising has not been implemented.');
