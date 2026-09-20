@@ -46,3 +46,6 @@ build/
 darwin/layrz_ble/.swiftpm/
 darwin/layrz_ble/.build/
 .atl
+
+# DevTools
+devtools_options.yaml

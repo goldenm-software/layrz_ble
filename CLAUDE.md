@@ -56,7 +56,7 @@ Pigeon defines two channels:
 
 `lib/src/types/` contains Dart-only types (`BleEvent`, `BleStatus`, `BleCharacteristicNotification`, `BleGattEvent`), generated with `freezed` + `json_serializable`. The `types.freezed.dart` and `types.g.dart` files are generated — do not edit them manually.
 
-Types shared with other Layrz packages (`BleDevice`, `BleService`, `BleCharacteristic`, `BleProperty`, `BleManufacturerData`, `BleServiceData`) come from `layrz_models` and are re-exported from `lib/layrz_ble.dart`.
+Types shared with other Layrz packages (`BleDevice`, `BleService`, `BleCharacteristic`, `BleProperty`, `BleManufacturerData`, `BleServiceData`) come from `layrz_sdk` and are re-exported from `lib/layrz_ble.dart`.
 
 ### Native implementations
 

@@ -2,28 +2,29 @@
 
 import 'dart:typed_data';
 
-import 'package:flutter/material.dart';
+import 'package:flutter/widgets.dart';
+import 'package:flutter_material_design_icons/flutter_material_design_icons.dart';
 import 'package:layrz_ble/layrz_ble.dart';
-import 'package:layrz_icons/layrz_icons.dart';
-import 'package:layrz_models/layrz_models.dart';
-import 'package:layrz_theme/layrz_theme.dart';
+import 'package:layrz_sdk/layrz_sdk.dart';
+import 'package:layrz_ui/layrz_ui.dart';
+import 'package:layrz_ui_extensions/layrz_ui_extensions.dart';
 import 'package:permission_handler/permission_handler.dart';
 
-void main() {
-  runApp(const MyApp());
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  final font = OpenSansFont();
+  await font.load();
+  runApp(MyApp(font: font));
 }
 
 class MyApp extends StatelessWidget {
-  const MyApp({super.key});
+  final LayrzFont font;
+  const MyApp({super.key, required this.font});
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      theme: generateLightTheme(),
-      debugShowCheckedModeBanner: false,
-      builder: (context, child) {
-        return ThemedSnackbarMessenger(child: child ?? const SizedBox());
-      },
+    return LayrzApp(
+      theme: LayrzThemeData.light(font: font),
       home: const HomePage(),
     );
   }
@@ -43,7 +44,7 @@ class _HomePageState extends State<HomePage> {
   List<BleService> _services = [];
 
   bool _isScanning = false;
-  bool _isLoading = false;
+  final _buttonController = LayrzButtonController();
   bool _isAdvertising = false;
   bool _isBluetoothEnabled = false;
   BleDevice? _selectedDevice;
@@ -54,10 +55,6 @@ class _HomePageState extends State<HomePage> {
   AppThemedAsset get logo => const AppThemedAsset(
     normal: 'https://cdn.layrz.com/resources/layrz/logo/normal.png',
     white: 'https://cdn.layrz.com/resources/layrz/logo/white.png',
-  );
-  AppThemedAsset get favicon => const AppThemedAsset(
-    normal: 'https://cdn.layrz.com/resources/layrz/favicon/normal.png',
-    white: 'https://cdn.layrz.com/resources/layrz/favicon/white.png',
   );
 
   int mtu = 512;
@@ -81,12 +78,10 @@ class _HomePageState extends State<HomePage> {
       setState(() {});
     });
 
-    if (ThemedPlatform.isAndroid) {
+    if (LayrzPlatform.isAndroid) {
       _ble.onGattUpdate.listen((BleGattEvent event) {
         if (event is GattWriteRequest) {
-          debugPrint(
-            'Received GATT write request: ${event.characteristicUuid}',
-          );
+          debugPrint('Received GATT write request: ${event.characteristicUuid}');
 
           debugPrint('\tSending success');
           _ble.respondWriteRequest(
@@ -137,16 +132,278 @@ class _HomePageState extends State<HomePage> {
 
   @override
   Widget build(BuildContext context) {
-    return ThemedLayout(
-      isBackEnabled: false,
-      logo: logo,
-      favicon: favicon,
-      appTitle: 'Layrz BLE Example',
-      enableNotifications: false,
-      userDynamicAvatar: Avatar(
-        type: AvatarType.icon,
-        icon: LayrzIconsClasses.solarOutlineUser,
-      ),
+    return LayrzLayout(
+      logo: context.isDark ? logo.white : logo.normal,
+      items: [
+        LayrzNavigatorPage(
+          id: 'check-capabilities',
+          labelText: 'Check capabilities',
+          onTap: () async {
+            _buttonController.startLoading();
+            if (LayrzPlatform.isAndroid) {
+              await Permission.location.request();
+              await Permission.locationWhenInUse.request();
+            }
+            if (LayrzPlatform.isIOS || LayrzPlatform.isAndroid) {
+              await Permission.bluetooth.request();
+            }
+
+            if (LayrzPlatform.isAndroid) {
+              await Permission.bluetooth.request();
+              await Permission.bluetoothScan.request();
+              await Permission.bluetoothConnect.request();
+              await Permission.bluetoothAdvertise.request();
+            }
+
+            bool result = await plugin.checkCapabilities();
+            LayrzSnackbarMessenger.of(context).showSnackbar(
+              LayrzSnackbar(
+                type: .custom,
+                titleText: 'Capabilities',
+                descriptionText: '$result',
+                color: Colors.blue,
+                icon: MdiIcons.bluetooth,
+              ),
+            );
+
+            await Future.delayed(const Duration(milliseconds: 20));
+
+            result = await plugin.checkScanPermissions();
+            LayrzSnackbarMessenger.of(context).showSnackbar(
+              LayrzSnackbar(
+                type: .custom,
+                titleText: 'Scan',
+                descriptionText: '$result',
+                color: Colors.blue,
+                icon: MdiIcons.bluetooth,
+              ),
+            );
+
+            await Future.delayed(const Duration(milliseconds: 20));
+
+            result = await plugin.checkAdvertisePermissions();
+            LayrzSnackbarMessenger.of(context).showSnackbar(
+              LayrzSnackbar(
+                type: .custom,
+                titleText: 'Advertise',
+                descriptionText: '$result',
+                color: Colors.blue,
+                icon: MdiIcons.bluetooth,
+              ),
+            );
+
+            _buttonController.stopLoading();
+          },
+        ),
+        LayrzNavigatorPage(
+          id: 'check_bt_enabled',
+          labelText: 'Check BT Enabled',
+          onTap: () async {
+            _buttonController.startLoading();
+            // Refresh status (which will update the reactive stream)
+            final status = await plugin.getStatuses();
+            debugPrint('Bluetooth state refreshed: ${status.isEnabled}');
+
+            LayrzSnackbarMessenger.of(context).showSnackbar(
+              LayrzSnackbar(
+                type: .custom,
+                titleText: 'Bluetooth',
+                descriptionText: status.isEnabled ? "🟢 ON" : "🔴 OFF",
+                color: status.isEnabled ? Colors.green : Colors.red,
+                icon: MdiIcons.bluetooth,
+              ),
+            );
+
+            _buttonController.stopLoading();
+          },
+        ),
+        LayrzNavigatorPage(
+          id: 'open_bt_settings',
+          labelText: 'Open BT Settings',
+          onTap: () async {
+            _buttonController.startLoading();
+            final result = await plugin.openBluetoothSettings();
+            debugPrint('openBluetoothSettings result: $result');
+
+            LayrzSnackbarMessenger.of(context).showSnackbar(
+              LayrzSnackbar(
+                type: .custom,
+                titleText: 'Opened Settings',
+                descriptionText: '$result',
+                color: Colors.orange,
+                icon: MdiIcons.bluetooth,
+              ),
+            );
+
+            _buttonController.stopLoading();
+          },
+        ),
+        if (_selectedDevice != null) ...[
+          LayrzNavigatorPage(
+            id: 'disconnect_device',
+            labelText: 'Disconnect device',
+            onTap: () async {
+              _buttonController.startLoading();
+              final result = await plugin.disconnect();
+
+              if (result == true) {
+                _selectedDevice = null;
+              }
+
+              _buttonController.stopLoading();
+              setState(() {});
+
+              LayrzSnackbarMessenger.of(context).showSnackbar(
+                LayrzSnackbar(
+                  type: .custom,
+                  titleText: 'Disconnected from device',
+                  descriptionText: '$result',
+                  color: Colors.red,
+                  icon: MdiIcons.bluetooth,
+                ),
+              );
+            },
+          ),
+        ] else ...[
+          if (LayrzPlatform.isAndroid) ...[
+            if (!_isAdvertising) ...[
+              LayrzNavigatorPage(
+                id: 'start_ble_advertise',
+                labelText: 'Start BLE Advertise',
+                onTap: () async {
+                  _buttonController.startLoading();
+                  _devices = {};
+                  _isAdvertising = await plugin.startAdvertise(
+                    manufacturerData: [
+                      const BleManufacturerData(companyId: 0x1234, data: [0x00, 0x01, 0x02, 0x03]),
+                    ],
+                    serviceData: [
+                      const BleServiceData(uuid: 0x1234, data: [0xff]),
+                    ],
+                    canConnect: true,
+                    allowBluetooth5: true,
+                    servicesSpecs: [
+                      BleService(
+                        uuid: serviceUuid,
+                        characteristics: [
+                          BleCharacteristic(
+                            uuid: readCharacteristic,
+                            properties: [BleProperty.read, BleProperty.notify],
+                          ),
+                          const BleCharacteristic(
+                            uuid: '00000000-0000-0000-0000-000000000003',
+                            properties: [BleProperty.write],
+                          ),
+                        ],
+                      ),
+                    ],
+                  );
+                  _buttonController.stopLoading();
+
+                  LayrzSnackbarMessenger.of(context).showSnackbar(
+                    LayrzSnackbar(
+                      type: .custom,
+                      titleText: 'Scanning for BLE devices...',
+                      descriptionText: 'Scanning for BLE devices...',
+                      color: Colors.blue,
+                      icon: MdiIcons.bluetooth,
+                    ),
+                  );
+                },
+              ),
+            ] else ...[
+              LayrzNavigatorPage(
+                id: 'stop_ble_advertise',
+                labelText: 'Stop BLE Advertise',
+                onTap: () async {
+                  _buttonController.startLoading();
+                  final result = await plugin.stopAdvertise();
+                  debugPrint('Stop advertise result: $result');
+                  if (result == true) {
+                    _isAdvertising = false;
+                  }
+
+                  _buttonController.stopLoading();
+                  setState(() {});
+
+                  LayrzSnackbarMessenger.of(context).showSnackbar(
+                    LayrzSnackbar(
+                      type: .custom,
+                      titleText: 'Advertise stopped',
+                      descriptionText: 'Advertise stopped',
+                      color: Colors.red,
+                      icon: MdiIcons.bluetooth,
+                    ),
+                  );
+                },
+              ),
+              LayrzNavigatorPage(
+                id: 'send_service_update',
+                labelText: 'Send Service update',
+                onTap: () async {
+                  _buttonController.startLoading();
+                  final result = await plugin.sendNotification(
+                    serviceUuid: serviceUuid,
+                    characteristicUuid: readCharacteristic,
+                    payload: Uint8List.fromList([0x04, 0x03, 0x02, 0x01, 0x05]),
+                    requestConfirmation: false,
+                  );
+                  debugPrint('Send notification result: $result');
+                  _buttonController.stopLoading();
+                },
+              ),
+            ],
+          ],
+          if (!_isScanning) ...[
+            LayrzNavigatorPage(
+              id: 'start_ble_scan',
+              labelText: 'Start BLE scan',
+              onTap: () async {
+                _buttonController.startLoading();
+                _devices = {};
+                _isScanning = await plugin.startScan();
+                _buttonController.stopLoading();
+
+                LayrzSnackbarMessenger.of(context).showSnackbar(
+                  LayrzSnackbar(
+                    type: .custom,
+                    titleText: 'Scanning for BLE devices...',
+                    descriptionText: 'Scanning for BLE devices...',
+                    color: Colors.blue,
+                    icon: MdiIcons.bluetooth,
+                  ),
+                );
+              },
+            ),
+          ] else ...[
+            LayrzNavigatorPage(
+              id: 'stop_ble_scan',
+              labelText: 'Stop BLE scan',
+              onTap: () async {
+                _buttonController.startLoading();
+                final result = await plugin.stopScan();
+                debugPrint('Stop scan result: $result');
+                if (result == true) {
+                  _isScanning = false;
+                }
+
+                _buttonController.stopLoading();
+                setState(() {});
+
+                LayrzSnackbarMessenger.of(context).showSnackbar(
+                  LayrzSnackbar(
+                    type: .custom,
+                    titleText: 'Scan stopped',
+                    descriptionText: 'Scan stopped',
+                    color: Colors.red,
+                    icon: MdiIcons.bluetooth,
+                  ),
+                );
+              },
+            ),
+          ],
+        ],
+      ],
       body: SizedBox(
         width: double.infinity,
         child: Column(
@@ -154,315 +411,10 @@ class _HomePageState extends State<HomePage> {
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Icon(
-                  Icons.bluetooth,
-                  color: _isBluetoothEnabled ? Colors.blue : Colors.grey,
-                  size: 24,
-                ),
+                Icon(MdiIcons.bluetooth, color: _isBluetoothEnabled ? Colors.blue : Colors.grey, size: 24),
                 const SizedBox(width: 8),
-                Text(
-                  "Layrz BLE Example",
-                  style: Theme.of(context).textTheme.titleMedium,
-                ),
+                Text("Layrz BLE Example", style: context.tokens.typography.title),
               ],
-            ),
-            const SizedBox(height: 10),
-            SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  ThemedButton(
-                    isLoading: _isLoading,
-                    labelText: 'Check capabilities',
-                    color: Colors.blue,
-                    onTap: () async {
-                      setState(() => _isLoading = true);
-                      if (ThemedPlatform.isAndroid) {
-                        await Permission.location.request();
-                        await Permission.locationWhenInUse.request();
-                      }
-                      if (!ThemedPlatform.isMacOS && !ThemedPlatform.isWeb) {
-                        await Permission.bluetooth.request();
-                      }
-
-                      if (ThemedPlatform.isAndroid) {
-                        await Permission.bluetooth.request();
-                        await Permission.bluetoothScan.request();
-                        await Permission.bluetoothConnect.request();
-                        await Permission.bluetoothAdvertise.request();
-                      }
-
-                      bool result = await plugin.checkCapabilities();
-                      ThemedSnackbarMessenger.of(context).showSnackbar(
-                        ThemedSnackbar(
-                          message: 'Capabilities: $result',
-                          color: Colors.blue,
-                          icon: LayrzIcons.solarOutlineBluetoothSquare,
-                          maxLines: 5,
-                        ),
-                      );
-
-                      await Future.delayed(const Duration(milliseconds: 20));
-
-                      result = await plugin.checkScanPermissions();
-                      ThemedSnackbarMessenger.of(context).showSnackbar(
-                        ThemedSnackbar(
-                          message: 'Scan: $result',
-                          color: Colors.blue,
-                          icon: LayrzIcons.solarOutlineBluetoothSquare,
-                          maxLines: 5,
-                        ),
-                      );
-
-                      await Future.delayed(const Duration(milliseconds: 20));
-
-                      result = await plugin.checkAdvertisePermissions();
-                      ThemedSnackbarMessenger.of(context).showSnackbar(
-                        ThemedSnackbar(
-                          message: 'Advertise: $result',
-                          color: Colors.blue,
-                          icon: LayrzIcons.solarOutlineBluetoothSquare,
-                          maxLines: 5,
-                        ),
-                      );
-
-                      setState(() => _isLoading = false);
-                    },
-                  ),
-                  const SizedBox(width: 10),
-                  ThemedButton(
-                    isLoading: _isLoading,
-                    labelText: 'Check BT Enabled',
-                    color: Colors.purple,
-                    onTap: () async {
-                      setState(() => _isLoading = true);
-                      // Refresh status (which will update the reactive stream)
-                      final status = await plugin.getStatuses();
-                      debugPrint(
-                        'Bluetooth state refreshed: ${status.isEnabled}',
-                      );
-
-                      ThemedSnackbarMessenger.of(context).showSnackbar(
-                        ThemedSnackbar(
-                          message:
-                              'Bluetooth: ${status.isEnabled ? "🟢 ON" : "🔴 OFF"}',
-                          color: status.isEnabled ? Colors.green : Colors.red,
-                          icon: LayrzIcons.solarOutlineBluetoothSquare,
-                          maxLines: 5,
-                        ),
-                      );
-
-                      setState(() => _isLoading = false);
-                    },
-                  ),
-                  const SizedBox(width: 10),
-                  ThemedButton(
-                    isLoading: _isLoading,
-                    labelText: 'Open BT Settings',
-                    color: Colors.orange,
-                    onTap: () async {
-                      setState(() => _isLoading = true);
-                      final result = await plugin.openBluetoothSettings();
-                      debugPrint('openBluetoothSettings result: $result');
-
-                      ThemedSnackbarMessenger.of(context).showSnackbar(
-                        ThemedSnackbar(
-                          message: 'Opened Settings: $result',
-                          color: Colors.orange,
-                          icon: LayrzIcons.solarOutlineBluetoothSquare,
-                          maxLines: 5,
-                        ),
-                      );
-
-                      setState(() => _isLoading = false);
-                    },
-                  ),
-                  if (_selectedDevice != null) ...[
-                    const SizedBox(width: 10),
-                    ThemedButton(
-                      isLoading: _isLoading,
-                      labelText: 'Disconnect device',
-                      color: Colors.red,
-                      onTap: () async {
-                        setState(() => _isLoading = true);
-                        final result = await plugin.disconnect();
-
-                        if (result == true) {
-                          _selectedDevice = null;
-                        }
-
-                        _isLoading = false;
-                        setState(() {});
-
-                        ThemedSnackbarMessenger.of(context).showSnackbar(
-                          ThemedSnackbar(
-                            message: 'Disconnected from device',
-                            color: Colors.red,
-                            icon: LayrzIcons.solarOutlineBluetoothSquare,
-                          ),
-                        );
-                      },
-                    ),
-                  ] else ...[
-                    if (ThemedPlatform.isAndroid) ...[
-                      if (!_isAdvertising) ...[
-                        const SizedBox(width: 10),
-                        ThemedButton(
-                          isLoading: _isLoading,
-                          labelText: 'Start BLE Advertise',
-                          color: Colors.green,
-                          onTap: () async {
-                            setState(() => _isLoading = true);
-                            _devices = {};
-                            _isAdvertising = await plugin.startAdvertise(
-                              manufacturerData: [
-                                const BleManufacturerData(
-                                  companyId: 0x1234,
-                                  data: [0x00, 0x01, 0x02, 0x03],
-                                ),
-                              ],
-                              serviceData: [
-                                const BleServiceData(
-                                  uuid: 0x1234,
-                                  data: [0xff],
-                                ),
-                              ],
-                              canConnect: true,
-                              allowBluetooth5: true,
-                              servicesSpecs: [
-                                BleService(
-                                  uuid: serviceUuid,
-                                  characteristics: [
-                                    BleCharacteristic(
-                                      uuid: readCharacteristic,
-                                      properties: [
-                                        BleProperty.read,
-                                        BleProperty.notify,
-                                      ],
-                                    ),
-                                    const BleCharacteristic(
-                                      uuid:
-                                          '00000000-0000-0000-0000-000000000003',
-                                      properties: [BleProperty.write],
-                                    ),
-                                  ],
-                                ),
-                              ],
-                            );
-                            setState(() => _isLoading = false);
-
-                            ThemedSnackbarMessenger.of(context).showSnackbar(
-                              ThemedSnackbar(
-                                message: 'Scanning for BLE devices...',
-                                color: Colors.blue,
-                                icon: LayrzIcons.solarOutlineBluetoothSquare,
-                              ),
-                            );
-                          },
-                        ),
-                      ] else ...[
-                        const SizedBox(width: 10),
-                        ThemedButton(
-                          isLoading: _isLoading,
-                          labelText: 'Stop BLE Advertise',
-                          color: Colors.red,
-                          onTap: () async {
-                            setState(() => _isLoading = true);
-                            final result = await plugin.stopAdvertise();
-                            debugPrint('Stop advertise result: $result');
-                            if (result == true) {
-                              _isAdvertising = false;
-                            }
-
-                            _isLoading = false;
-                            setState(() {});
-
-                            ThemedSnackbarMessenger.of(context).showSnackbar(
-                              ThemedSnackbar(
-                                message: 'Advertise stopped',
-                                color: Colors.red,
-                                icon: LayrzIcons.solarOutlineBluetoothSquare,
-                              ),
-                            );
-                          },
-                        ),
-                        const SizedBox(width: 10),
-                        ThemedButton(
-                          isLoading: _isLoading,
-                          labelText: 'Send Service update',
-                          color: Colors.orange,
-                          onTap: () async {
-                            setState(() => _isLoading = true);
-                            final result = await plugin.sendNotification(
-                              serviceUuid: serviceUuid,
-                              characteristicUuid: readCharacteristic,
-                              payload: Uint8List.fromList([
-                                0x04,
-                                0x03,
-                                0x02,
-                                0x01,
-                                0x05,
-                              ]),
-                              requestConfirmation: false,
-                            );
-                            debugPrint('Send notification result: $result');
-                            setState(() => _isLoading = false);
-                          },
-                        ),
-                      ],
-                    ],
-                    if (!_isScanning) ...[
-                      const SizedBox(width: 10),
-                      ThemedButton(
-                        isLoading: _isLoading,
-                        labelText: 'Start BLE scan',
-                        color: Colors.green,
-                        onTap: () async {
-                          setState(() => _isLoading = true);
-                          _devices = {};
-                          _isScanning = await plugin.startScan();
-                          setState(() => _isLoading = false);
-
-                          ThemedSnackbarMessenger.of(context).showSnackbar(
-                            ThemedSnackbar(
-                              message: 'Scanning for BLE devices...',
-                              color: Colors.blue,
-                              icon: LayrzIcons.solarOutlineBluetoothSquare,
-                            ),
-                          );
-                        },
-                      ),
-                    ] else ...[
-                      const SizedBox(width: 10),
-                      ThemedButton(
-                        isLoading: _isLoading,
-                        labelText: 'Stop BLE scan',
-                        color: Colors.red,
-                        onTap: () async {
-                          setState(() => _isLoading = true);
-                          final result = await plugin.stopScan();
-                          debugPrint('Stop scan result: $result');
-                          if (result == true) {
-                            _isScanning = false;
-                          }
-
-                          _isLoading = false;
-                          setState(() {});
-
-                          ThemedSnackbarMessenger.of(context).showSnackbar(
-                            ThemedSnackbar(
-                              message: 'Scan stopped',
-                              color: Colors.red,
-                              icon: LayrzIcons.solarOutlineBluetoothSquare,
-                            ),
-                          );
-                        },
-                      ),
-                    ],
-                  ],
-                ],
-              ),
             ),
             const SizedBox(height: 10),
             if (_selectedDevice == null) ...[
@@ -471,25 +423,24 @@ class _HomePageState extends State<HomePage> {
                   itemCount: _deviceList.length,
                   itemBuilder: (context, index) {
                     final device = _deviceList[index];
-                    return InkWell(
+                    return LayrzTappable(
                       onTap: () async {
                         debugPrint('Selected device: ${device.macAddress}');
-                        setState(() => _isLoading = true);
-                        final result = await plugin.connect(
-                          macAddress: device.macAddress,
-                        );
+                        _buttonController.startLoading();
+                        final result = await plugin.connect(macAddress: device.macAddress);
                         if (result == true) {
                           _selectedDevice = device;
                           _services = [];
                         }
-                        setState(() => _isLoading = false);
+                        _buttonController.stopLoading();
 
-                        ThemedSnackbarMessenger.of(context).showSnackbar(
-                          ThemedSnackbar(
-                            message:
-                                'Connected to device: ${device.macAddress}',
+                        LayrzSnackbarMessenger.of(context).showSnackbar(
+                          LayrzSnackbar(
+                            type: .custom,
+                            titleText: 'Connected to device',
+                            descriptionText: 'Connected to device: ${device.macAddress}',
                             color: Colors.green,
-                            icon: LayrzIcons.solarOutlineBluetoothSquare,
+                            icon: MdiIcons.bluetooth,
                           ),
                         );
                       },
@@ -497,45 +448,29 @@ class _HomePageState extends State<HomePage> {
                         padding: const EdgeInsets.all(8.0),
                         child: Row(
                           children: [
-                            ThemedAvatar(
-                              icon: LayrzIcons.solarOutlineIPhone,
-                              size: 40,
-                            ),
+                            LayrzAvatar.icon(icon: MdiIcons.devices, size: 40),
                             const SizedBox(width: 10),
                             Expanded(
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  Text(
-                                    device.name ?? 'Unknown device',
-                                    style: Theme.of(
-                                      context,
-                                    ).textTheme.titleSmall,
-                                  ),
+                                  Text(device.name ?? 'Unknown device', style: context.tokens.typography.body),
                                   Text(
                                     device.macAddress,
-                                    style: Theme.of(
-                                      context,
-                                    ).textTheme.bodySmall,
+                                    style: context.tokens.typography.label,
                                   ),
                                   Text(
                                     'RSSI: ${device.rssi} - TX power: ${device.txPower}',
-                                    style: Theme.of(
-                                      context,
-                                    ).textTheme.bodySmall,
+                                    style: context.tokens.typography.label,
                                   ),
                                   Text(
                                     "Manufacturer data: ${_castManufaturerData(device.manufacturerData)}",
-                                    style: Theme.of(
-                                      context,
-                                    ).textTheme.bodySmall,
+                                    style: context.tokens.typography.label,
                                     maxLines: 10,
                                   ),
                                   Text(
                                     "Service data: ${_castServiceData(device.serviceData)}",
-                                    style: Theme.of(
-                                      context,
-                                    ).textTheme.bodySmall,
+                                    style: context.tokens.typography.label,
                                     maxLines: 10,
                                   ),
                                 ],
@@ -549,137 +484,6 @@ class _HomePageState extends State<HomePage> {
                 ),
               ),
             ] else ...[
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  ThemedButton(
-                    color: Colors.blue,
-                    labelText: 'Discover services',
-                    isLoading: _isLoading,
-                    onTap: () async {
-                      // setState(() => _isLoading = true);
-                      // _services = await plugin.discoverServices() ?? [];
-                      // setState(() => _isLoading = false);
-
-                      // ThemedSnackbarMessenger.of(context).showSnackbar(ThemedSnackbar(
-                      //   message: 'Discovered ${_services.length} services',
-                      //   color: Colors.blue,
-                      //   icon: LayrzIcons.solarOutlineBluetoothSquare,
-                      // ));
-                    },
-                  ),
-                  const SizedBox(width: 10),
-                  ThemedButton(
-                    color: Colors.orange,
-                    labelText: 'Set MTU to 512',
-                    isLoading: _isLoading,
-                    onTap: () async {
-                      // setState(() => _isLoading = true);
-                      // final result = await plugin.setMtu(newMtu: 512);
-                      // debugPrint('Set MTU result: $result');
-                      // setState(() => _isLoading = false);
-
-                      // if (result != null) {
-                      //   mtu = result;
-                      //   setState(() {});
-                      // }
-
-                      // ThemedSnackbarMessenger.of(context).showSnackbar(ThemedSnackbar(
-                      //   message: 'Set MTU to $result after a negotiation',
-                      //   color: Colors.orange,
-                      //   icon: LayrzIcons.solarOutlineBluetoothSquare,
-                      // ));
-                    },
-                  ),
-                ],
-              ),
-              const SizedBox(height: 10),
-              // Row(
-              //   mainAxisAlignment: MainAxisAlignment.center,
-              //   children: [
-              //     ThemedButton(
-              //       color: Colors.orange,
-              //       labelText: 'Set notification listener',
-              //       isLoading: _isLoading,
-              //       onTap: () async {
-              //         setState(() => _isLoading = true);
-              //         final result = await plugin.startNotify(
-              //           serviceUuid: serviceId,
-              //           characteristicUuid: readCharacteristic,
-              //         );
-              //         debugPrint('Set notification listener result: $result');
-              //         setState(() => _isLoading = false);
-
-              //         ThemedSnackbarMessenger.of(context).showSnackbar(ThemedSnackbar(
-              //           message: 'Notification listener set: $result',
-              //           color: Colors.orange,
-              //           icon: LayrzIcons.solarOutlineBluetoothSquare,
-              //         ));
-              //       },
-              //     ),
-              //     const SizedBox(width: 10),
-              //     ThemedButton(
-              //       color: Colors.orange,
-              //       labelText: 'Set notification listener off',
-              //       isLoading: _isLoading,
-              //       onTap: () async {
-              //         setState(() => _isLoading = true);
-              //         final result = await plugin.stopNotify(
-              //           serviceUuid: serviceId,
-              //           characteristicUuid: readCharacteristic,
-              //         );
-              //         debugPrint('Set notification listener result: $result');
-              //         setState(() => _isLoading = false);
-
-              //         ThemedSnackbarMessenger.of(context).showSnackbar(ThemedSnackbar(
-              //           message: 'Notification listener set: $result',
-              //           color: Colors.orange,
-              //           icon: LayrzIcons.solarOutlineBluetoothSquare,
-              //         ));
-              //       },
-              //     ),
-              //     const SizedBox(width: 10),
-              //     ThemedButton(
-              //       color: Colors.blue,
-              //       labelText: 'Send a payload',
-              //       isLoading: _isLoading,
-              //       onTap: () async {
-              //         setState(() => _isLoading = true);
-
-              //         debugPrint("Sending header");
-              //         await plugin.writeCharacteristic(
-              //           serviceUuid: serviceId,
-              //           characteristicUuid: writeCharacteristic,
-              //           payload: Uint8List.fromList("##${payload.length};1".codeUnits),
-              //           withResponse: true,
-              //         );
-
-              //         debugPrint("Sending payload");
-              //         await plugin.writeCharacteristic(
-              //           serviceUuid: serviceId,
-              //           characteristicUuid: writeCharacteristic,
-              //           payload: Uint8List.fromList(payload.codeUnits),
-              //           withResponse: true,
-              //         );
-
-              //         setState(() => _isLoading = false);
-
-              //         ThemedSnackbarMessenger.of(context).showSnackbar(ThemedSnackbar(
-              //           message: 'Payload sent',
-              //           color: Colors.blue,
-              //           icon: LayrzIcons.solarOutlineBluetoothSquare,
-              //         ));
-
-              //         final result = await plugin.readCharacteristic(
-              //           serviceUuid: serviceId,
-              //           characteristicUuid: readCharacteristic,
-              //         );
-
-              //         debugPrint('Read characteristic result: ${ascii.decode(result?.toList() ?? [])}');
-              //       },
-              //     ),
-              //   ],
-              // ),
               const SizedBox(height: 10),
               Expanded(
                 child: SingleChildScrollView(
@@ -687,35 +491,23 @@ class _HomePageState extends State<HomePage> {
                     children: _services.map((service) {
                       return Column(
                         children: [
-                          Text(
-                            'Service: ${service.uuid}',
-                            style: Theme.of(context).textTheme.titleSmall,
-                          ),
+                          Text('Service: ${service.uuid}', style: context.tokens.typography.body),
                           const SizedBox(height: 5),
-                          Text(
-                            'Characteristics:',
-                            style: Theme.of(context).textTheme.bodySmall,
-                          ),
+                          Text('Characteristics:', style: context.tokens.typography.body),
                           Padding(
                             padding: const EdgeInsets.only(left: 10),
                             child: Column(
-                              children: (service.characteristics ?? []).map((
-                                characteristic,
-                              ) {
+                              children: (service.characteristics ?? []).map((characteristic) {
                                 return Column(
                                   children: [
                                     Text(
                                       'Characteristic: ${characteristic.uuid}',
-                                      style: Theme.of(
-                                        context,
-                                      ).textTheme.bodySmall,
+                                      style: context.tokens.typography.label,
                                     ),
                                     const SizedBox(height: 5),
                                     Text(
                                       'Properties: ${characteristic.properties}',
-                                      style: Theme.of(
-                                        context,
-                                      ).textTheme.bodySmall,
+                                      style: context.tokens.typography.label,
                                     ),
                                   ],
                                 );
