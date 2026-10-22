@@ -5,6 +5,21 @@ namespace layrz_ble {
   using layrz_ble::LayrzBleCallbackChannel;
   using layrz_ble::LayrzBlePlatformChannel;
 
+  /// @brief Convert a GattCommunicationStatus into a readable name for the logs.
+  /// @param status the status returned by any GATT operation
+  /// @return const char* the enum name, or "Unknown" for unexpected values
+  /// @note Without this, every GATT failure logs the same opaque line and the caller
+  ///       cannot tell an unreachable device from a protocol error or a denied access.
+  static const char* GattStatusToString(GattCommunicationStatus status) {
+    switch (status) {
+      case GattCommunicationStatus::Success: return "Success";
+      case GattCommunicationStatus::Unreachable: return "Unreachable";
+      case GattCommunicationStatus::ProtocolError: return "ProtocolError";
+      case GattCommunicationStatus::AccessDenied: return "AccessDenied";
+      default: return "Unknown";
+    }
+  } // GattStatusToString
+
   std::string LayrzBlePlugin::filteredDeviceId = std::string("");
   std::unique_ptr<BleScanResult> LayrzBlePlugin::connectedDevice = nullptr;
   static std::unique_ptr<LayrzBleCallbackChannel> callbackChannel;
@@ -264,7 +279,20 @@ namespace layrz_ble {
       auto servicesResult = co_await btDevice.GetGattServicesAsync((BluetoothCacheMode::Uncached));
       auto status = servicesResult.Status();
       if (status != GattCommunicationStatus::Success) {
-        Log("Failed to get GATT services");
+        // Windows reaches this point for very different reasons -- the peripheral never
+        // accepted the connection, it dropped mid-discovery, the service table changed
+        // since the OS cached it, or the ATT layer answered with an error -- and they
+        // need opposite fixes. Log what actually happened.
+        auto protocolError = servicesResult.ProtocolError();
+        if (protocolError) {
+          Log(
+            "Failed to get GATT services: %s (ATT protocol error 0x%02X)",
+            GattStatusToString(status),
+            protocolError.Value()
+          );
+        } else {
+          Log("Failed to get GATT services: %s", GattStatusToString(status));
+        }
         result(false);
         co_return;
       }
@@ -276,6 +304,17 @@ namespace layrz_ble {
         servicesAndCharacteristics[serviceUuid] = BleService(service);
   
         auto characteristics = co_await service.GetCharacteristicsAsync(BluetoothCacheMode::Uncached);
+        if (characteristics.Status() != GattCommunicationStatus::Success) {
+          // The status was not checked before, so a service whose characteristics could
+          // not be read was registered as empty and every later lookup on it failed with
+          // "Characteristic not found", hiding the real cause.
+          Log(
+            "Failed to get characteristics of service %s: %s",
+            serviceUuid.c_str(),
+            GattStatusToString(characteristics.Status())
+          );
+          continue;
+        }
         for (auto characteristic : characteristics.Characteristics()) {
           auto characteristicUuid = toUppercase(GuidToString(characteristic.Uuid()));
           // Log("\t\tParsing characteristic %s", characteristicUuid.c_str());
@@ -728,7 +767,7 @@ namespace layrz_ble {
 
       auto status = co_await characteristic.WriteClientCharacteristicConfigurationDescriptorAsync(cccdValue);
       if (status != GattCommunicationStatus::Success) {
-        Log("Failed to start notifications for characteristic");
+        Log("Failed to start notifications for characteristic: %s", GattStatusToString(status));
         result(false);
         co_return;
       }
@@ -821,7 +860,7 @@ namespace layrz_ble {
     try {
       auto status = co_await characteristic.WriteClientCharacteristicConfigurationDescriptorAsync(GattClientCharacteristicConfigurationDescriptorValue::None);
       if (status != GattCommunicationStatus::Success) {
-        Log("Failed to stop notifications for characteristic");
+        Log("Failed to stop notifications for characteristic: %s", GattStatusToString(status));
         result(false);
         co_return;
       }
