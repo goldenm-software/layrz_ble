@@ -1,5 +1,11 @@
 # Changelog
 
+## 2.0.1
+
+- `startNotify` now subscribes using **indications** when the characteristic advertises `INDICATE`, falling back to notifications otherwise. Notifications carry no ATT confirmation, so a peripheral whose controller drops the packet after the host accepted it cannot tell a delivered payload from a lost one — the failure is invisible on both ends. Indications are acknowledged by the stack, which gives the peripheral real flow control and a reliable failure signal. Characteristics that only advertise `NOTIFY` are unaffected.
+- Implemented on Android (`BluetoothGattDescriptor.ENABLE_INDICATION_VALUE` written to the CCCD instead of the hardcoded `ENABLE_NOTIFICATION_VALUE`) and Windows (`GattClientCharacteristicConfigurationDescriptorValue::Indicate`). `stopNotify` needs no change: `DISABLE_NOTIFICATION_VALUE` is `{0x00, 0x00}`, which clears both bits.
+- iOS and macOS are untouched because CoreBluetooth owns the choice: `setNotifyValue(true)` subscribes according to the characteristic's properties and exposes no API to select between the two. **Pending verification:** Apple's documented behaviour is that notifications win when a characteristic advertises both, so a peripheral that wants indications on Apple platforms has to advertise `INDICATE` alone.
+
 ## 2.0.0
 
 - Major upgrade to Flutter 3.47 and replacement of `layrz_models` in favor of `layrz_sdk`

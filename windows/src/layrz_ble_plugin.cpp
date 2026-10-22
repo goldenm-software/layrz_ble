@@ -717,7 +717,16 @@ namespace layrz_ble {
     std::function<void(ErrorOr<bool> reply)> result
   ) {
     try {
-      auto status = co_await characteristic.WriteClientCharacteristicConfigurationDescriptorAsync(GattClientCharacteristicConfigurationDescriptorValue::Notify);
+      // Prefer indications when the characteristic offers them: they are acknowledged at
+      // the ATT layer, so the peripheral can tell a delivered payload from a dropped one.
+      // Characteristics that only advertise Notify keep the previous behaviour.
+      auto properties = characteristic.CharacteristicProperties();
+      auto cccdValue = GattClientCharacteristicConfigurationDescriptorValue::Notify;
+      if ((properties & GattCharacteristicProperties::Indicate) == GattCharacteristicProperties::Indicate) {
+        cccdValue = GattClientCharacteristicConfigurationDescriptorValue::Indicate;
+      }
+
+      auto status = co_await characteristic.WriteClientCharacteristicConfigurationDescriptorAsync(cccdValue);
       if (status != GattCommunicationStatus::Success) {
         Log("Failed to start notifications for characteristic");
         result(false);

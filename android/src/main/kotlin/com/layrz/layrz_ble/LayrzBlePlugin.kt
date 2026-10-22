@@ -538,13 +538,29 @@ class LayrzBlePlugin : LayrzBlePlatformChannel, FlutterPlugin, ActivityAware, Pl
 			callback(Result.success(false))
 			return
 		}
-		if (descriptor.value.contentEquals(BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE)) {
+
+		// Prefer indications when the characteristic offers them. Notifications carry no
+		// ATT confirmation, so neither the peripheral nor this plugin can tell a delivered
+		// payload from one the peripheral's controller dropped before it hit the air.
+		// Indications are acknowledged by the stack, which gives the peripheral real flow
+		// control and a reliable failure signal. Characteristics that only advertise
+		// NOTIFY keep the previous behaviour.
+		val supportsIndicate =
+			(characteristic.properties and BluetoothGattCharacteristic.PROPERTY_INDICATE) != 0
+		val cccdValue = if (supportsIndicate) {
+			BluetoothGattDescriptor.ENABLE_INDICATION_VALUE
+		} else {
+			BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE
+		}
+
+		if (descriptor.value.contentEquals(cccdValue)) {
 			Log.d(TAG, "Descriptor already enabled")
 			callback(Result.success(true))
 			return
 		}
 
-		descriptor.value = BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE
+		Log.d(TAG, "Subscribing to $characteristicUuid using ${if (supportsIndicate) "indications" else "notifications"}")
+		descriptor.value = cccdValue
 		gatt.writeDescriptor(descriptor)
 		callback(Result.success(true))
 		return
